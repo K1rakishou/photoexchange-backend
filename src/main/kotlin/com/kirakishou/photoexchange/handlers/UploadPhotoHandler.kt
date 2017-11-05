@@ -1,6 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.model.TestEntity
+import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.service.JsonConverterService
 import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -13,7 +13,7 @@ class UploadPhotoHandler(private val jsonConverter: JsonConverterService) {
     fun handle(request: ServerRequest): Mono<ServerResponse> {
         return request.body(BodyExtractors.toMultipartData())
                 .flatMap {
-                    val filePart = it.getFirst("file")
+                    val filePart = it.getFirst("photo")
                     val packetPart = it.getFirst("packet")
 
                     checkNotNull(filePart)
@@ -32,11 +32,9 @@ class UploadPhotoHandler(private val jsonConverter: JsonConverterService) {
                 .flatMap {
                     val file = it.t1
                     val packetRaw = it.t2
-                    val packet = jsonConverter.fromJson<TestEntity>(packetRaw, TestEntity::class.java)
+                    val packet = jsonConverter.fromJson<SendPhotoPacket>(packetRaw, SendPhotoPacket::class.java)
 
-
-
-                    return@flatMap ServerResponse.ok().body(Mono.just(packet.testField))
+                    return@flatMap ServerResponse.ok().body(Mono.just(packet.userId))
                 }
     }
 }
