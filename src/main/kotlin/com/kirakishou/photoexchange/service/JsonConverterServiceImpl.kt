@@ -13,4 +13,7 @@ class JsonConverterServiceImpl(
         return gson.fromJson(Utils.dataBufferToString(dataBufferList), clazz) as T
     }
 
+    override fun toJson(data: Any): String {
+        return gson.toJson(data)
+    }
 }

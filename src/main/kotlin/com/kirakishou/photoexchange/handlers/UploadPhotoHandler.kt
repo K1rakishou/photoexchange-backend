@@ -1,6 +1,8 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
+import com.kirakishou.photoexchange.model.response.StatusResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
 import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -34,7 +36,8 @@ class UploadPhotoHandler(private val jsonConverter: JsonConverterService) {
                     val packetRaw = it.t2
                     val packet = jsonConverter.fromJson<SendPhotoPacket>(packetRaw, SendPhotoPacket::class.java)
 
-                    return@flatMap ServerResponse.ok().body(Mono.just(packet.userId))
+                    val responseJson = jsonConverter.toJson(StatusResponse(ServerErrorCode.OK.value))
+                    return@flatMap ServerResponse.ok().body(Mono.just(responseJson))
                 }
     }
 }
