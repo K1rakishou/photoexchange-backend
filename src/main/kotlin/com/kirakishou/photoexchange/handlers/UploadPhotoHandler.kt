@@ -10,6 +10,7 @@ import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.TimeUtils
 import org.springframework.core.io.buffer.DataBuffer
+import org.springframework.http.HttpStatus
 import org.springframework.http.codec.multipart.Part
 import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.BodyExtractors
@@ -19,6 +20,7 @@ import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
 import reactor.util.function.Tuple2
 import java.io.File
+import java.io.IOException
 
 class UploadPhotoHandler(private val jsonConverter: JsonConverterService,
                          private val photoInfoRepo: PhotoInfoRepository,
@@ -45,7 +47,7 @@ class UploadPhotoHandler(private val jsonConverter: JsonConverterService,
                 .single()
 
         val photoInfoMono = packetRawMono
-                .map { packetRaw ->  jsonConverter.fromJson<SendPhotoPacket>(packetRaw, SendPhotoPacket::class.java) }
+                .map { packetRaw -> jsonConverter.fromJson<SendPhotoPacket>(packetRaw, SendPhotoPacket::class.java) }
                 .doOnSuccess(this::checkPacketCorrectness)
                 .map(this::createPhotoInfo)
                 .flatMap { storedPhoto -> photoInfoRepo.save(storedPhoto) }
@@ -57,6 +59,31 @@ class UploadPhotoHandler(private val jsonConverter: JsonConverterService,
                 .doOnSuccess(this::writePhotoToDisk)
                 .map { it.t2 }
                 .flatMap { sendResponse() }
+                .onErrorResume(this::handleErrors)
+    }
+
+    private fun handleErrors(error: Throwable): Mono<ServerResponse> {
+        return when (error) {
+            is MultiValueMapDoesNotContainsPart -> TODO()
+            is MultiPartRequestPartIsNull -> TODO()
+            is EmptyPacket -> TODO()
+            is EmptyFile -> TODO()
+            is PacketContainsBadData -> TODO()
+            is CouldNotSavePhotoToDb -> TODO()
+            is PhotoSizeExceeded -> TODO()
+            is ErrorWhileWritingPhotoToDisk -> TODO()
+
+            else -> {
+                error.printStackTrace()
+
+                formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.UNKNOWN_ERROR)
+            }
+        }
+    }
+
+    private fun formatResponse(httpStatus: HttpStatus, errorCode: ServerErrorCode): Mono<ServerResponse> {
+        return ServerResponse.status(httpStatus)
+                .body(Mono.just(StatusResponse(errorCode.value)))
     }
 
     private fun sendResponse(): Mono<ServerResponse> {
@@ -86,7 +113,7 @@ class UploadPhotoHandler(private val jsonConverter: JsonConverterService,
                     }
                 }
             }
-        } catch (e: Throwable) {
+        } catch (e: IOException) {
             photoInfoRepo.deleteById(photoInfo.whoUploaded)
 
             throw ErrorWhileWritingPhotoToDisk()
