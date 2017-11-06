@@ -17,7 +17,7 @@ open class PhotoInfoRepository(private val template: ReactiveMongoTemplate) {
 
     fun findPhotoInfo(userId: String): Mono<PhotoInfo> {
         val criteria = Criteria
-                .where("userId").`is`(userId).not()
+                .where("whoUploaded").`is`(userId).not()
                 .andOperator(Criteria.where("receivedPhotoBack").`is`(false))
 
         val query = Query().with(Sort(Sort.Direction.DESC, "uploadedOn"))

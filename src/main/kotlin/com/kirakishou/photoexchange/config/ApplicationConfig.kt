@@ -42,7 +42,7 @@ fun myBeans() = beans {
     bean {
         ReactiveMongoTemplate(
                 SimpleReactiveMongoDatabaseFactory(
-                        ConnectionString("mongodb://${DB_SERVER_ADDRESS}/fileserver")
+                        ConnectionString("mongodb://${DB_SERVER_ADDRESS}/photoexhange")
                 )
         )
     }

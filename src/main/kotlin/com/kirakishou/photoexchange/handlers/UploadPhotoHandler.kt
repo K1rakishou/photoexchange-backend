@@ -8,6 +8,7 @@ import com.kirakishou.photoexchange.model.net.response.StatusResponse
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
@@ -29,7 +30,7 @@ class UploadPhotoHandler(private val jsonConverter: JsonConverterService,
     private val PACKET_PART_KEY = "packet"
     private val PHOTO_PART_KEY = "photo"
     private val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
-    private var fileDirectoryPath = "D:\\photos"
+    private var fileDirectoryPath = "D:\\projects\\data\\photos"
 
     fun handle(request: ServerRequest): Mono<ServerResponse> {
         val multiValueMapMono = request.body(BodyExtractors.toMultipartData())
@@ -64,18 +65,25 @@ class UploadPhotoHandler(private val jsonConverter: JsonConverterService,
 
     private fun handleErrors(error: Throwable): Mono<ServerResponse> {
         return when (error) {
-            is MultiValueMapDoesNotContainsPart -> TODO()
-            is MultiPartRequestPartIsNull -> TODO()
-            is EmptyPacket -> TODO()
-            is EmptyFile -> TODO()
-            is PacketContainsBadData -> TODO()
-            is CouldNotSavePhotoToDb -> TODO()
-            is PhotoSizeExceeded -> TODO()
-            is ErrorWhileWritingPhotoToDisk -> TODO()
+            is MultiValueMapDoesNotContainsPart ->
+                formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+            is MultiPartRequestPartIsNull ->
+                formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+            is EmptyPacket ->
+                formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+            is EmptyFile ->
+                formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+            is PacketContainsBadData ->
+                formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+            is PhotoSizeExceeded ->
+                formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+            is CouldNotSavePhotoToDb ->
+                formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.REPOSITORY_ERROR)
+            is ErrorWhileWritingPhotoToDisk ->
+                formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.DISK_ERROR)
 
             else -> {
                 error.printStackTrace()
-
                 formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.UNKNOWN_ERROR)
             }
         }
@@ -101,19 +109,9 @@ class UploadPhotoHandler(private val jsonConverter: JsonConverterService,
         val outFile = File(filePath)
 
         try {
-            outFile.outputStream().use { outputStream ->
-                for (chunk in photoChunks) {
-                    chunk.asInputStream().use { inputStream ->
-                        val chunkSize = inputStream.available()
-                        val buffer = ByteArray(chunkSize)
-
-                        //copy chunks from one stream to another
-                        inputStream.read(buffer, 0, chunkSize)
-                        outputStream.write(buffer, 0, chunkSize)
-                    }
-                }
-            }
+            IOUtils.copyDataBuffersToFile(photoChunks, outFile)
         } catch (e: IOException) {
+            e.printStackTrace()
             photoInfoRepo.deleteById(photoInfo.whoUploaded)
 
             throw ErrorWhileWritingPhotoToDisk()
