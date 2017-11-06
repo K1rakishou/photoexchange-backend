@@ -1,4 +1,4 @@
-package com.kirakishou.photoexchange.model.response
+package com.kirakishou.photoexchange.model.net.response
 
 import com.google.gson.annotations.SerializedName
 

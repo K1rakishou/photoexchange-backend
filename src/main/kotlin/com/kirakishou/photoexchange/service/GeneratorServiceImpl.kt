@@ -20,7 +20,7 @@ class GeneratorServiceImpl : GeneratorService {
         return sb.toString()
     }
 
-    override fun generateNewFileName(): String {
+    override fun generateNewPhotoName(): String {
         return generateRandomString(64, numericAlphabetic)
     }
 }
