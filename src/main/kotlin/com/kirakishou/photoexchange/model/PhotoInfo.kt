@@ -8,6 +8,9 @@ import org.springframework.data.mongodb.core.mapping.Document
 
 @Document(collection = PhotoInfoRepository.COLLECTION_NAME)
 data class PhotoInfo(@Id
+                     var photoId: Long,
+
+                     @Indexed(name = "who_uploaded")
                      val whoUploaded: String,
 
                      @Indexed(name = "photo_name_index")
@@ -21,12 +24,18 @@ data class PhotoInfo(@Id
                      val uploadedOn: Long) {
 
     fun isEmpty(): Boolean {
-        return whoUploaded.isEmpty() && photoName.isEmpty() && lon == 0.0 && lat == 0.0 && !receivedPhotoBack && uploadedOn == 0L
+        return photoId == -1L
+                && whoUploaded.isEmpty()
+                && photoName.isEmpty()
+                && lon == 0.0
+                && lat == 0.0
+                && !receivedPhotoBack
+                && uploadedOn == 0L
     }
 
     companion object {
         fun empty(): PhotoInfo {
-            return PhotoInfo("", "", 0.0, 0.0, false, 0L)
+            return PhotoInfo(-1L, "", "", 0.0, 0.0, false, 0L)
         }
     }
 }

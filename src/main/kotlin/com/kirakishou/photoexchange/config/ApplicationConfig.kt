@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.config
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
+import com.kirakishou.photoexchange.repository.MongoSequenceRepository
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
@@ -31,7 +32,10 @@ fun myBeans() = beans {
         JsonConverterServiceImpl(ref())
     }
     bean {
-        PhotoInfoRepository(ref())
+        MongoSequenceRepository(ref())
+    }
+    bean {
+        PhotoInfoRepository(ref(), ref())
     }
     bean {
         GeneratorServiceImpl()

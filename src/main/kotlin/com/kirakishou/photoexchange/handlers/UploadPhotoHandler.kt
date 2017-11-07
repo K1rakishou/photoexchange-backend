@@ -140,6 +140,7 @@ class UploadPhotoHandler(private val jsonConverter: JsonConverterService,
     private fun createPhotoInfo(packet: SendPhotoPacket): PhotoInfo {
         val newPhotoName = generator.generateNewPhotoName()
         return PhotoInfo(
+                -1L,
                 packet.userId,
                 newPhotoName,
                 packet.lon,
