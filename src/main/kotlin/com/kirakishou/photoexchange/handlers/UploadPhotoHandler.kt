@@ -23,9 +23,11 @@ import reactor.util.function.Tuple2
 import java.io.File
 import java.io.IOException
 
-class UploadPhotoHandler(private val jsonConverter: JsonConverterService,
-                         private val photoInfoRepo: PhotoInfoRepository,
-                         private val generator: GeneratorServiceImpl): WebHandler {
+class UploadPhotoHandler(
+        private val jsonConverter: JsonConverterService,
+        private val photoInfoRepo: PhotoInfoRepository,
+        private val generator: GeneratorServiceImpl
+) : WebHandler {
 
     private val PACKET_PART_KEY = "packet"
     private val PHOTO_PART_KEY = "photo"
