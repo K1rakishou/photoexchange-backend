@@ -25,14 +25,14 @@ import java.io.IOException
 
 class UploadPhotoHandler(private val jsonConverter: JsonConverterService,
                          private val photoInfoRepo: PhotoInfoRepository,
-                         private val generator: GeneratorServiceImpl) {
+                         private val generator: GeneratorServiceImpl): WebHandler {
 
     private val PACKET_PART_KEY = "packet"
     private val PHOTO_PART_KEY = "photo"
     private val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
     private var fileDirectoryPath = "D:\\projects\\data\\photos"
 
-    fun handle(request: ServerRequest): Mono<ServerResponse> {
+    override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val multiValueMapMono = request.body(BodyExtractors.toMultipartData())
                 .flux()
                 .share()
