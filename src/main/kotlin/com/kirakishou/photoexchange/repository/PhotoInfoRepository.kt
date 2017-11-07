@@ -1,11 +1,12 @@
 package com.kirakishou.photoexchange.repository
 
 import com.kirakishou.photoexchange.model.PhotoInfo
+import com.kirakishou.photoexchange.util.TimeUtils
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
-import reactor.core.publisher.Flux
+import org.springframework.data.mongodb.core.query.Update
 import reactor.core.publisher.Mono
 
 open class PhotoInfoRepository(private val template: ReactiveMongoTemplate,
@@ -28,16 +29,22 @@ open class PhotoInfoRepository(private val template: ReactiveMongoTemplate,
     }
 
     fun findPhotoInfo(userId: String): Mono<PhotoInfo> {
-        val criteria = Criteria
-                .where("whoUploaded").`is`(userId).not()
-                .andOperator(Criteria.where("receivedPhotoBack").`is`(false))
+        val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
+                .addCriteria(Criteria.where("whoUploaded").ne(userId))
+                .addCriteria(Criteria.where("receivedPhotoBack").`is`(false))
+                .addCriteria(Criteria.where("candidateFound").`is`(false))
+                .limit(1)
 
-        val query = Query().with(Sort(Sort.Direction.DESC, "uploadedOn"))
-                .addCriteria(criteria)
+        val update = Update()
+                .set("candidateFound", true)
+                .set("candidateFoundOn", TimeUtils.getTime())
 
-        return template.find(query, PhotoInfo::class.java)
-                .switchIfEmpty(Flux.just(PhotoInfo.empty()))
-                .single()
+        return template.findAndModify(query, update, PhotoInfo::class.java)
+                .switchIfEmpty(Mono.just(PhotoInfo.empty()))
+    }
+
+    fun updateSetPhotoSuccessfullyDelivered(userId: String) {
+        TODO()
     }
 
     fun deleteById(userId: String) {
@@ -49,3 +56,27 @@ open class PhotoInfoRepository(private val template: ReactiveMongoTemplate,
         const val SEQUENCE_NAME = "photo_info_sequence"
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -148,6 +148,8 @@ class UploadPhotoHandler(
                 packet.lon,
                 packet.lat,
                 false,
+                false,
+                0L,
                 TimeUtils.getTime()
         )
     }

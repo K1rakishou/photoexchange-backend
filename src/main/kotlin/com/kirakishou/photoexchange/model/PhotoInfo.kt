@@ -18,7 +18,9 @@ data class PhotoInfo(@Id
 
                      val lon: Double,
                      val lat: Double,
+                     val candidateFound: Boolean,
                      val receivedPhotoBack: Boolean,
+                     val candidateFoundOn: Long,
 
                      @Indexed(name = "uploaded_on", direction = IndexDirection.DESCENDING)
                      val uploadedOn: Long) {
@@ -35,7 +37,7 @@ data class PhotoInfo(@Id
 
     companion object {
         fun empty(): PhotoInfo {
-            return PhotoInfo(-1L, "", "", 0.0, 0.0, false, 0L)
+            return PhotoInfo(-1L, "", "", 0.0, 0.0, false, false, 0L, 0L)
         }
     }
 }
