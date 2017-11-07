@@ -5,6 +5,7 @@ import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.exception.*
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.StatusResponse
+import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -60,8 +61,8 @@ class UploadPhotoHandler(
                 .doOnSuccess(this::checkPhotoTotalSize)
                 .zipWith(photoInfoMono)
                 .doOnSuccess(this::writePhotoToDisk)
-                .map { it.t2 }
-                .flatMap { sendResponse() }
+                .map { it.t2.photoName }
+                .flatMap(this::sendResponse)
                 .onErrorResume(this::handleErrors)
     }
 
@@ -96,8 +97,8 @@ class UploadPhotoHandler(
                 .body(Mono.just(StatusResponse(errorCode.value)))
     }
 
-    private fun sendResponse(): Mono<ServerResponse> {
-        val response = StatusResponse(ServerErrorCode.OK.value)
+    private fun sendResponse(photoName: String): Mono<ServerResponse> {
+        val response = UploadPhotoResponse(photoName, ServerErrorCode.OK)
         val responseJson = jsonConverter.toJson(response)
 
         return ServerResponse.ok().body(Mono.just(responseJson))
