@@ -19,7 +19,8 @@ class GetPhotoAnswerHandler(
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val userIdMono = Mono.just(request.pathVariable(USER_ID_PATH_VARIABLE))
 
-        return userIdMono.flatMap { userId -> photoInfoRepo.findPhotoInfo(userId) }
+        return userIdMono
+                .flatMap { userId -> photoInfoRepo.findPhotoInfo(userId) }
                 .flatMap { photoInfo ->
                     val photoAnswer = PhotoAnswerResponse(photoInfo.whoUploaded, photoInfo.photoName, ServerErrorCode.OK)
                     val photoAnswerJson = jsonConverter.toJson(photoAnswer)
