@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.config
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.handlers.GetPhotoAnswerHandler
+import com.kirakishou.photoexchange.handlers.GetPhotoHandler
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.repository.MongoSequenceRepository
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
@@ -27,6 +28,7 @@ fun myBeans() = beans {
     bean<Router>()
     bean<UploadPhotoHandler>()
     bean<GetPhotoAnswerHandler>()
+    bean<GetPhotoHandler>()
     bean<Gson> {
         GsonBuilder().create()
     }
