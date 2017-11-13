@@ -27,12 +27,6 @@ data class PhotoInfo(@Id
 
     fun isEmpty(): Boolean {
         return photoId == -1L
-                && whoUploaded.isEmpty()
-                && photoName.isEmpty()
-                && lon == 0.0
-                && lat == 0.0
-                && !receivedPhotoBack
-                && uploadedOn == 0L
     }
 
     companion object {
