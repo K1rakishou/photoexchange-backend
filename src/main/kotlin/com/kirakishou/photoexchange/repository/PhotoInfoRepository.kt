@@ -52,8 +52,17 @@ open class PhotoInfoRepository(private val template: ReactiveMongoTemplate,
                 .switchIfEmpty(Mono.just(PhotoInfo.empty()))
     }
 
-    fun updateSetPhotoSuccessfullyDelivered(userId: String) {
-        TODO()
+    fun updateSetPhotoSuccessfullyDelivered(photoId: Long): Mono<Boolean> {
+        val query = Query()
+                .addCriteria(Criteria.where("photoId").`is`(photoId))
+                .addCriteria(Criteria.where("receivedPhotoBack").`is`(false))
+                .addCriteria(Criteria.where("candidateFound").`is`(false))
+
+        val update = Update()
+                .set("receivedPhotoBack", true)
+
+        return template.updateFirst(query, update, PhotoInfo::class.java)
+                .map { it.wasAcknowledged() }
     }
 
     fun deleteById(userId: String) {

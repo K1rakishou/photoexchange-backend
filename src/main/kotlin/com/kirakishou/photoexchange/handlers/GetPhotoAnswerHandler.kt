@@ -20,7 +20,9 @@ class GetPhotoAnswerHandler(
     private val USER_ID_PATH_VARIABLE = "user_id"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
+        //TODO: check USER_ID_PATH_VARIABLE existence
         val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
+
         val countFlux = photoInfoRepo.countUserUploadedPhotos(userId)
                 .map { it.toInt() }
                 .flux()
@@ -29,7 +31,7 @@ class GetPhotoAnswerHandler(
         val userHasNoUploadedPhotosFlux = countFlux
                 .filter { count -> count <= 0 }
                 .flatMap {
-                    return@flatMap getBodyResponse(PhotoAnswerResponse.fail(ServerErrorCode.NOTHING_FOUND))
+                    return@flatMap getBodyResponse(PhotoAnswerResponse.fail(ServerErrorCode.USER_HAS_NO_UPLOADED_PHOTOS))
                 }
 
         val userHasUploadedPhotosFlux = countFlux
@@ -55,6 +57,7 @@ class GetPhotoAnswerHandler(
                             .filter { !it.isEmpty() }
                             .map { photoInfo ->
                                 return@map PhotoAnswerJsonObject(
+                                        photoInfo.photoId,
                                         photoInfo.whoUploaded,
                                         photoInfo.photoName,
                                         photoInfo.lon,
@@ -62,7 +65,7 @@ class GetPhotoAnswerHandler(
                             }
 
                     if (photoAnswerList.isEmpty()) {
-                        return@flatMap getBodyResponse(PhotoAnswerResponse.fail(ServerErrorCode.NOTHING_FOUND))
+                        return@flatMap getBodyResponse(PhotoAnswerResponse.fail(ServerErrorCode.NO_PHOTOS_TO_SEND_BACK))
                     }
 
                     val allFound = (count - photoAnswerList.size) > 0

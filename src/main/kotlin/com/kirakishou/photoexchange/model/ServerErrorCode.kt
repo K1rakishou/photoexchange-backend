@@ -6,5 +6,6 @@ enum class ServerErrorCode(val value: Int) {
     BAD_REQUEST(1),
     REPOSITORY_ERROR(2),
     DISK_ERROR(3),
-    NOTHING_FOUND(4)
+    USER_HAS_NO_UPLOADED_PHOTOS(4),
+    NO_PHOTOS_TO_SEND_BACK(5)
 }

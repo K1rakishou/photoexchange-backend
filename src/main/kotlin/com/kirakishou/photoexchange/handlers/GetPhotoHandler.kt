@@ -17,6 +17,7 @@ class GetPhotoHandler : WebHandler {
     private var fileDirectoryPath = "D:\\projects\\data\\photos"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
+        //TODO: check PHOTO_NAME_PATH_VARIABLE existence
         val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
 
         val photoStreamFlux = Flux.using({
