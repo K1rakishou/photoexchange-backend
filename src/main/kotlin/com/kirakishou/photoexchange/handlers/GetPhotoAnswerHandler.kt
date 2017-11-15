@@ -1,6 +1,5 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.model.PhotoInfo
 import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerJsonObject
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
@@ -30,46 +29,29 @@ class GetPhotoAnswerHandler(
 
         val userHasNoUploadedPhotosFlux = countFlux
                 .filter { count -> count <= 0 }
-                .flatMap {
-                    return@flatMap getBodyResponse(PhotoAnswerResponse.fail(ServerErrorCode.USER_HAS_NO_UPLOADED_PHOTOS))
-                }
+                .flatMap { getBodyResponse(PhotoAnswerResponse.fail(ServerErrorCode.USER_HAS_NO_UPLOADED_PHOTOS)) }
 
         val userHasUploadedPhotosFlux = countFlux
                 .filter { count -> count > 0 }
-                .flatMap { count ->
-                    val photoInfoResultMonoList = arrayListOf<Mono<PhotoInfo>>()
-
-                    for (i in 0 until count) {
-                        photoInfoResultMonoList += photoInfoRepo.findPhotoInfo(userId)
-                    }
-
-                    return@flatMap Flux.fromIterable(photoInfoResultMonoList)
-                            .flatMap { it }
-                            .buffer()
-                            .single()
-                }
+                .flatMap { photoInfoRepo.findPhotoInfo(userId) }
                 .zipWith(countFlux)
                 .flatMap {
-                    val photoInfoList = it.t1
+                    val photoInfo = it.t1
                     val count = it.t2
 
-                    val photoAnswerList = photoInfoList
-                            .filter { !it.isEmpty() }
-                            .map { photoInfo ->
-                                return@map PhotoAnswerJsonObject(
-                                        photoInfo.photoId,
-                                        photoInfo.whoUploaded,
-                                        photoInfo.photoName,
-                                        photoInfo.lon,
-                                        photoInfo.lat)
-                            }
-
-                    if (photoAnswerList.isEmpty()) {
+                    if (photoInfo.isEmpty()) {
                         return@flatMap getBodyResponse(PhotoAnswerResponse.fail(ServerErrorCode.NO_PHOTOS_TO_SEND_BACK))
                     }
 
-                    val allFound = (count - photoAnswerList.size) > 0
-                    return@flatMap getBodyResponse(PhotoAnswerResponse.success(photoAnswerList, allFound, ServerErrorCode.OK))
+                    val photoAnswer = PhotoAnswerJsonObject(
+                            photoInfo.photoId,
+                            photoInfo.whoUploaded,
+                            photoInfo.photoName,
+                            photoInfo.lon,
+                            photoInfo.lat)
+
+                    val allFound = (count - 1) > 0
+                    return@flatMap getBodyResponse(PhotoAnswerResponse.success(photoAnswer, allFound, ServerErrorCode.OK))
                 }
 
         return Flux.merge(userHasNoUploadedPhotosFlux, userHasUploadedPhotosFlux)

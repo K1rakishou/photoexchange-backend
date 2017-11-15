@@ -31,8 +31,8 @@ open class PhotoInfoRepository(private val template: ReactiveMongoTemplate,
     fun countUserUploadedPhotos(userId: String): Mono<Long> {
         val query = Query()
                 .addCriteria(Criteria.where("whoUploaded").`is`(userId))
-                .addCriteria(Criteria.where("receivedPhotoBack").`is`(false))
-                .addCriteria(Criteria.where("candidateFound").`is`(false))
+                .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
+                .addCriteria(Criteria.where("candidateFoundOn").`is`(0L))
 
         return template.count(query, PhotoInfo::class.java)
     }
@@ -40,26 +40,26 @@ open class PhotoInfoRepository(private val template: ReactiveMongoTemplate,
     fun findPhotoInfo(userId: String): Mono<PhotoInfo> {
         val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
                 .addCriteria(Criteria.where("whoUploaded").ne(userId))
-                .addCriteria(Criteria.where("receivedPhotoBack").`is`(false))
-                .addCriteria(Criteria.where("candidateFound").`is`(false))
+                .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
+                .addCriteria(Criteria.where("candidateFoundOn").`is`(0L))
                 .limit(1)
 
         val update = Update()
-                .set("candidateFound", true)
                 .set("candidateFoundOn", TimeUtils.getTime())
+                .set("candidateUserId", userId)
 
         return template.findAndModify(query, update, PhotoInfo::class.java)
                 .switchIfEmpty(Mono.just(PhotoInfo.empty()))
     }
 
-    fun updateSetPhotoSuccessfullyDelivered(photoId: Long): Mono<Boolean> {
+    fun updateSetPhotoSuccessfullyDelivered(photoId: Long, userId: String): Mono<Boolean> {
         val query = Query()
                 .addCriteria(Criteria.where("photoId").`is`(photoId))
-                .addCriteria(Criteria.where("receivedPhotoBack").`is`(false))
-                .addCriteria(Criteria.where("candidateFound").`is`(false))
+                .addCriteria(Criteria.where("candidateUserId").`is`(userId))
+                .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
 
         val update = Update()
-                .set("receivedPhotoBack", true)
+                .set("receivedPhotoBackOn", TimeUtils.getTime())
 
         return template.updateFirst(query, update, PhotoInfo::class.java)
                 .map { it.wasAcknowledged() }

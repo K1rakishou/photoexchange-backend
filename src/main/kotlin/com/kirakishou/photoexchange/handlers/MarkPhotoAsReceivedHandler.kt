@@ -15,10 +15,13 @@ class MarkPhotoAsReceivedHandler(
 ) : WebHandler {
 
     private val PHOTO_ID_PATH_VARIABLE = "photo_id"
+    private val USER_ID_PATH_VARIABLE = "user_id"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         //TODO: check USER_ID_PATH_VARIABLE existence
         val photoIdString = request.pathVariable(PHOTO_ID_PATH_VARIABLE)
+        val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
+
         val photoId = try {
             photoIdString.toLong()
         } catch (e: NumberFormatException) {
@@ -29,7 +32,7 @@ class MarkPhotoAsReceivedHandler(
             //TODO: return bad photoId errorCode
         }
 
-        val updateResultFlux = photoInfoRepo.updateSetPhotoSuccessfullyDelivered(photoId)
+        val updateResultFlux = photoInfoRepo.updateSetPhotoSuccessfullyDelivered(photoId, userId)
                 .flux()
                 .share()
 

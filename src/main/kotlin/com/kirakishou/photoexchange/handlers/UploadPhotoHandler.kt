@@ -146,10 +146,10 @@ class UploadPhotoHandler(
                 -1L,
                 packet.userId,
                 newPhotoName,
+                "",
                 packet.lon,
                 packet.lat,
-                false,
-                false,
+                0L,
                 0L,
                 TimeUtils.getTime()
         )
