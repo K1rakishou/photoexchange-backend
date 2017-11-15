@@ -37,6 +37,15 @@ open class PhotoInfoRepository(private val template: ReactiveMongoTemplate,
         return template.count(query, PhotoInfo::class.java)
     }
 
+    fun countUserReceivedBackPhotos(userId: String): Mono<Long> {
+        val query = Query()
+                .addCriteria(Criteria.where("candidateUserId").`is`(userId))
+                .addCriteria(Criteria.where("receivedPhotoBackOn").ne(0))
+                .addCriteria(Criteria.where("candidateFoundOn").ne(0))
+
+        return template.count(query, PhotoInfo::class.java)
+    }
+
     fun findPhotoInfo(userId: String): Mono<PhotoInfo> {
         val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
                 .addCriteria(Criteria.where("whoUploaded").ne(userId))

@@ -1,6 +1,7 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.model.ServerErrorCode
+import com.kirakishou.photoexchange.model.exception.NoPhotosToSendBack
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerJsonObject
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
@@ -23,43 +24,66 @@ class GetPhotoAnswerHandler(
         //TODO: check USER_ID_PATH_VARIABLE existence
         val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
 
-        val countFlux = photoInfoRepo.countUserUploadedPhotos(userId)
+        val userPhotosCountFlux = photoInfoRepo.countUserUploadedPhotos(userId)
                 .map { it.toInt() }
                 .flux()
                 .share()
 
-        val userHasNoUploadedPhotosFlux = countFlux
-                .filter { count -> count <= 0 }
-                .flatMap { getBodyResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.USER_HAS_NO_UPLOADED_PHOTOS)) }
+        val hasUserReceivedAllPhotosBack = photoInfoRepo.countUserReceivedBackPhotos(userId)
+                .map { it.toInt() }
+                .flux()
+                .zipWith(userPhotosCountFlux)
+                .map {
+                    val photosUploaded = it.t1
+                    val photosReceived = it.t2
 
-        val userHasUploadedPhotosFlux = countFlux
+                    return@map (photosUploaded - photosReceived) > 0
+                }
+                .single()
+
+        val userHasNoUploadedPhotosFlux = userPhotosCountFlux
+                .filter { count -> count <= 0 }
+                .flatMap { formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.USER_HAS_NO_UPLOADED_PHOTOS)) }
+
+        val userHasUploadedPhotosFlux = userPhotosCountFlux
                 .filter { count -> count > 0 }
                 .flatMap { photoInfoRepo.findPhotoInfo(userId) }
-                .zipWith(countFlux)
-                .flatMap {
-                    val photoInfo = it.t1
-                    val count = it.t2
-
+                .map { photoInfo ->
                     if (photoInfo.isEmpty()) {
-                        return@flatMap getBodyResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.NO_PHOTOS_TO_SEND_BACK))
+                        throw NoPhotosToSendBack()
                     }
 
-                    val photoAnswer = PhotoAnswerJsonObject(
+                    return@map PhotoAnswerJsonObject(
                             photoInfo.photoId,
                             photoInfo.whoUploaded,
                             photoInfo.photoName,
                             photoInfo.lon,
                             photoInfo.lat)
+                }
+                .zipWith(hasUserReceivedAllPhotosBack)
+                .flatMap {
+                    val photoAnswer = it.t1
+                    val allFound = it.t2
 
-                    val allFound = (count - 1) > 0
-                    return@flatMap getBodyResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswer, allFound, ServerErrorCode.OK))
+                    return@flatMap formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswer, allFound, ServerErrorCode.OK))
                 }
 
         return Flux.merge(userHasNoUploadedPhotosFlux, userHasUploadedPhotosFlux)
                 .single()
+                .onErrorResume(this::handleErrors)
     }
 
-    private fun getBodyResponse(httpStatus: HttpStatus, response: PhotoAnswerResponse): Mono<ServerResponse> {
+    private fun handleErrors(error: Throwable) = when (error) {
+        is NoPhotosToSendBack ->
+            formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.NO_PHOTOS_TO_SEND_BACK))
+
+        else -> {
+            error.printStackTrace()
+            formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, PhotoAnswerResponse.fail(ServerErrorCode.UNKNOWN_ERROR))
+        }
+    }
+
+    private fun formatResponse(httpStatus: HttpStatus, response: PhotoAnswerResponse): Mono<ServerResponse> {
         val photoAnswerJson = jsonConverter.toJson(response)
         return ServerResponse.status(httpStatus).body(Mono.just(photoAnswerJson))
     }

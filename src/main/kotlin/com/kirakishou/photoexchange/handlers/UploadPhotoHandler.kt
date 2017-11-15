@@ -66,29 +66,27 @@ class UploadPhotoHandler(
                 .onErrorResume(this::handleErrors)
     }
 
-    private fun handleErrors(error: Throwable): Mono<ServerResponse> {
-        return when (error) {
-            is MultiValueMapDoesNotContainsPart ->
-                formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
-            is MultiPartRequestPartIsNull ->
-                formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
-            is EmptyPacket ->
-                formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
-            is EmptyFile ->
-                formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
-            is PacketContainsBadData ->
-                formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
-            is PhotoSizeExceeded ->
-                formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
-            is CouldNotSavePhotoToDb ->
-                formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.REPOSITORY_ERROR)
-            is ErrorWhileWritingPhotoToDisk ->
-                formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.DISK_ERROR)
+    private fun handleErrors(error: Throwable) = when (error) {
+        is MultiValueMapDoesNotContainsPart ->
+            formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+        is MultiPartRequestPartIsNull ->
+            formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+        is EmptyPacket ->
+            formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+        is EmptyFile ->
+            formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+        is PacketContainsBadData ->
+            formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+        is PhotoSizeExceeded ->
+            formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+        is CouldNotSavePhotoToDb ->
+            formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.REPOSITORY_ERROR)
+        is ErrorWhileWritingPhotoToDisk ->
+            formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.DISK_ERROR)
 
-            else -> {
-                error.printStackTrace()
-                formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.UNKNOWN_ERROR)
-            }
+        else -> {
+            error.printStackTrace()
+            formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.UNKNOWN_ERROR)
         }
     }
 
