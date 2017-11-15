@@ -31,8 +31,7 @@ class MarkPhotoAsReceivedHandler(
         }
 
         if (photoId == -1L) {
-            return ServerResponse.status(HttpStatus.BAD_REQUEST)
-                    .body(Mono.just(getBodyResponse(StatusResponse.from(ServerErrorCode.BAD_PHOTO_ID))))
+            return getBodyResponse(HttpStatus.BAD_REQUEST, StatusResponse.from(ServerErrorCode.BAD_PHOTO_ID))
         }
 
         val updateResultFlux = photoInfoRepo.updateSetPhotoSuccessfullyDelivered(photoId, userId)
@@ -42,23 +41,24 @@ class MarkPhotoAsReceivedHandler(
         val wasUpdatedMono = updateResultFlux
                 .filter { wasUpdated -> wasUpdated }
                 .flatMap {
-                    ServerResponse.ok()
-                        .body(Mono.just(getBodyResponse(StatusResponse.from(ServerErrorCode.OK))))
+                    getBodyResponse(HttpStatus.OK, StatusResponse.from(ServerErrorCode.OK))
                 }
 
         val wasNotUpdatedMono = updateResultFlux
                 .filter { wasUpdated -> !wasUpdated }
                 .flatMap {
-                    ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .body(Mono.just(getBodyResponse(StatusResponse.from(ServerErrorCode.UNKNOWN_ERROR))))
+                    getBodyResponse(HttpStatus.INTERNAL_SERVER_ERROR, StatusResponse.from(ServerErrorCode.UNKNOWN_ERROR))
                 }
 
         return Flux.merge(wasUpdatedMono, wasNotUpdatedMono)
                 .single()
+                .doOnNext {
+                    println(it.toString())
+                }
     }
 
-    private fun getBodyResponse(response: StatusResponse): Mono<ServerResponse> {
+    private fun getBodyResponse(httpStatus: HttpStatus, response: StatusResponse): Mono<ServerResponse> {
         val photoAnswerJson = jsonConverter.toJson(response)
-        return ServerResponse.ok().body(Mono.just(photoAnswerJson))
+        return ServerResponse.status(httpStatus).body(Mono.just(photoAnswerJson))
     }
 }
