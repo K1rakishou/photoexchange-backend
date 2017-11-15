@@ -1,5 +1,7 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.model.ServerErrorCode
+import com.kirakishou.photoexchange.model.net.response.StatusResponse
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
 import org.springframework.http.HttpStatus
@@ -29,7 +31,8 @@ class MarkPhotoAsReceivedHandler(
         }
 
         if (photoId == -1L) {
-            //TODO: return bad photoId errorCode
+            return ServerResponse.status(HttpStatus.BAD_REQUEST)
+                    .body(Mono.just(getBodyResponse(StatusResponse.from(ServerErrorCode.BAD_PHOTO_ID))))
         }
 
         val updateResultFlux = photoInfoRepo.updateSetPhotoSuccessfullyDelivered(photoId, userId)
@@ -38,13 +41,24 @@ class MarkPhotoAsReceivedHandler(
 
         val wasUpdatedMono = updateResultFlux
                 .filter { wasUpdated -> wasUpdated }
-                .flatMap { ServerResponse.ok().body(Mono.just("ok")) }
+                .flatMap {
+                    ServerResponse.ok()
+                        .body(Mono.just(getBodyResponse(StatusResponse.from(ServerErrorCode.OK))))
+                }
 
         val wasNotUpdatedMono = updateResultFlux
                 .filter { wasUpdated -> !wasUpdated }
-                .flatMap { ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Mono.just("not ok")) }
+                .flatMap {
+                    ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(Mono.just(getBodyResponse(StatusResponse.from(ServerErrorCode.UNKNOWN_ERROR))))
+                }
 
         return Flux.merge(wasUpdatedMono, wasNotUpdatedMono)
                 .single()
+    }
+
+    private fun getBodyResponse(response: StatusResponse): Mono<ServerResponse> {
+        val photoAnswerJson = jsonConverter.toJson(response)
+        return ServerResponse.ok().body(Mono.just(photoAnswerJson))
     }
 }

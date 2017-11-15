@@ -6,7 +6,7 @@ import com.kirakishou.photoexchange.model.ServerErrorCode
 class PhotoAnswerResponse
 private constructor(
 
-    @SerializedName("photo_answer_list")
+    @SerializedName("photo_answer")
     val photoAnswer: PhotoAnswerJsonObject?,
 
     @SerializedName("all_found")
