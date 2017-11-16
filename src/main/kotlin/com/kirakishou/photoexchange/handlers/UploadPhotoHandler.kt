@@ -69,7 +69,7 @@ class UploadPhotoHandler(
             }
 
             if (!writePhotoToDisk(photoParts, photoInfo)) {
-                return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.REPOSITORY_ERROR)
+                return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.DISK_ERROR)
             }
 
             val response = UploadPhotoResponse(photoInfo.photoName, ServerErrorCode.OK)
