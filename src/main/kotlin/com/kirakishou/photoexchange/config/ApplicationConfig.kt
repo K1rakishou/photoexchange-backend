@@ -11,14 +11,14 @@ import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.mongodb.ConnectionString
+import com.mongodb.MongoClient
 import com.samskivert.mustache.Mustache
 import org.springframework.boot.autoconfigure.mustache.MustacheResourceTemplateLoader
 import org.springframework.boot.web.reactive.result.view.MustacheViewResolver
 import org.springframework.context.support.beans
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate
-import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory
-import org.springframework.data.mongodb.repository.support.ReactiveMongoRepositoryFactory
+import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.SimpleMongoDbFactory
+import org.springframework.data.mongodb.repository.support.MongoRepositoryFactory
 import org.springframework.web.reactive.function.server.HandlerStrategies
 import org.springframework.web.reactive.function.server.RouterFunctions
 
@@ -46,14 +46,10 @@ fun myBeans() = beans {
         GeneratorServiceImpl()
     }
     bean {
-        ReactiveMongoRepositoryFactory(ref())
+        MongoRepositoryFactory(ref())
     }
     bean {
-        ReactiveMongoTemplate(
-                SimpleReactiveMongoDatabaseFactory(
-                        ConnectionString("mongodb://${DB_SERVER_ADDRESS}/photoexhange")
-                )
-        )
+        MongoTemplate(SimpleMongoDbFactory(MongoClient("192.168.99.100", 27017), "photoexhange"))
     }
     bean("webHandler") {
         RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build())

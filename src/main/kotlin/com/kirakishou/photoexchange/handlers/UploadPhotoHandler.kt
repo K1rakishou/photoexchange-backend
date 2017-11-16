@@ -5,7 +5,6 @@ import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.exception.EmptyFile
 import com.kirakishou.photoexchange.model.exception.EmptyPacket
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
-import com.kirakishou.photoexchange.model.net.response.StatusResponse
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
@@ -40,14 +39,14 @@ class UploadPhotoHandler(
     private var fileDirectoryPath = "D:\\projects\\data\\photos"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
-        return async {
+        val result = async {
             val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitFirst()
             if (!checkMultiValueMapPart(multiValueMap, PACKET_PART_KEY)) {
-                return@async formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+                return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
             }
 
             if (!checkMultiValueMapPart(multiValueMap, PHOTO_PART_KEY)) {
-                return@async formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+                return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
             }
 
             val packetParts = collectPacketParts(multiValueMap).awaitFirst()
@@ -55,34 +54,34 @@ class UploadPhotoHandler(
 
             val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
             if (!packet.isPacketOk()) {
-                return@async formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+                return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
             }
 
             val photoInfo = createPhotoInfo(packet)
             val result = photoInfoRepo.save(photoInfo)
             if (result.isEmpty()) {
-                return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.REPOSITORY_ERROR)
+                return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
             }
 
             if (!checkPhotoTotalSize(photoParts)) {
-                return@async formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+                return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
             }
 
             if (!writePhotoToDisk(photoParts, photoInfo)) {
-                return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.REPOSITORY_ERROR)
+                return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
             }
 
-            val response = UploadPhotoResponse(photoInfo.photoName, ServerErrorCode.OK)
-            val responseJson = jsonConverter.toJson(response)
+            return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(photoInfo.photoName, ServerErrorCode.OK))
+        }
 
-            return@async ServerResponse.ok().body(Mono.just(responseJson))
-        }.asMono(CommonPool)
+        return result
+                .asMono(CommonPool)
                 .flatMap { it }
     }
 
-    private fun formatResponse(httpStatus: HttpStatus, errorCode: ServerErrorCode): Mono<ServerResponse> {
+    private fun formatResponse(httpStatus: HttpStatus, response: UploadPhotoResponse): Mono<ServerResponse> {
         return ServerResponse.status(httpStatus)
-                .body(Mono.just(StatusResponse(errorCode.value)))
+                .body(Mono.just(response))
     }
 
     private suspend fun writePhotoToDisk(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): Boolean {
