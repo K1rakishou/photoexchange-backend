@@ -2,7 +2,6 @@ package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.exception.NoPhotosToSendBack
-import com.kirakishou.photoexchange.model.net.response.PhotoAnswerJsonObject
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -10,7 +9,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class GetPhotoAnswerHandler(
@@ -21,23 +19,31 @@ class GetPhotoAnswerHandler(
     private val USER_ID_PATH_VARIABLE = "user_id"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
-        //TODO: check USER_ID_PATH_VARIABLE existence
+        /*//TODO: check USER_ID_PATH_VARIABLE existence
         val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
 
         val userPhotosCountFlux = photoInfoRepo.countUserUploadedPhotos(userId)
                 .map { it.toInt() }
                 .flux()
+                .doOnError {
+                    println(it)
+                }
                 .share()
 
         val hasUserReceivedAllPhotosBack = photoInfoRepo.countUserReceivedBackPhotos(userId)
                 .map { it.toInt() }
+                .doOnError {
+                    println(it)
+                }
                 .flux()
                 .zipWith(userPhotosCountFlux)
                 .map {
                     val photosUploaded = it.t1
                     val photosReceived = it.t2
+                    val allFound = (photosUploaded - photosReceived) > 0
 
-                    return@map (photosUploaded - photosReceived) > 0
+                    println("allFound: $allFound")
+                    return@map allFound
                 }
                 .single()
 
@@ -69,8 +75,13 @@ class GetPhotoAnswerHandler(
                 }
 
         return Flux.merge(userHasNoUploadedPhotosFlux, userHasUploadedPhotosFlux)
+                .doOnError {
+                    println(it)
+                }
                 .single()
-                .onErrorResume(this::handleErrors)
+                .onErrorResume(this::handleErrors)*/
+
+        TODO()
     }
 
     private fun handleErrors(error: Throwable) = when (error) {
