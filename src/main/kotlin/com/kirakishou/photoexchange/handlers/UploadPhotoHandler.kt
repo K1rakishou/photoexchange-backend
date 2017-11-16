@@ -40,38 +40,44 @@ class UploadPhotoHandler(
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val result = async {
-            val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitFirst()
-            if (!checkMultiValueMapPart(multiValueMap, PACKET_PART_KEY)) {
-                return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
+            try {
+                val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitFirst()
+                if (!checkMultiValueMapPart(multiValueMap, PACKET_PART_KEY)) {
+                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
+                }
+
+                if (!checkMultiValueMapPart(multiValueMap, PHOTO_PART_KEY)) {
+                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
+                }
+
+                val packetParts = collectPacketParts(multiValueMap).awaitFirst()
+                val photoParts = collectPhotoParts(multiValueMap).awaitFirst()
+
+                val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
+                if (!packet.isPacketOk()) {
+                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
+                }
+
+                val photoInfo = createPhotoInfo(packet)
+                val result = photoInfoRepo.save(photoInfo)
+                if (result.isEmpty()) {
+                    return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
+                }
+
+                if (!checkPhotoTotalSize(photoParts)) {
+                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
+                }
+
+                if (!writePhotoToDisk(photoParts, photoInfo)) {
+                    return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
+                }
+
+                return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(photoInfo.photoName, ServerErrorCode.OK))
+
+            } catch (error: Throwable) {
+                error.printStackTrace()
+                return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.UNKNOWN_ERROR))
             }
-
-            if (!checkMultiValueMapPart(multiValueMap, PHOTO_PART_KEY)) {
-                return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
-            }
-
-            val packetParts = collectPacketParts(multiValueMap).awaitFirst()
-            val photoParts = collectPhotoParts(multiValueMap).awaitFirst()
-
-            val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
-            if (!packet.isPacketOk()) {
-                return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
-            }
-
-            val photoInfo = createPhotoInfo(packet)
-            val result = photoInfoRepo.save(photoInfo)
-            if (result.isEmpty()) {
-                return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
-            }
-
-            if (!checkPhotoTotalSize(photoParts)) {
-                return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
-            }
-
-            if (!writePhotoToDisk(photoParts, photoInfo)) {
-                return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
-            }
-
-            return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(photoInfo.photoName, ServerErrorCode.OK))
         }
 
         return result
