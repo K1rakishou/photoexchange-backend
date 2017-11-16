@@ -39,7 +39,7 @@ class UploadPhotoHandler(
     private var fileDirectoryPath = "D:\\projects\\data\\photos"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
-        return async {
+        val result = async {
             val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitFirst()
             if (!checkMultiValueMapPart(multiValueMap, PACKET_PART_KEY)) {
                 return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
@@ -72,7 +72,10 @@ class UploadPhotoHandler(
             }
 
             return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(photoInfo.photoName, ServerErrorCode.OK))
-        }.asMono(CommonPool)
+        }
+
+        return result
+                .asMono(CommonPool)
                 .flatMap { it }
     }
 
