@@ -2,7 +2,8 @@ package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.model.PhotoInfo
 import com.kirakishou.photoexchange.model.ServerErrorCode
-import com.kirakishou.photoexchange.model.exception.*
+import com.kirakishou.photoexchange.model.exception.EmptyFile
+import com.kirakishou.photoexchange.model.exception.EmptyPacket
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.StatusResponse
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
@@ -11,6 +12,10 @@ import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.TimeUtils
+import kotlinx.coroutines.experimental.CommonPool
+import kotlinx.coroutines.experimental.async
+import kotlinx.coroutines.experimental.reactive.awaitFirst
+import kotlinx.coroutines.experimental.reactor.asMono
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
 import org.springframework.http.codec.multipart.Part
@@ -20,7 +25,6 @@ import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
-import reactor.util.function.Tuple2
 import java.io.File
 import java.io.IOException
 
@@ -36,58 +40,44 @@ class UploadPhotoHandler(
     private var fileDirectoryPath = "D:\\projects\\data\\photos"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
-        val multiValueMapMono = request.body(BodyExtractors.toMultipartData())
-                .flux()
-                .share()
+        return async {
+            val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitFirst()
+            if (!checkMultiValueMapPart(multiValueMap, PACKET_PART_KEY)) {
+                return@async formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+            }
 
-        val packetRawMono = multiValueMapMono
-                .doOnNext { map -> checkMultiValueMapPart(map, PACKET_PART_KEY) }
-                .flatMap(this::collectPacketParts)
-                .single()
+            if (!checkMultiValueMapPart(multiValueMap, PHOTO_PART_KEY)) {
+                return@async formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+            }
 
-        val photoPartMono = multiValueMapMono
-                .doOnNext { map -> checkMultiValueMapPart(map, PHOTO_PART_KEY) }
-                .flatMap(this::collectPhotoParts)
-                .single()
+            val packetParts = collectPacketParts(multiValueMap).awaitFirst()
+            val photoParts = collectPhotoParts(multiValueMap).awaitFirst()
 
-        val photoInfoMono = packetRawMono
-                .map { packetRaw -> jsonConverter.fromJson<SendPhotoPacket>(packetRaw, SendPhotoPacket::class.java) }
-                .doOnSuccess(this::checkPacketCorrectness)
-                .map(this::createPhotoInfo)
-                .flatMap { storedPhoto -> photoInfoRepo.save(storedPhoto) }
-                .doOnSuccess(this::checkRepoResult)
+            val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
+            if (!packet.isPacketOk()) {
+                return@async formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+            }
 
-        return photoPartMono
-                .doOnSuccess(this::checkPhotoTotalSize)
-                .zipWith(photoInfoMono)
-                .doOnSuccess(this::writePhotoToDisk)
-                .map { it.t2.photoName }
-                .flatMap(this::sendResponse)
-                .onErrorResume(this::handleErrors)
-    }
+            val photoInfo = createPhotoInfo(packet)
+            val result = photoInfoRepo.save(photoInfo)
+            if (result.isEmpty()) {
+                return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.REPOSITORY_ERROR)
+            }
 
-    private fun handleErrors(error: Throwable) = when (error) {
-        is MultiValueMapDoesNotContainsPart ->
-            formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
-        is MultiPartRequestPartIsNull ->
-            formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
-        is EmptyPacket ->
-            formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
-        is EmptyFile ->
-            formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
-        is PacketContainsBadData ->
-            formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
-        is PhotoSizeExceeded ->
-            formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
-        is CouldNotSavePhotoToDb ->
-            formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.REPOSITORY_ERROR)
-        is ErrorWhileWritingPhotoToDisk ->
-            formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.DISK_ERROR)
+            if (!checkPhotoTotalSize(photoParts)) {
+                return@async formatResponse(HttpStatus.BAD_REQUEST, ServerErrorCode.BAD_REQUEST)
+            }
 
-        else -> {
-            error.printStackTrace()
-            formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.UNKNOWN_ERROR)
-        }
+            if (!writePhotoToDisk(photoParts, photoInfo)) {
+                return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ServerErrorCode.REPOSITORY_ERROR)
+            }
+
+            val response = UploadPhotoResponse(photoInfo.photoName, ServerErrorCode.OK)
+            val responseJson = jsonConverter.toJson(response)
+
+            return@async ServerResponse.ok().body(Mono.just(responseJson))
+        }.asMono(CommonPool)
+                .flatMap { it }
     }
 
     private fun formatResponse(httpStatus: HttpStatus, errorCode: ServerErrorCode): Mono<ServerResponse> {
@@ -95,17 +85,7 @@ class UploadPhotoHandler(
                 .body(Mono.just(StatusResponse(errorCode.value)))
     }
 
-    private fun sendResponse(photoName: String): Mono<ServerResponse> {
-        val response = UploadPhotoResponse(photoName, ServerErrorCode.OK)
-        val responseJson = jsonConverter.toJson(response)
-
-        return ServerResponse.ok().body(Mono.just(responseJson))
-    }
-
-    private fun writePhotoToDisk(it: Tuple2<MutableList<DataBuffer>, PhotoInfo>) {
-        val photoChunks = it.t1
-        val photoInfo = it.t2
-
+    private suspend fun writePhotoToDisk(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): Boolean {
         val filePath = "$fileDirectoryPath\\${photoInfo.photoName}"
         val outFile = File(filePath)
 
@@ -113,29 +93,25 @@ class UploadPhotoHandler(
             IOUtils.copyDataBuffersToFile(photoChunks, outFile)
         } catch (e: IOException) {
             e.printStackTrace()
-            photoInfoRepo.deleteById(photoInfo.whoUploaded)
 
-            throw ErrorWhileWritingPhotoToDisk()
+            val deleteResult = photoInfoRepo.deleteById(photoInfo.whoUploaded)
+            if (!deleteResult) {
+                System.err.println("Could not delete photo info")
+            }
+
+            return false
         }
+
+        return true
     }
 
-    private fun checkPhotoTotalSize(photo: MutableList<DataBuffer>) {
+    private fun checkPhotoTotalSize(photo: MutableList<DataBuffer>): Boolean {
         val totalLength = photo.sumBy { it.readableByteCount() }
         if (totalLength > MAX_PHOTO_SIZE) {
-            throw PhotoSizeExceeded()
+            return false
         }
-    }
 
-    private fun checkRepoResult(result: PhotoInfo) {
-        if (result.isEmpty()) {
-            throw CouldNotSavePhotoToDb()
-        }
-    }
-
-    private fun checkPacketCorrectness(packet: SendPhotoPacket) {
-        if (!packet.isPacketOk()) {
-            throw PacketContainsBadData()
-        }
+        return true
     }
 
     private fun createPhotoInfo(packet: SendPhotoPacket): PhotoInfo {
@@ -177,14 +153,16 @@ class UploadPhotoHandler(
                 .single()
     }
 
-    private fun checkMultiValueMapPart(map: MultiValueMap<String, Part>, key: String) {
+    private fun checkMultiValueMapPart(map: MultiValueMap<String, Part>, key: String): Boolean {
         if (!map.contains(key)) {
-            throw MultiValueMapDoesNotContainsPart()
+            return false
         }
 
         if (map.getFirst(key) == null) {
-            throw MultiPartRequestPartIsNull()
+            return false
         }
+
+        return true
     }
 }
 

@@ -1,6 +1,5 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.net.response.StatusResponse
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -8,7 +7,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 class MarkPhotoAsReceivedHandler(
@@ -20,7 +18,7 @@ class MarkPhotoAsReceivedHandler(
     private val USER_ID_PATH_VARIABLE = "user_id"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
-        //TODO: check USER_ID_PATH_VARIABLE existence
+        /*//TODO: check USER_ID_PATH_VARIABLE existence
         val photoIdString = request.pathVariable(PHOTO_ID_PATH_VARIABLE)
         val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
 
@@ -51,7 +49,9 @@ class MarkPhotoAsReceivedHandler(
                 }
 
         return Flux.merge(wasUpdatedMono, wasNotUpdatedMono)
-                .single()
+                .single()*/
+
+        TODO()
     }
 
     private fun formatResponse(httpStatus: HttpStatus, response: StatusResponse): Mono<ServerResponse> {

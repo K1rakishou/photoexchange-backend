@@ -2,80 +2,88 @@ package com.kirakishou.photoexchange.repository
 
 import com.kirakishou.photoexchange.model.PhotoInfo
 import com.kirakishou.photoexchange.util.TimeUtils
+import kotlinx.coroutines.experimental.ThreadPoolDispatcher
+import kotlinx.coroutines.experimental.async
+import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 import org.springframework.data.domain.Sort
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate
+import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
-import reactor.core.publisher.Mono
 
-open class PhotoInfoRepository(private val template: ReactiveMongoTemplate,
+open class PhotoInfoRepository(private val template: MongoTemplate,
                                private val mongoSequenceRepo: MongoSequenceRepository) {
 
-    fun save(photoInfoParam: PhotoInfo): Mono<PhotoInfo> {
-        return mongoSequenceRepo.getNextId(SEQUENCE_NAME)
-                .zipWith(Mono.just(photoInfoParam))
-                .map {
-                    val id = it.t1
-                    val photoInfo = it.t2
-                    photoInfo.photoId = id
-
-                    return@map photoInfo
-                }
-                .flatMap { photoInfo ->
-                    template.save(photoInfo)
-                            .onErrorReturn(PhotoInfo.empty())
-                }
+    private val mongoThreadPoolContext: ThreadPoolDispatcher by lazy {
+        newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), "mongo")
     }
 
-    fun countUserUploadedPhotos(userId: String): Mono<Long> {
-        val query = Query()
-                .addCriteria(Criteria.where("whoUploaded").`is`(userId))
-                .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
-                .addCriteria(Criteria.where("candidateFoundOn").`is`(0L))
+    suspend fun save(photoInfoParam: PhotoInfo): PhotoInfo {
+        return async(mongoThreadPoolContext) {
+            val id = mongoSequenceRepo.getNextId(SEQUENCE_NAME)
+            photoInfoParam.photoId = id
+            template.save(photoInfoParam)
 
-        return template.count(query, PhotoInfo::class.java)
+            return@async photoInfoParam
+        }.await()
     }
 
-    fun countUserReceivedBackPhotos(userId: String): Mono<Long> {
-        val query = Query()
-                .addCriteria(Criteria.where("candidateUserId").`is`(userId))
-                .addCriteria(Criteria.where("receivedPhotoBackOn").ne(0))
-                .addCriteria(Criteria.where("candidateFoundOn").ne(0))
+    suspend fun countUserUploadedPhotos(userId: String): Long {
+        return async(mongoThreadPoolContext) {
+            val query = Query()
+                    .addCriteria(Criteria.where("whoUploaded").`is`(userId))
+                    .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
+                    .addCriteria(Criteria.where("candidateFoundOn").`is`(0L))
 
-        return template.count(query, PhotoInfo::class.java)
+            return@async template.count(query, PhotoInfo::class.java)
+        }.await()
     }
 
-    fun findPhotoInfo(userId: String): Mono<PhotoInfo> {
-        val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
-                .addCriteria(Criteria.where("whoUploaded").ne(userId))
-                .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
-                .addCriteria(Criteria.where("candidateFoundOn").`is`(0L))
-                .limit(1)
+    suspend fun countUserReceivedBackPhotos(userId: String): Long {
+        return async(mongoThreadPoolContext) {
+            val query = Query()
+                    .addCriteria(Criteria.where("candidateUserId").`is`(userId))
+                    .addCriteria(Criteria.where("receivedPhotoBackOn").gt(0))
+                    .addCriteria(Criteria.where("candidateFoundOn").gt(0))
 
-        val update = Update()
-                .set("candidateFoundOn", TimeUtils.getTime())
-                .set("candidateUserId", userId)
-
-        return template.findAndModify(query, update, PhotoInfo::class.java)
-                .switchIfEmpty(Mono.just(PhotoInfo.empty()))
+            return@async template.count(query, PhotoInfo::class.java)
+        }.await()
     }
 
-    fun updateSetPhotoSuccessfullyDelivered(photoId: Long, userId: String): Mono<Boolean> {
-        val query = Query()
-                .addCriteria(Criteria.where("photoId").`is`(photoId))
-                .addCriteria(Criteria.where("candidateUserId").`is`(userId))
-                .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
+    suspend fun findPhotoInfo(userId: String): PhotoInfo {
+        return async(mongoThreadPoolContext) {
+            val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
+                    .addCriteria(Criteria.where("whoUploaded").ne(userId))
+                    .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
+                    .addCriteria(Criteria.where("candidateFoundOn").`is`(0L))
+                    .limit(1)
 
-        val update = Update()
-                .set("receivedPhotoBackOn", TimeUtils.getTime())
+            val update = Update()
+                    .set("candidateFoundOn", TimeUtils.getTime())
+                    .set("candidateUserId", userId)
 
-        return template.updateFirst(query, update, PhotoInfo::class.java)
-                .map { it.wasAcknowledged() }
+            return@async template.findAndModify(query, update, PhotoInfo::class.java)
+        }.await()
     }
 
-    fun deleteById(userId: String) {
-        template.remove(Query.query(Criteria.where("whoUploaded").`is`(userId)))
+    suspend fun updateSetPhotoSuccessfullyDelivered(photoId: Long, userId: String): Boolean {
+        return async(mongoThreadPoolContext) {
+            val query = Query()
+                    .addCriteria(Criteria.where("photoId").`is`(photoId))
+                    .addCriteria(Criteria.where("candidateUserId").`is`(userId))
+                    .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
+
+            val update = Update()
+                    .set("receivedPhotoBackOn", TimeUtils.getTime())
+
+            return@async template.updateFirst(query, update, PhotoInfo::class.java).wasAcknowledged()
+        }.await()
+    }
+
+    suspend fun deleteById(userId: String): Boolean {
+        return async(mongoThreadPoolContext) {
+            return@async template.remove(Query.query(Criteria.where("whoUploaded").`is`(userId))).wasAcknowledged()
+        }.await()
     }
 
     companion object {

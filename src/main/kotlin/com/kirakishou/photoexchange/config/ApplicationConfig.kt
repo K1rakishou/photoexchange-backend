@@ -11,7 +11,6 @@ import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.JsonConverterServiceImpl
 import com.mongodb.ConnectionString
 import com.samskivert.mustache.Mustache
 import org.springframework.boot.autoconfigure.mustache.MustacheResourceTemplateLoader
@@ -35,7 +34,7 @@ fun myBeans() = beans {
         GsonBuilder().create()
     }
     bean<JsonConverterService> {
-        JsonConverterServiceImpl(ref())
+        JsonConverterService(ref())
     }
     bean {
         MongoSequenceRepository(ref())
