@@ -30,6 +30,10 @@ class GetPhotoAnswerHandler(
                 val userReceivedPhotosCount = photoInfoRepo.countUserReceivedBackPhotos(userId).toInt()
                 val allFound = (userUploadedPhotosCount - userReceivedPhotosCount) > 0
 
+                if (userUploadedPhotosCount <= userReceivedPhotosCount) {
+                    return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.UPLOAD_MORE_PHOTOS))
+                }
+
                 if (userUploadedPhotosCount <= 0) {
                     return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.USER_HAS_NO_UPLOADED_PHOTOS))
                 }

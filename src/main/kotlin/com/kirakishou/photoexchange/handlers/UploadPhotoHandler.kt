@@ -86,11 +86,11 @@ class UploadPhotoHandler(
     }
 
     private fun formatResponse(httpStatus: HttpStatus, response: UploadPhotoResponse): Mono<ServerResponse> {
-        return ServerResponse.status(httpStatus)
-                .body(Mono.just(response))
+        val photoAnswerJson = jsonConverter.toJson(response)
+        return ServerResponse.status(httpStatus).body(Mono.just(photoAnswerJson))
     }
 
-    private suspend fun writePhotoToDisk(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): Boolean {
+    private fun writePhotoToDisk(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): Boolean {
         val filePath = "$fileDirectoryPath\\${photoInfo.photoName}"
         val outFile = File(filePath)
 
@@ -98,11 +98,6 @@ class UploadPhotoHandler(
             IOUtils.copyDataBuffersToFile(photoChunks, outFile)
         } catch (e: IOException) {
             e.printStackTrace()
-
-            val deleteResult = photoInfoRepo.deleteById(photoInfo.whoUploaded)
-            if (!deleteResult) {
-                System.err.println("Could not delete photo info")
-            }
 
             return false
         }

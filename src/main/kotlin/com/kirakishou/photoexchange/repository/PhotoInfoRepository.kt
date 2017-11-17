@@ -62,7 +62,7 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
                     .set("candidateFoundOn", TimeUtils.getTime())
                     .set("candidateUserId", userId)
 
-            return@async template.findAndModify(query, update, PhotoInfo::class.java)
+            return@async template.findAndModify(query, update, PhotoInfo::class.java) ?: PhotoInfo.empty()
         }.await()
     }
 
