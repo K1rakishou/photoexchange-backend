@@ -26,9 +26,9 @@ class GetPhotoAnswerHandler(
             try {
                 //TODO: check USER_ID_PATH_VARIABLE existence
                 val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
-                val userUploadedPhotosCount = photoInfoRepo.countUserUploadedPhotos(userId).toInt()
-                val userReceivedPhotosCount = photoInfoRepo.countUserReceivedBackPhotos(userId).toInt()
-                val allFound = (userUploadedPhotosCount - userReceivedPhotosCount) > 0
+                val userUploadedPhotosCount = photoInfoRepo.countUserUploadedPhotos(userId)
+                val userReceivedPhotosCount = photoInfoRepo.countUserReceivedBackPhotos(userId)
+                val allFound = (userUploadedPhotosCount - userReceivedPhotosCount) <= 0
 
                 if (userUploadedPhotosCount <= userReceivedPhotosCount) {
                     return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.UPLOAD_MORE_PHOTOS))
