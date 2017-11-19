@@ -28,7 +28,6 @@ class GetPhotoAnswerHandler(
                 val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
                 val userUploadedPhotosCount = photoInfoRepo.countUserUploadedPhotos(userId)
                 val userReceivedPhotosCount = photoInfoRepo.countUserReceivedBackPhotos(userId)
-                val allFound = (userUploadedPhotosCount - userReceivedPhotosCount) <= 0
 
                 if (userUploadedPhotosCount <= userReceivedPhotosCount) {
                     return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.UPLOAD_MORE_PHOTOS))
@@ -50,6 +49,7 @@ class GetPhotoAnswerHandler(
                         photoInfo.lon,
                         photoInfo.lat)
 
+                val allFound = (userUploadedPhotosCount - (userReceivedPhotosCount + 1)) <= 0
                 return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswer, allFound, ServerErrorCode.OK))
 
             } catch (error: Throwable) {
