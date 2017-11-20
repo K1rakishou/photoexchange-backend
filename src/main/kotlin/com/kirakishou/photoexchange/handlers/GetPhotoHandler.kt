@@ -23,7 +23,7 @@ class GetPhotoHandler : WebHandler {
         val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
         val photoSize = request.pathVariable(PHOTO_SIZE_PATH_VARIABLE)
 
-        if (photoSize != "o" || photoSize != "s") {
+        if (photoSize != "o" && photoSize != "s") {
             return ServerResponse.notFound().build()
         }
 
