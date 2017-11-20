@@ -33,9 +33,7 @@ class UploadPhotoHandler(
         private val photoInfoRepo: PhotoInfoRepository,
         private val generator: GeneratorServiceImpl
 ) : WebHandler {
-
     private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
-
     private val PACKET_PART_KEY = "packet"
     private val PHOTO_PART_KEY = "photo"
     private val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
@@ -74,17 +72,20 @@ class UploadPhotoHandler(
                     return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
 
-                val photoInfo = createPhotoInfo(packet)
-                val result = photoInfoRepo.save(photoInfo)
-                if (result.isEmpty()) {
-                    return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
-                }
-
                 if (!checkPhotoTotalSize(photoParts)) {
+                    logger.debug("Bad photo size")
                     return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
 
+                val photoInfo = createPhotoInfo(packet)
+                val result = photoInfoRepo.save(photoInfo)
+                if (result.isEmpty()) {
+                    logger.debug("Could not save a photoInfo")
+                    return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
+                }
+
                 if (!writePhotoToDisk(photoParts, photoInfo)) {
+                    logger.debug("Could not save file to the disk")
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
                 }
 
@@ -130,7 +131,7 @@ class UploadPhotoHandler(
         try {
             IOUtils.copyDataBuffersToFile(photoChunks, outFile)
         } catch (e: IOException) {
-            e.printStackTrace()
+            logger.error("Error while trying to save file to the disk", e)
 
             return false
         }

@@ -8,6 +8,7 @@ import com.kirakishou.photoexchange.service.JsonConverterService
 import kotlinx.coroutines.experimental.CommonPool
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.reactor.asMono
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
@@ -18,7 +19,7 @@ class GetPhotoAnswerHandler(
         private val jsonConverter: JsonConverterService,
         private val photoInfoRepo: PhotoInfoRepository
 ) : WebHandler {
-
+    private val logger = LoggerFactory.getLogger(GetPhotoAnswerHandler::class.java)
     private val USER_ID_PATH_VARIABLE = "user_id"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
@@ -29,16 +30,29 @@ class GetPhotoAnswerHandler(
                 val userUploadedPhotosCount = photoInfoRepo.countUserUploadedPhotos(userId)
                 val userReceivedPhotosCount = photoInfoRepo.countUserReceivedBackPhotos(userId)
 
+                if (userUploadedPhotosCount == -1L) {
+                    logger.debug("Could not get user's uploaded photo from the DB")
+                    return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, PhotoAnswerResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
+                }
+
+                if (userReceivedPhotosCount == -1L) {
+                    logger.debug("Could not get user's received photo from the DB")
+                    return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, PhotoAnswerResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
+                }
+
                 if (userUploadedPhotosCount <= userReceivedPhotosCount) {
+                    logger.debug("User has the same amount received photos as uploaded")
                     return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.UPLOAD_MORE_PHOTOS))
                 }
 
                 if (userUploadedPhotosCount <= 0) {
+                    logger.debug("User has not uploaded any photos yet")
                     return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.USER_HAS_NO_UPLOADED_PHOTOS))
                 }
 
-                val photoInfo = photoInfoRepo.findPhotoInfo(userId)
+                val photoInfo = photoInfoRepo.findPhotoInfoByUserId(userId)
                 if (photoInfo.isEmpty()) {
+                    logger.debug("Could not find any photos by userId")
                     return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.NO_PHOTOS_TO_SEND_BACK))
                 }
 
@@ -53,7 +67,7 @@ class GetPhotoAnswerHandler(
                 return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswer, allFound, ServerErrorCode.OK))
 
             } catch (error: Throwable) {
-                error.printStackTrace()
+                logger.error("Unknown error", error)
                 return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, PhotoAnswerResponse.fail(ServerErrorCode.UNKNOWN_ERROR))
             }
         }

@@ -66,7 +66,7 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
         }.await()
     }
 
-    suspend fun findPhotoInfo(userId: String): PhotoInfo {
+    suspend fun findPhotoInfoByUserId(userId: String): PhotoInfo {
         return async(mongoThreadPoolContext) {
             val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
                     .addCriteria(Criteria.where("whoUploaded").ne(userId))

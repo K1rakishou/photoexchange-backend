@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
+import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBufferUtils
 import org.springframework.core.io.buffer.DefaultDataBufferFactory
 import org.springframework.http.HttpHeaders
@@ -11,7 +12,7 @@ import reactor.core.publisher.Mono
 import java.io.File
 
 class GetPhotoHandler : WebHandler {
-
+    private val logger = LoggerFactory.getLogger(GetPhotoHandler::class.java)
     private val readChuckSize = 16384
     private val PHOTO_NAME_PATH_VARIABLE = "photo_name"
     private var fileDirectoryPath = "D:\\projects\\data\\photos"

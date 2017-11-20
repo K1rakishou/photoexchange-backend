@@ -8,6 +8,7 @@ import com.kirakishou.photoexchange.service.JsonConverterService
 import kotlinx.coroutines.experimental.CommonPool
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.reactor.asMono
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
@@ -18,7 +19,7 @@ class MarkPhotoAsReceivedHandler(
         private val jsonConverter: JsonConverterService,
         private val photoInfoRepo: PhotoInfoRepository
 ) : WebHandler {
-
+    private val logger = LoggerFactory.getLogger(MarkPhotoAsReceivedHandler::class.java)
     private val PHOTO_ID_PATH_VARIABLE = "photo_id"
     private val USER_ID_PATH_VARIABLE = "user_id"
 
@@ -36,17 +37,19 @@ class MarkPhotoAsReceivedHandler(
                 }
 
                 if (photoId == -1L) {
+                    logger.debug("Couldn't convert photoId string to long")
                     return@async formatResponse(HttpStatus.BAD_REQUEST, StatusResponse.from(ServerErrorCode.BAD_PHOTO_ID))
                 }
 
                 if (!photoInfoRepo.updateSetPhotoSuccessfullyDelivered(photoId, userId)) {
+                    logger.debug("Couldn't update photo delivered")
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, StatusResponse.from(ServerErrorCode.UNKNOWN_ERROR))
                 }
 
                 return@async formatResponse(HttpStatus.OK, StatusResponse.from(ServerErrorCode.OK))
 
             } catch (error: Throwable) {
-                error.printStackTrace()
+                logger.error("Unknown error", error)
                 return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.UNKNOWN_ERROR))
             }
         }
