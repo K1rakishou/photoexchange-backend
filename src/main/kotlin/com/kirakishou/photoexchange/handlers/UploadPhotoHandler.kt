@@ -15,6 +15,7 @@ import kotlinx.coroutines.experimental.CommonPool
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.reactive.awaitFirst
 import kotlinx.coroutines.experimental.reactor.asMono
+import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
 import org.springframework.http.codec.multipart.Part
@@ -33,20 +34,34 @@ class UploadPhotoHandler(
         private val generator: GeneratorServiceImpl
 ) : WebHandler {
 
+    private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
+
     private val PACKET_PART_KEY = "packet"
     private val PHOTO_PART_KEY = "photo"
     private val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
     private var fileDirectoryPath = "D:\\projects\\data\\photos"
+    private var lastTimeCheck = 0L
+    private val ONE_HOUR = 1000 * 60 * 60
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val result = async {
             try {
+                val now = TimeUtils.getTimeFast()
+                if (now - lastTimeCheck > ONE_HOUR) {
+                    logger.debug("Start cleanDatabaseAndPhotos routine")
+
+                    lastTimeCheck = now
+                    cleanDatabaseAndPhotos(now - ONE_HOUR)
+                }
+
                 val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitFirst()
                 if (!checkMultiValueMapPart(multiValueMap, PACKET_PART_KEY)) {
+                    logger.debug("multipart request does not contain \"packet\" part")
                     return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
 
                 if (!checkMultiValueMapPart(multiValueMap, PHOTO_PART_KEY)) {
+                    logger.debug("multipart request does not contain \"photo\" part")
                     return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
 
@@ -55,6 +70,7 @@ class UploadPhotoHandler(
 
                 val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
                 if (!packet.isPacketOk()) {
+                    logger.debug("One or more of the packet's fields are incorrect")
                     return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
 
@@ -75,7 +91,7 @@ class UploadPhotoHandler(
                 return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(photoInfo.photoName, ServerErrorCode.OK))
 
             } catch (error: Throwable) {
-                error.printStackTrace()
+                logger.error("Unknown error", error)
                 return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.UNKNOWN_ERROR))
             }
         }
@@ -83,6 +99,23 @@ class UploadPhotoHandler(
         return result
                 .asMono(CommonPool)
                 .flatMap { it }
+    }
+
+    private suspend fun cleanDatabaseAndPhotos(time: Long) {
+        val photosToDelete = photoInfoRepo.findOlderThan(time)
+        val isOk = photoInfoRepo.deleteOlderThan(time)
+        if (!isOk) {
+            return
+        }
+
+        for (photo in photosToDelete) {
+            val filePath = "$fileDirectoryPath\\${photo.photoName}"
+            val file = File(filePath)
+
+            if (file.exists() && file.isFile) {
+                file.delete()
+            }
+        }
     }
 
     private fun formatResponse(httpStatus: HttpStatus, response: UploadPhotoResponse): Mono<ServerResponse> {
@@ -125,7 +158,7 @@ class UploadPhotoHandler(
                 packet.lat,
                 0L,
                 0L,
-                TimeUtils.getTime()
+                TimeUtils.getTimeFast()
         )
     }
 

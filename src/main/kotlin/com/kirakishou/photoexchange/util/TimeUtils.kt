@@ -2,7 +2,7 @@ package com.kirakishou.photoexchange.util
 
 object TimeUtils {
 
-    fun getTime(): Long {
+    fun getTimeFast(): Long {
         return System.currentTimeMillis()
     }
 }

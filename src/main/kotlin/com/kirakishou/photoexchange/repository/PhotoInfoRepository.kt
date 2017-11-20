@@ -22,7 +22,11 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
         return async(mongoThreadPoolContext) {
             val id = mongoSequenceRepo.getNextId(SEQUENCE_NAME)
             photoInfoParam.photoId = id
-            template.save(photoInfoParam)
+            try {
+                template.save(photoInfoParam)
+            } catch (error: Throwable) {
+                return@async PhotoInfo.empty()
+            }
 
             return@async photoInfoParam
         }.await()
@@ -35,7 +39,13 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
                     .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
                     .addCriteria(Criteria.where("candidateFoundOn").`is`(0L))
 
-            return@async template.count(query, PhotoInfo::class.java)
+            val count = try {
+                template.count(query, PhotoInfo::class.java)
+            } catch (error: Throwable) {
+                -1L
+            }
+
+            return@async count
         }.await()
     }
 
@@ -46,7 +56,13 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
                     .addCriteria(Criteria.where("receivedPhotoBackOn").gt(0))
                     .addCriteria(Criteria.where("candidateFoundOn").gt(0))
 
-            return@async template.count(query, PhotoInfo::class.java)
+            val count = try {
+                template.count(query, PhotoInfo::class.java)
+            } catch (error: Throwable) {
+                -1L
+            }
+
+            return@async count
         }.await()
     }
 
@@ -59,10 +75,31 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
                     .limit(1)
 
             val update = Update()
-                    .set("candidateFoundOn", TimeUtils.getTime())
+                    .set("candidateFoundOn", TimeUtils.getTimeFast())
                     .set("candidateUserId", userId)
 
-            return@async template.findAndModify(query, update, PhotoInfo::class.java) ?: PhotoInfo.empty()
+            val result = try {
+                template.findAndModify(query, update, PhotoInfo::class.java) ?: PhotoInfo.empty()
+            } catch (error: Throwable) {
+                PhotoInfo.empty()
+            }
+
+            return@async result
+        }.await()
+    }
+
+    suspend fun findOlderThan(time: Long): List<PhotoInfo> {
+        return async(mongoThreadPoolContext) {
+            val query = Query()
+                    .addCriteria(Criteria.where("uploadedOn").lt(time))
+
+            val result = try {
+                template.find(query, PhotoInfo::class.java)
+            } catch (error: Throwable) {
+                emptyList<PhotoInfo>()
+            }
+
+            return@async result
         }.await()
     }
 
@@ -74,15 +111,42 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
                     .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
 
             val update = Update()
-                    .set("receivedPhotoBackOn", TimeUtils.getTime())
+                    .set("receivedPhotoBackOn", TimeUtils.getTimeFast())
 
-            return@async template.updateFirst(query, update, PhotoInfo::class.java).wasAcknowledged()
+            val result = try {
+                template.updateFirst(query, update, PhotoInfo::class.java).wasAcknowledged()
+            } catch (error: Throwable) {
+                false
+            }
+
+            return@async result
         }.await()
     }
 
     suspend fun deleteById(userId: String): Boolean {
         return async(mongoThreadPoolContext) {
-            return@async template.remove(Query.query(Criteria.where("whoUploaded").`is`(userId))).wasAcknowledged()
+            val result = try {
+                template.remove(Query.query(Criteria.where("whoUploaded").`is`(userId))).wasAcknowledged()
+            } catch (error: Throwable) {
+                false
+            }
+
+            return@async result
+        }.await()
+    }
+
+    suspend fun deleteOlderThan(time: Long): Boolean {
+        return async(mongoThreadPoolContext) {
+            val query = Query()
+                    .addCriteria(Criteria.where("uploadedOn").lt(time))
+
+            val result = try {
+                template.remove(query, PhotoInfo::class.java).wasAcknowledged()
+            } catch (error: Throwable) {
+                false
+            }
+
+            return@async result
         }.await()
     }
 

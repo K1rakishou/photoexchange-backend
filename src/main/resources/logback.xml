@@ -1,10 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
 <configuration>
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.sssXXX, UTC} [%thread] %-5level %logger{15} - %msg%n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
-    <root level="info">
-        <appender-ref ref="STDOUT" />
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
     </root>
+    <root level="DEBUG">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+    <logger name="reactor.ipc.netty.http.server.HttpServer" level="WARN"/>
 </configuration>
