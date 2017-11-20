@@ -26,8 +26,18 @@ class MarkPhotoAsReceivedHandler(
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val result = async {
             try {
-                //TODO: check USER_ID_PATH_VARIABLE existence
-                val photoIdString = request.pathVariable(PHOTO_ID_PATH_VARIABLE)
+                val pathVariables = request.pathVariables()
+                if (!pathVariables.containsKey(PHOTO_ID_PATH_VARIABLE)) {
+                    logger.debug("request does not contain photo_id variable")
+                    return@async formatResponse(HttpStatus.BAD_REQUEST, StatusResponse.from(ServerErrorCode.BAD_REQUEST))
+                }
+
+                if (!pathVariables.containsKey(USER_ID_PATH_VARIABLE)) {
+                    logger.debug("request does not contain user_id variable")
+                    return@async formatResponse(HttpStatus.BAD_REQUEST, StatusResponse.from(ServerErrorCode.BAD_REQUEST))
+                }
+
+                val photoIdString =  request.pathVariable(PHOTO_ID_PATH_VARIABLE)
                 val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
 
                 val photoId = try {
