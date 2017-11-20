@@ -15,14 +15,20 @@ class GetPhotoHandler : WebHandler {
     private val logger = LoggerFactory.getLogger(GetPhotoHandler::class.java)
     private val readChuckSize = 16384
     private val PHOTO_NAME_PATH_VARIABLE = "photo_name"
+    private val PHOTO_SIZE_PATH_VARIABLE = "photo_size"
     private var fileDirectoryPath = "D:\\projects\\data\\photos"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         //TODO: check PHOTO_NAME_PATH_VARIABLE existence
         val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
+        val photoSize = request.pathVariable(PHOTO_SIZE_PATH_VARIABLE)
+
+        if (photoSize != "o" && photoSize != "s") {
+            return ServerResponse.notFound().build()
+        }
 
         val photoStreamFlux = Flux.using({
-            val path = "$fileDirectoryPath\\$photoName"
+            val path = "$fileDirectoryPath\\${photoName}_${photoSize}"
             return@using File(path).inputStream()
         }, { inputStream ->
             return@using DataBufferUtils.read(inputStream, DefaultDataBufferFactory(false, readChuckSize), readChuckSize)

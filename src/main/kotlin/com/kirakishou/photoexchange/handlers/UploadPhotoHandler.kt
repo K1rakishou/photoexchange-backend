@@ -10,6 +10,7 @@ import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.IOUtils
+import com.kirakishou.photoexchange.util.ImageUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.CommonPool
 import kotlinx.coroutines.experimental.async
@@ -25,6 +26,7 @@ import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
+import java.awt.Dimension
 import java.io.File
 import java.io.IOException
 
@@ -84,9 +86,25 @@ class UploadPhotoHandler(
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
                 }
 
-                if (!writePhotoToDisk(photoParts, photoInfo)) {
+                val tempFile = saveTempFile(photoParts, photoInfo)
+                if (tempFile == null) {
                     logger.debug("Could not save file to the disk")
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
+                }
+
+                try {
+                    //save medium version of the image
+                    ImageUtils.resizeAndSaveImageOnDisk(tempFile, Dimension(1536, 1536), "_o", fileDirectoryPath, photoInfo.photoName)
+
+                    //save small version of the image
+                    ImageUtils.resizeAndSaveImageOnDisk(tempFile, Dimension(512, 512), "_s", fileDirectoryPath, photoInfo.photoName)
+
+                } catch (error: Throwable) {
+                    photoInfoRepo.deleteById(photoInfo.whoUploaded)
+                } finally {
+                    if (tempFile.exists()) {
+                        tempFile.delete()
+                    }
                 }
 
                 return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(photoInfo.photoName, ServerErrorCode.OK))
@@ -124,7 +142,7 @@ class UploadPhotoHandler(
         return ServerResponse.status(httpStatus).body(Mono.just(photoAnswerJson))
     }
 
-    private fun writePhotoToDisk(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): Boolean {
+    private fun saveTempFile(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): File? {
         val filePath = "$fileDirectoryPath\\${photoInfo.photoName}"
         val outFile = File(filePath)
 
@@ -133,10 +151,10 @@ class UploadPhotoHandler(
         } catch (e: IOException) {
             logger.error("Error while trying to save file to the disk", e)
 
-            return false
+            return null
         }
 
-        return true
+        return outFile
     }
 
     private fun checkPhotoTotalSize(photo: MutableList<DataBuffer>): Boolean {
