@@ -27,7 +27,7 @@ class Router(
                 }
 
                 accept(MediaType.parseMediaType("image/*")).nest {
-                    GET("/get_photo/{photo_name}", getPhotoHandler::handle)
+                    GET("/get_photo/{photo_name}/{photo_size}", getPhotoHandler::handle)
                 }
             }
         }
