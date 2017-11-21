@@ -19,6 +19,8 @@ class GetPhotoHandler : WebHandler {
     private var fileDirectoryPath = "D:\\projects\\data\\photos"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
+        logger.debug("GetPhoto request")
+
         //TODO: check PHOTO_NAME_PATH_VARIABLE existence
         val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
         val photoSize = request.pathVariable(PHOTO_SIZE_PATH_VARIABLE)

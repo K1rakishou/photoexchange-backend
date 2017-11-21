@@ -45,6 +45,8 @@ class UploadPhotoHandler(
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val result = async {
+            logger.debug("UploadPhoto request")
+
             try {
                 val now = TimeUtils.getTimeFast()
                 if (now - lastTimeCheck > ONE_HOUR) {
@@ -93,7 +95,7 @@ class UploadPhotoHandler(
                 }
 
                 try {
-                    //save medium version of the image
+                    //save resized (original) version of the image
                     ImageUtils.resizeAndSaveImageOnDisk(tempFile, Dimension(1536, 1536), "_o", fileDirectoryPath, photoInfo.photoName)
 
                     //save small version of the image

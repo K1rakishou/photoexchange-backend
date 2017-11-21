@@ -24,6 +24,8 @@ class GetPhotoAnswerHandler(
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val result = async {
+            logger.debug("GetPhotoAnswer request")
+
             try {
                 //TODO: check USER_ID_PATH_VARIABLE existence
                 val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
@@ -47,7 +49,7 @@ class GetPhotoAnswerHandler(
 
                 if (userUploadedPhotosCount <= 0) {
                     logger.debug("User has not uploaded any photos yet")
-                    return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.USER_HAS_NO_UPLOADED_PHOTOS))
+                    return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.UPLOAD_MORE_PHOTOS))
                 }
 
                 val photoInfo = photoInfoRepo.findPhotoInfoByUserId(userId)

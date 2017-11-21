@@ -25,6 +25,8 @@ class MarkPhotoAsReceivedHandler(
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val result = async {
+            logger.debug("MarkPhotoAsReceived request")
+
             try {
                 val pathVariables = request.pathVariables()
                 if (!pathVariables.containsKey(PHOTO_ID_PATH_VARIABLE)) {
