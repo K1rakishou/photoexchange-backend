@@ -41,21 +41,14 @@ class UploadPhotoHandler(
     private val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
     private var fileDirectoryPath = "D:\\projects\\data\\photos"
     private var lastTimeCheck = 0L
-    private val ONE_HOUR = 1000 * 60 * 60
+    private val SEVEN_DAYS = 1000L * 60L * 60L * 24L * 7L
+    private val photoSizes = arrayOf("_o", "_s")
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val result = async {
             logger.debug("UploadPhoto request")
 
             try {
-                val now = TimeUtils.getTimeFast()
-                if (now - lastTimeCheck > ONE_HOUR) {
-                    logger.debug("Start cleanDatabaseAndPhotos routine")
-
-                    lastTimeCheck = now
-                    cleanDatabaseAndPhotos(now - ONE_HOUR)
-                }
-
                 val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitFirst()
                 if (!checkMultiValueMapPart(multiValueMap, PACKET_PART_KEY)) {
                     logger.debug("multipart request does not contain \"packet\" part")
@@ -109,6 +102,11 @@ class UploadPhotoHandler(
                     }
                 }
 
+                try {
+                    cleanUp()
+                } catch (error: Throwable) {
+                    logger.error("Error while cleanup", error)
+                }
                 return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(photoInfo.photoName, ServerErrorCode.OK))
 
             } catch (error: Throwable) {
@@ -122,19 +120,37 @@ class UploadPhotoHandler(
                 .flatMap { it }
     }
 
+    private suspend fun cleanUp() {
+        val now = TimeUtils.getTimeFast()
+        if (now - lastTimeCheck > SEVEN_DAYS) {
+            logger.debug("Start cleanDatabaseAndPhotos routine")
+
+            lastTimeCheck = now
+            cleanDatabaseAndPhotos(now - SEVEN_DAYS)
+        }
+    }
+
     private suspend fun cleanDatabaseAndPhotos(time: Long) {
         val photosToDelete = photoInfoRepo.findOlderThan(time)
-        val isOk = photoInfoRepo.deleteAll(photosToDelete.map { it.photoId })
+        if (photosToDelete.isEmpty()) {
+            return
+        }
+
+        val ids = photosToDelete.map { it.photoId }
+        val isOk = photoInfoRepo.deleteAll(ids)
+
         if (!isOk) {
             return
         }
 
         for (photo in photosToDelete) {
-            val filePath = "$fileDirectoryPath\\${photo.photoName}"
-            val file = File(filePath)
+            for (size in photoSizes) {
+                val filePath = "$fileDirectoryPath\\${photo.photoName}$size"
+                val file = File(filePath)
 
-            if (file.exists() && file.isFile) {
-                file.delete()
+                if (file.exists() && file.isFile) {
+                    file.delete()
+                }
             }
         }
     }
