@@ -105,7 +105,7 @@ class UploadPhotoHandler(
                 try {
                     cleanUp()
                 } catch (error: Throwable) {
-                    logger.error("Error while cleanup", error)
+                    logger.error("Error while cleanup (cleanDatabaseAndPhotos)", error)
                 }
 
                 return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(photoInfo.photoName, ServerErrorCode.OK))
@@ -128,6 +128,8 @@ class UploadPhotoHandler(
 
             lastTimeCheck = now
             cleanDatabaseAndPhotos(now - SEVEN_DAYS)
+
+            logger.debug("End cleanDatabaseAndPhotos routine")
         }
     }
 

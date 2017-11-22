@@ -100,14 +100,13 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
             val query = Query()
                     .addCriteria(Criteria.where("candidateFoundOn").lt(time))
                     .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
-                    .addCriteria(Criteria.where("candidateFoundOn").`is`(0L))
 
             val update = Update()
                     .set("candidateFoundOn", 0L)
                     .set("candidateUserId", "")
 
             try {
-                template.findAndModify(query, update, PhotoInfo::class.java)
+                template.updateMulti(query, update, PhotoInfo::class.java)
             } catch (error: Throwable) {
                 logger.error("DB error", error)
             }

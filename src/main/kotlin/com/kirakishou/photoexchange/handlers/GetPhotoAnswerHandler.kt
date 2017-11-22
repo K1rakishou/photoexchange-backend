@@ -71,7 +71,7 @@ class GetPhotoAnswerHandler(
                 try {
                     cleanUp()
                 } catch (error: Throwable) {
-                    logger.error("Error while cleanup", error)
+                    logger.error("Error while cleanup (cleanPhotoCandidates)", error)
                 }
 
                 val allFound = (userUploadedPhotosCount - (userReceivedPhotosCount + 1)) <= 0
@@ -95,6 +95,8 @@ class GetPhotoAnswerHandler(
 
             lastTimeCheck = now
             cleanPhotoCandidates(now - FIVE_MINUTES)
+
+            logger.debug("End cleanPhotoCandidates routine")
         }
     }
 
