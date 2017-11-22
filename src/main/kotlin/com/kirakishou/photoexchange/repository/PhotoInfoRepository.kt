@@ -5,6 +5,7 @@ import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.ThreadPoolDispatcher
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.newFixedThreadPoolContext
+import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
@@ -13,6 +14,8 @@ import org.springframework.data.mongodb.core.query.Update
 
 open class PhotoInfoRepository(private val template: MongoTemplate,
                                private val mongoSequenceRepo: MongoSequenceRepository) {
+
+    private val logger = LoggerFactory.getLogger(PhotoInfoRepository::class.java)
 
     private val mongoThreadPoolContext: ThreadPoolDispatcher by lazy {
         newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), "mongo")
@@ -25,6 +28,7 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
             try {
                 template.save(photoInfoParam)
             } catch (error: Throwable) {
+                logger.error("DB error", error)
                 return@async PhotoInfo.empty()
             }
 
@@ -42,6 +46,7 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
             val count = try {
                 template.count(query, PhotoInfo::class.java)
             } catch (error: Throwable) {
+                logger.error("DB error", error)
                 -1L
             }
 
@@ -59,6 +64,7 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
             val count = try {
                 template.count(query, PhotoInfo::class.java)
             } catch (error: Throwable) {
+                logger.error("DB error", error)
                 -1L
             }
 
@@ -81,10 +87,30 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
             val result = try {
                 template.findAndModify(query, update, PhotoInfo::class.java) ?: PhotoInfo.empty()
             } catch (error: Throwable) {
+                logger.error("DB error", error)
                 PhotoInfo.empty()
             }
 
             return@async result
+        }.await()
+    }
+
+    suspend fun cleanCandidatesFromPhotosOverTime(time: Long) {
+        async(mongoThreadPoolContext) {
+            val query = Query()
+                    .addCriteria(Criteria.where("candidateFoundOn").lt(time))
+                    .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
+                    .addCriteria(Criteria.where("candidateFoundOn").`is`(0L))
+
+            val update = Update()
+                    .set("candidateFoundOn", 0L)
+                    .set("candidateUserId", "")
+
+            try {
+                template.findAndModify(query, update, PhotoInfo::class.java)
+            } catch (error: Throwable) {
+                logger.error("DB error", error)
+            }
         }.await()
     }
 
@@ -96,6 +122,7 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
             val result = try {
                 template.find(query, PhotoInfo::class.java)
             } catch (error: Throwable) {
+                logger.error("DB error", error)
                 emptyList<PhotoInfo>()
             }
 
@@ -116,6 +143,7 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
             val result = try {
                 template.updateFirst(query, update, PhotoInfo::class.java).wasAcknowledged()
             } catch (error: Throwable) {
+                logger.error("DB error", error)
                 false
             }
 
@@ -128,6 +156,7 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
             val result = try {
                 template.remove(Query.query(Criteria.where("whoUploaded").`is`(userId))).wasAcknowledged()
             } catch (error: Throwable) {
+                logger.error("DB error", error)
                 false
             }
 
@@ -143,6 +172,7 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
             val result = try {
                 template.remove(query, PhotoInfo::class.java).wasAcknowledged()
             } catch (error: Throwable) {
+                logger.error("DB error", error)
                 false
             }
 

@@ -5,6 +5,7 @@ import com.kirakishou.photoexchange.model.net.response.PhotoAnswerJsonObject
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.CommonPool
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.reactor.asMono
@@ -21,6 +22,8 @@ class GetPhotoAnswerHandler(
 ) : WebHandler {
     private val logger = LoggerFactory.getLogger(GetPhotoAnswerHandler::class.java)
     private val USER_ID_PATH_VARIABLE = "user_id"
+    private var lastTimeCheck = 0L
+    private val FIVE_MINUTES = 1000L * 60L * 5L
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val result = async {
@@ -65,6 +68,12 @@ class GetPhotoAnswerHandler(
                         photoInfo.lon,
                         photoInfo.lat)
 
+                try {
+                    cleanUp()
+                } catch (error: Throwable) {
+                    logger.error("Error while cleanup", error)
+                }
+
                 val allFound = (userUploadedPhotosCount - (userReceivedPhotosCount + 1)) <= 0
                 return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswer, allFound, ServerErrorCode.OK))
 
@@ -77,6 +86,20 @@ class GetPhotoAnswerHandler(
         return result
                 .asMono(CommonPool)
                 .flatMap { it }
+    }
+
+    private suspend fun cleanUp() {
+        val now = TimeUtils.getTimeFast()
+        if (now - lastTimeCheck > FIVE_MINUTES) {
+            logger.debug("Start cleanPhotoCandidates routine")
+
+            lastTimeCheck = now
+            cleanPhotoCandidates(now - FIVE_MINUTES)
+        }
+    }
+
+    private suspend fun cleanPhotoCandidates(time: Long) {
+        photoInfoRepo.cleanCandidatesFromPhotosOverTime(time)
     }
 
     private fun formatResponse(httpStatus: HttpStatus, response: PhotoAnswerResponse): Mono<ServerResponse> {
