@@ -1,6 +1,7 @@
 package com.kirakishou.photoexchange
 
 import com.kirakishou.photoexchange.config.myBeans
+import org.slf4j.LoggerFactory
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.http.server.reactive.HttpHandler
 import org.springframework.http.server.reactive.ReactorHttpHandlerAdapter
@@ -9,6 +10,7 @@ import reactor.ipc.netty.http.server.HttpServer
 import reactor.ipc.netty.tcp.BlockingNettyContext
 
 class PhotoExchangeApplication(port: Int = 8080) {
+    private val logger = LoggerFactory.getLogger(PhotoExchangeApplication::class.java)
     private val httpHandler: HttpHandler
     private val server: HttpServer
     private lateinit var nettyContext: BlockingNettyContext
