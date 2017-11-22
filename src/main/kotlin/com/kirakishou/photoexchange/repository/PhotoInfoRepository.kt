@@ -135,10 +135,10 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
         }.await()
     }
 
-    suspend fun deleteOlderThan(time: Long): Boolean {
+    suspend fun deleteAll(ids: List<Long>): Boolean {
         return async(mongoThreadPoolContext) {
             val query = Query()
-                    .addCriteria(Criteria.where("uploadedOn").lt(time))
+                    .addCriteria(Criteria.where("photoId").`in`(ids))
 
             val result = try {
                 template.remove(query, PhotoInfo::class.java).wasAcknowledged()

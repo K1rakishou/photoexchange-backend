@@ -124,7 +124,7 @@ class UploadPhotoHandler(
 
     private suspend fun cleanDatabaseAndPhotos(time: Long) {
         val photosToDelete = photoInfoRepo.findOlderThan(time)
-        val isOk = photoInfoRepo.deleteOlderThan(time)
+        val isOk = photoInfoRepo.deleteAll(photosToDelete.map { it.photoId })
         if (!isOk) {
             return
         }
