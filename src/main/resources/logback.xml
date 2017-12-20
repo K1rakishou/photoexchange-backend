@@ -2,7 +2,7 @@
 <configuration>
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{80} - %msg%n</pattern>
         </encoder>
     </appender>
 
@@ -18,4 +18,17 @@
     <logger name="org.mongodb.driver.protocol.command" level="WARN"/>
     <logger name="reactor.ipc.netty.channel.ChannelOperationsHandler" level="WARN"/>
     <logger name="reactor.ipc.netty.http.server.HttpServerOperations" level="WARN"/>
+    <logger name="org.springframework.web.reactive.function.server.RouterFunctions" level="WARN"/>
+    <logger name="org.springframework.data.mongodb.core.MongoTemplate" level="WARN"/>
+    <logger name="org.mongodb.driver.protocol.update" level="WARN"/>
+    <logger name="org.springframework.data.mongodb.core.MongoTemplate" level="WARN"/>
+    <logger name="org.springframework.data.mongodb.core.index.MongoPersistentEntityIndexCreator" level="WARN"/>
+    <logger name="org.mongodb.driver.connection" level="WARN"/>
+    <logger name="org.synchronoss.cloud.nio.multipart.DefaultPartBodyStreamStorageFactory" level="WARN"/>
+    <logger name="reactor.ipc.netty.channel.FluxReceive" level="WARN"/>
+    <logger name="org.synchronoss.cloud.nio.stream.storage.FileStreamStorage" level="WARN"/>
+    <logger name="reactor.ipc.netty.channel.ChannelOperations" level="WARN"/>
+    <logger name="org.springframework.http.server.reactive.ReactorServerHttpResponse" level="WARN"/>
+    <logger name="reactor.ipc.netty.channel.ContextHandler" level="WARN"/>
+    <logger name="org.springframework.http.server.reactive.ReactorHttpHandlerAdapter" level="WARN"/>
 </configuration>

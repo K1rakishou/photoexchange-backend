@@ -105,7 +105,7 @@ class UploadPhotoHandler(
                 try {
                     cleanUp()
                 } catch (error: Throwable) {
-                    logger.error("Error while cleanup (cleanDatabaseAndPhotos)", error)
+                    logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
                 }
 
                 return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(photoInfo.photoName, ServerErrorCode.OK))
