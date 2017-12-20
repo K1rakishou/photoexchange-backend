@@ -33,7 +33,7 @@ fun myBeans() = beans {
     bean<Gson> {
         GsonBuilder().create()
     }
-    bean<JsonConverterService> {
+    bean {
         JsonConverterService(ref())
     }
     bean {
