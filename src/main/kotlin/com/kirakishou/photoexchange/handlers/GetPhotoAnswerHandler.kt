@@ -27,26 +27,26 @@ class GetPhotoAnswerHandler(
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val result = async {
-            logger.debug("GetPhotoAnswer request")
-
             try {
                 //TODO: check USER_ID_PATH_VARIABLE existence
                 val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
+                logger.debug("New GetPhotoAnswer request. UserId: $userId")
+
                 val userUploadedPhotosCount = photoInfoRepo.countUserUploadedPhotos(userId)
                 val userReceivedPhotosCount = photoInfoRepo.countUserReceivedBackPhotos(userId)
 
                 if (userUploadedPhotosCount == -1L) {
-                    logger.debug("Could not get user's uploaded photo from the DB")
+                    logger.debug("Could not get user's uploaded photos count from the DB")
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, PhotoAnswerResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
                 }
 
                 if (userReceivedPhotosCount == -1L) {
-                    logger.debug("Could not get user's received photo from the DB")
+                    logger.debug("Could not get user's received photos count from the DB")
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, PhotoAnswerResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
                 }
 
                 if (userUploadedPhotosCount <= userReceivedPhotosCount) {
-                    logger.debug("User has the same amount received photos as uploaded")
+                    logger.debug("User has less (or equal) amount of uploaded photos than received")
                     return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.UPLOAD_MORE_PHOTOS))
                 }
 
@@ -57,8 +57,14 @@ class GetPhotoAnswerHandler(
 
                 val photoInfo = photoInfoRepo.findPhotoInfoByUserId(userId)
                 if (photoInfo.isEmpty()) {
-                    logger.debug("Could not find any photos by userId")
+                    logger.debug("No spare photos were found.")
                     return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.NO_PHOTOS_TO_SEND_BACK))
+                }
+
+                try {
+                    cleanUp()
+                } catch (error: Throwable) {
+                    logger.error("Error while cleaning up (cleanPhotoCandidates)", error)
                 }
 
                 val photoAnswer = PhotoAnswerJsonObject(
@@ -68,13 +74,9 @@ class GetPhotoAnswerHandler(
                         photoInfo.lon,
                         photoInfo.lat)
 
-                try {
-                    cleanUp()
-                } catch (error: Throwable) {
-                    logger.error("Error while cleaning up (cleanPhotoCandidates)", error)
-                }
-
                 val allFound = (userUploadedPhotosCount - (userReceivedPhotosCount + 1)) <= 0
+
+                logger.debug("Spare photo has been found. User received the same amount of photos as he has uploaded: $allFound")
                 return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswer, allFound, ServerErrorCode.OK))
 
             } catch (error: Throwable) {

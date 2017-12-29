@@ -46,7 +46,7 @@ class UploadPhotoHandler(
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val result = async {
-            logger.debug("UploadPhoto request")
+            logger.debug("New UploadPhoto request")
 
             try {
                 val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitFirst()
@@ -68,6 +68,8 @@ class UploadPhotoHandler(
                     logger.debug("One or more of the packet's fields are incorrect")
                     return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
+
+                logger.debug("userId = ${packet.userId}")
 
                 if (!checkPhotoTotalSize(photoParts)) {
                     logger.debug("Bad photo size")
@@ -108,6 +110,7 @@ class UploadPhotoHandler(
                     logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
                 }
 
+                logger.debug("Photo has been successfully uploaded")
                 return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(photoInfo.photoName, ServerErrorCode.OK))
 
             } catch (error: Throwable) {

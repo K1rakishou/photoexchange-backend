@@ -40,8 +40,6 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
         return async(mongoThreadPoolContext) {
             val query = Query()
                     .addCriteria(Criteria.where("whoUploaded").`is`(userId))
-                    .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
-                    .addCriteria(Criteria.where("candidateFoundOn").`is`(0L))
 
             val count = try {
                 template.count(query, PhotoInfo::class.java)
