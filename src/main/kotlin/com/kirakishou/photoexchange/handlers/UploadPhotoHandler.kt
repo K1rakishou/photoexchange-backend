@@ -31,9 +31,9 @@ import java.io.File
 import java.io.IOException
 
 class UploadPhotoHandler(
-        private val jsonConverter: JsonConverterService,
-        private val photoInfoRepo: PhotoInfoRepository,
-        private val generator: GeneratorServiceImpl
+    private val jsonConverter: JsonConverterService,
+    private val photoInfoRepo: PhotoInfoRepository,
+    private val generator: GeneratorServiceImpl
 ) : WebHandler {
     private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
     private val PACKET_PART_KEY = "packet"
@@ -85,7 +85,7 @@ class UploadPhotoHandler(
 
                 val tempFile = saveTempFile(photoParts, photoInfo)
                 if (tempFile == null) {
-                    logger.debug("Could not save file to the disk")
+                    logger.debug("Could not save file to disk")
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
                 }
 
@@ -105,7 +105,7 @@ class UploadPhotoHandler(
                 }
 
                 try {
-                    cleanUp()
+                    deleteOldPhotos()
                 } catch (error: Throwable) {
                     logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
                 }
@@ -124,7 +124,7 @@ class UploadPhotoHandler(
                 .flatMap { it }
     }
 
-    private suspend fun cleanUp() {
+    private suspend fun deleteOldPhotos() {
         val now = TimeUtils.getTimeFast()
         if (now - lastTimeCheck > SEVEN_DAYS) {
             logger.debug("Start cleanDatabaseAndPhotos routine")
