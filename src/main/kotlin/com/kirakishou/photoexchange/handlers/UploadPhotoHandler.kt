@@ -41,6 +41,7 @@ class UploadPhotoHandler(
     private val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
     private var fileDirectoryPath = "D:\\projects\\data\\photos"
     private var lastTimeCheck = 0L
+    private val ONE_HOUR = 1000L * 60L * 60L
     private val SEVEN_DAYS = 1000L * 60L * 60L * 24L * 7L
     private val photoSizes = arrayOf("_o", "_s")
 
@@ -126,7 +127,9 @@ class UploadPhotoHandler(
 
     private suspend fun deleteOldPhotos() {
         val now = TimeUtils.getTimeFast()
-        if (now - lastTimeCheck > SEVEN_DAYS) {
+
+        //execute every hour
+        if (now - lastTimeCheck > ONE_HOUR) {
             logger.debug("Start cleanDatabaseAndPhotos routine")
 
             lastTimeCheck = now
