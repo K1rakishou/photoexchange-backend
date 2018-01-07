@@ -16,8 +16,8 @@ private constructor(
 ) : StatusResponse(errorCode.value) {
 
     companion object {
-        fun success(photoAnswer: PhotoAnswerJsonObject, allFound: Boolean, errorCode: ServerErrorCode): PhotoAnswerResponse {
-            return PhotoAnswerResponse(photoAnswer, allFound, errorCode)
+        fun success(photoAnswer: PhotoAnswerJsonObject, allFound: Boolean): PhotoAnswerResponse {
+            return PhotoAnswerResponse(photoAnswer, allFound, ServerErrorCode.OK)
         }
 
         fun fail(errorCode: ServerErrorCode): PhotoAnswerResponse {

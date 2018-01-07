@@ -35,6 +35,7 @@ class UploadPhotoHandler(
     private val photoInfoRepo: PhotoInfoRepository,
     private val generator: GeneratorServiceImpl
 ) : WebHandler {
+
     private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
     private val PACKET_PART_KEY = "packet"
     private val PHOTO_PART_KEY = "photo"
@@ -112,7 +113,7 @@ class UploadPhotoHandler(
                 }
 
                 logger.debug("Photo has been successfully uploaded")
-                return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(photoInfo.photoName, ServerErrorCode.OK))
+                return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(photoInfo.photoName))
 
             } catch (error: Throwable) {
                 logger.error("Unknown error", error)

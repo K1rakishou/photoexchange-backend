@@ -8,5 +8,6 @@ enum class ServerErrorCode(val value: Int) {
     DISK_ERROR(3),
     NO_PHOTOS_TO_SEND_BACK(4),
     BAD_PHOTO_ID(5),
-    UPLOAD_MORE_PHOTOS(6)
+    UPLOAD_MORE_PHOTOS(6),
+    NOT_FOUND(7)
 }

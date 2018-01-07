@@ -1,9 +1,6 @@
 package com.kirakishou.photoexchange.routers
 
-import com.kirakishou.photoexchange.handlers.GetPhotoAnswerHandler
-import com.kirakishou.photoexchange.handlers.GetPhotoHandler
-import com.kirakishou.photoexchange.handlers.MarkPhotoAsReceivedHandler
-import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
+import com.kirakishou.photoexchange.handlers.*
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.server.router
 
@@ -11,7 +8,8 @@ class Router(
         private val uploadPhotoHandler: UploadPhotoHandler,
         private val getPhotoAnswerHandler: GetPhotoAnswerHandler,
         private val getPhotoHandler: GetPhotoHandler,
-        private val markPhotoAsReceived: MarkPhotoAsReceivedHandler
+        private val markPhotoAsReceived: MarkPhotoAsReceivedHandler,
+        private val getUserLocation: GetUserLocation
 ) {
 
     fun setUpRouter() = router {
@@ -24,6 +22,7 @@ class Router(
                 accept(MediaType.APPLICATION_JSON).nest {
                     POST("/received/{photo_id}/{user_id}", markPhotoAsReceived::handle)
                     GET("/get_answer/{user_id}", getPhotoAnswerHandler::handle)
+                    GET("/get_location/{user_id}/{photo_id}", getUserLocation::handle)
                 }
 
                 accept(MediaType.parseMediaType("image/*")).nest {
