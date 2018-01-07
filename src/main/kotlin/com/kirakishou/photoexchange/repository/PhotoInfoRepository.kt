@@ -25,6 +25,7 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
         return async(mongoThreadPoolContext) {
             val id = mongoSequenceRepo.getNextId(SEQUENCE_NAME)
             photoInfoParam.photoId = id
+
             try {
                 template.save(photoInfoParam)
             } catch (error: Throwable) {
@@ -90,6 +91,28 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
             }
 
             return@async result
+        }.await()
+    }
+
+    suspend fun findUploadedPhotoNewLocation(userId: String, photoId: String): PhotoInfo {
+        return async(mongoThreadPoolContext) {
+            val query = Query()
+                    .addCriteria(Criteria.where("whoUploaded").`is`(userId))
+                    .addCriteria(Criteria.where("photoName").`is`(photoId))
+                    .addCriteria(Criteria.where("candidateFoundOn").gt(0L))
+
+            val result = try {
+                template.find(query, PhotoInfo::class.java)
+            } catch (error: Throwable) {
+                logger.error("DB error", error)
+                emptyList<PhotoInfo>()
+            }
+
+            if (result.isNotEmpty()) {
+                return@async result.first()
+            } else {
+                return@async PhotoInfo.empty()
+            }
         }.await()
     }
 

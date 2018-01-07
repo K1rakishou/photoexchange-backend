@@ -12,8 +12,8 @@ class UploadPhotoResponse(
 ) : StatusResponse(errorCode.value) {
 
     companion object {
-        fun success(photoName: String, errorCode: ServerErrorCode): UploadPhotoResponse {
-            return UploadPhotoResponse(photoName, errorCode)
+        fun success(photoName: String): UploadPhotoResponse {
+            return UploadPhotoResponse(photoName, ServerErrorCode.OK)
         }
 
         fun fail(errorCode: ServerErrorCode): UploadPhotoResponse {
