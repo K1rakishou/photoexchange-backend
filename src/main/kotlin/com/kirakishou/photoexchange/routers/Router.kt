@@ -9,7 +9,7 @@ class Router(
         private val getPhotoAnswerHandler: GetPhotoAnswerHandler,
         private val getPhotoHandler: GetPhotoHandler,
         private val markPhotoAsReceived: MarkPhotoAsReceivedHandler,
-        private val getUserLocation: GetUserLocation
+        private val getUserLocationHandler: GetUserLocationHandler
 ) {
 
     fun setUpRouter() = router {
@@ -22,8 +22,9 @@ class Router(
                 accept(MediaType.APPLICATION_JSON).nest {
                     POST("/received/{photo_id}/{user_id}", markPhotoAsReceived::handle)
                     GET("/get_answer/{user_id}", getPhotoAnswerHandler::handle)
-                    GET("/get_location/{user_id}/{photo_id}", getUserLocation::handle)
                 }
+
+                GET("/get_location", getUserLocationHandler::handle)
 
                 accept(MediaType.parseMediaType("image/*")).nest {
                     GET("/get_photo/{photo_name}/{photo_size}", getPhotoHandler::handle)

@@ -77,7 +77,7 @@ class GetPhotoAnswerHandler(
                 val allFound = (userUploadedPhotosCount - (userReceivedPhotosCount + 1)) <= 0
 
                 logger.debug("Spare photo has been found. User received the same amount of photos as he has uploaded: $allFound")
-                return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswer, allFound, ServerErrorCode.OK))
+                return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswer, allFound))
 
             } catch (error: Throwable) {
                 logger.error("Unknown error", error)
