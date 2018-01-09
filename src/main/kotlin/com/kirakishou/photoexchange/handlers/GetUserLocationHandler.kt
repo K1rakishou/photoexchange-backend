@@ -20,7 +20,7 @@ class GetUserLocationHandler(
 ) : WebHandler {
     private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
     private val USER_ID_QUERY_PARAM = "user_id"
-    private val PHOTO_IDS_QUERY_PARAM = "photo_ids"
+    private val PHOTO_NAMES_QUERY_PARAM = "photo_names"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val result = async {
@@ -28,19 +28,19 @@ class GetUserLocationHandler(
 
             try {
                 val userIdOpt = request.queryParam(USER_ID_QUERY_PARAM)
-                val photoIdsOpt = request.queryParam(PHOTO_IDS_QUERY_PARAM)
-                if (!userIdOpt.isPresent || !photoIdsOpt.isPresent) {
+                val photoNamesOpt = request.queryParam(PHOTO_NAMES_QUERY_PARAM)
+                if (!userIdOpt.isPresent || !photoNamesOpt.isPresent) {
                     return@async formatResponse(HttpStatus.BAD_REQUEST, GetUserLocationResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
 
                 val userId = userIdOpt.get()
-                val photoIds = photoIdsOpt.get()
-                val photoIdList = photoIds.split(',')
-                if (photoIdList.isEmpty()) {
+                val photoNames = photoNamesOpt.get()
+                val photoNameList = photoNames.split(',')
+                if (photoNameList.isEmpty()) {
                     return@async formatResponse(HttpStatus.BAD_REQUEST, GetUserLocationResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
 
-                val photoInfoList = photoInfoRepo.findUploadedPhotosLocations(userId, photoIdList)
+                val photoInfoList = photoInfoRepo.findUploadedPhotosLocations(userId, photoNameList)
                 val locationsList = photoInfoList.map { GetUserLocationResponse.UserNewLocation(it.photoName, it.lat, it.lon) }
 
                 return@async formatResponse(HttpStatus.OK, GetUserLocationResponse.success(locationsList))

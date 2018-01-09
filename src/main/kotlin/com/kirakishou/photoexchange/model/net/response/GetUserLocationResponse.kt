@@ -22,8 +22,8 @@ private constructor(
     }
 
     class UserNewLocation(
-        @SerializedName("photo_id")
-        val photoId: String,
+        @SerializedName("photo_name")
+        val photoName: String,
 
         @SerializedName("lat")
         val lat: Double,

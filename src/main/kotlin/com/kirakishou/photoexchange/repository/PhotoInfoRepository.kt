@@ -94,11 +94,11 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
         }.await()
     }
 
-    suspend fun findUploadedPhotosLocations(userId: String, photoIdList: List<String>): List<PhotoInfo> {
+    suspend fun findUploadedPhotosLocations(userId: String, photoNameList: List<String>): List<PhotoInfo> {
         return async(mongoThreadPoolContext) {
             val query = Query()
                     .addCriteria(Criteria.where("whoUploaded").`is`(userId))
-                    .addCriteria(Criteria.where("photoName").`in`(photoIdList))
+                    .addCriteria(Criteria.where("photoName").`in`(photoNameList))
                     .addCriteria(Criteria.where("candidateFoundOn").gt(0L))
 
             val result = try {
