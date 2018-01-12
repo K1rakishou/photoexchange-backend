@@ -5,6 +5,8 @@ import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.ThreadPoolDispatcher
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.newFixedThreadPoolContext
+import kotlinx.coroutines.experimental.sync.Mutex
+import kotlinx.coroutines.experimental.sync.withLock
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.MongoTemplate
@@ -23,17 +25,23 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
 
     suspend fun save(photoInfoParam: PhotoInfo): PhotoInfo {
         return async(mongoThreadPoolContext) {
-            val id = mongoSequenceRepo.getNextId(SEQUENCE_NAME)
-            photoInfoParam.photoId = id
+            val mutex = Mutex()
 
-            try {
-                template.save(photoInfoParam)
-            } catch (error: Throwable) {
-                logger.error("DB error", error)
-                return@async PhotoInfo.empty()
+            return@async mutex.withLock {
+                val id = mongoSequenceRepo.getNextId()
+                photoInfoParam.photoId = id
+
+                try {
+                    template.save(photoInfoParam)
+                } catch (error: Throwable) {
+                    logger.error("DB error", error)
+                    return@async PhotoInfo.empty()
+                }
+
+                return@withLock photoInfoParam
             }
 
-            return@async photoInfoParam
+
         }.await()
     }
 
@@ -71,7 +79,7 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
         }.await()
     }
 
-    suspend fun findPhotoInfoByUserId(userId: String): PhotoInfo {
+    suspend fun findLatestUploadedPhoto(userId: String): PhotoInfo {
         return async(mongoThreadPoolContext) {
             val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
                     .addCriteria(Criteria.where("whoUploaded").ne(userId))
@@ -198,7 +206,6 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
 
     companion object {
         const val COLLECTION_NAME = "photo_info"
-        const val SEQUENCE_NAME = "photo_info_sequence"
     }
 }
 
