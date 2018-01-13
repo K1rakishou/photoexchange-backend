@@ -28,7 +28,6 @@ data class PhotoInfo(
     @Indexed(name = "uploaded_on", direction = IndexDirection.DESCENDING)
     val uploadedOn: Long
 ) {
-
     fun isEmpty(): Boolean {
         return photoId == -1L
     }

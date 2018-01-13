@@ -4,7 +4,6 @@ import com.kirakishou.photoexchange.model.PhotoInfo
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.ThreadPoolDispatcher
 import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.MongoTemplate
@@ -12,18 +11,16 @@ import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 
-open class PhotoInfoRepository(private val template: MongoTemplate,
-                               private val mongoSequenceRepo: MongoSequenceRepository) {
-
+open class PhotoInfoRepository(
+    private val template: MongoTemplate,
+    private val mongoSequenceRepo: MongoSequenceRepository,
+    private val mongoThreadPoolContext: ThreadPoolDispatcher
+) {
     private val logger = LoggerFactory.getLogger(PhotoInfoRepository::class.java)
-
-    private val mongoThreadPoolContext: ThreadPoolDispatcher by lazy {
-        newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), "mongo")
-    }
 
     suspend fun save(photoInfoParam: PhotoInfo): PhotoInfo {
         return async(mongoThreadPoolContext) {
-            val id = mongoSequenceRepo.getNextId()
+            val id = mongoSequenceRepo.getNextPhotoId()
             photoInfoParam.photoId = id
 
             try {
@@ -71,10 +68,10 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
         }.await()
     }
 
-    suspend fun findPhotoByCandidateUserId(userId: String): PhotoInfo {
+    suspend fun findPhotoByCandidateUserIdList(userIdList: List<String>): List<PhotoInfo> {
         return async(mongoThreadPoolContext) {
             val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
-                    .addCriteria(Criteria.where("whoUploaded").`is`(userId))
+                    .addCriteria(Criteria.where("whoUploaded").`in`(userIdList))
                     .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
                     .addCriteria(Criteria.where("candidateFoundOn").ne(0L))
                     .limit(1)
@@ -86,11 +83,7 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
                 emptyList<PhotoInfo>()
             }
 
-            if (result.isEmpty()) {
-                return@async PhotoInfo.empty()
-            }
-
-            return@async result.first()
+            return@async result
         }.await()
     }
 
