@@ -72,8 +72,8 @@ open class PhotoInfoRepository(
         return async(mongoThreadPoolContext) {
             val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
                     .addCriteria(Criteria.where("whoUploaded").`in`(userIdList))
-                    .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
-                    .addCriteria(Criteria.where("candidateFoundOn").ne(0L))
+                    .addCriteria(Criteria.where("receivedPhotoBackOn").gt(0L))
+                    .addCriteria(Criteria.where("candidateFoundOn").gt(0L))
                     .limit(1)
 
             val result = try {

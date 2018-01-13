@@ -44,7 +44,10 @@ class GetUserLocationHandler(
                 val candidateUserIdList = photoInfoList.map { it.candidateUserId }
 
                 val candidatesCoordinates = photoInfoRepo.findPhotoByCandidateUserIdList(candidateUserIdList)
-                val locationsList = candidatesCoordinates.map { GetUserLocationResponse.UserNewLocation(it.photoName, it.lat, it.lon) }
+                val locationsList = candidatesCoordinates.map { candidate ->
+                    val currentUserPhotoInfo = photoInfoList.first { candidate.whoUploaded == it.candidateUserId }
+                    GetUserLocationResponse.UserNewLocation(currentUserPhotoInfo.photoName, candidate.lat, candidate.lon)
+                }
 
                 return@async formatResponse(HttpStatus.OK, GetUserLocationResponse.success(locationsList))
             } catch (error: Throwable) {
