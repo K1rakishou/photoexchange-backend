@@ -55,7 +55,12 @@ class GetPhotoAnswerHandler(
                     return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.UPLOAD_MORE_PHOTOS))
                 }
 
-                val photoInfo = photoInfoRepo.findLatestUploadedPhoto(userId)
+                /*val photoWithCandidate = photoInfoRepo.findPhotoByCandidateUserId(userId)
+                if (!photoWithCandidate.isEmpty()) {
+                    val candidateUserId = photoWithCandidate.candidateUserId
+                }*/
+
+                val photoInfo = photoInfoRepo.findOldestUploadedPhoto(userId)
                 if (photoInfo.isEmpty()) {
                     logger.debug("No spare photos were found.")
                     return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.NO_PHOTOS_TO_SEND_BACK))

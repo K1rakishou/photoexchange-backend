@@ -5,8 +5,6 @@ import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.ThreadPoolDispatcher
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.newFixedThreadPoolContext
-import kotlinx.coroutines.experimental.sync.Mutex
-import kotlinx.coroutines.experimental.sync.withLock
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.MongoTemplate
@@ -25,23 +23,17 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
 
     suspend fun save(photoInfoParam: PhotoInfo): PhotoInfo {
         return async(mongoThreadPoolContext) {
-            val mutex = Mutex()
+            val id = mongoSequenceRepo.getNextId()
+            photoInfoParam.photoId = id
 
-            return@async mutex.withLock {
-                val id = mongoSequenceRepo.getNextId()
-                photoInfoParam.photoId = id
-
-                try {
-                    template.save(photoInfoParam)
-                } catch (error: Throwable) {
-                    logger.error("DB error", error)
-                    return@async PhotoInfo.empty()
-                }
-
-                return@withLock photoInfoParam
+            try {
+                template.save(photoInfoParam)
+            } catch (error: Throwable) {
+                logger.error("DB error", error)
+                return@async PhotoInfo.empty()
             }
 
-
+            return@async photoInfoParam
         }.await()
     }
 
@@ -79,7 +71,30 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
         }.await()
     }
 
-    suspend fun findLatestUploadedPhoto(userId: String): PhotoInfo {
+    suspend fun findPhotoByCandidateUserId(userId: String): PhotoInfo {
+        return async(mongoThreadPoolContext) {
+            val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
+                    .addCriteria(Criteria.where("whoUploaded").`is`(userId))
+                    .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
+                    .addCriteria(Criteria.where("candidateFoundOn").ne(0L))
+                    .limit(1)
+
+            val result = try {
+                template.find(query, PhotoInfo::class.java)
+            } catch (error: Throwable) {
+                logger.error("DB error", error)
+                emptyList<PhotoInfo>()
+            }
+
+            if (result.isEmpty()) {
+                return@async PhotoInfo.empty()
+            }
+
+            return@async result.first()
+        }.await()
+    }
+
+    suspend fun findOldestUploadedPhoto(userId: String): PhotoInfo {
         return async(mongoThreadPoolContext) {
             val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
                     .addCriteria(Criteria.where("whoUploaded").ne(userId))
