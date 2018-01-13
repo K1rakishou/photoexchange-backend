@@ -55,7 +55,7 @@ class GetPhotoAnswerHandler(
                     return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.UPLOAD_MORE_PHOTOS))
                 }
 
-                val photoInfo = photoInfoRepo.findPhotoInfoByUserId(userId)
+                val photoInfo = photoInfoRepo.findOldestUploadedPhoto(userId)
                 if (photoInfo.isEmpty()) {
                     logger.debug("No spare photos were found.")
                     return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.NO_PHOTOS_TO_SEND_BACK))
@@ -74,10 +74,12 @@ class GetPhotoAnswerHandler(
                         photoInfo.lon,
                         photoInfo.lat)
 
+                //"userReceivedPhotosCount + 1" because we are receiving a photo right now
+                //and it's not marked in the database at the point of executing "photoInfoRepo.countUserReceivedBackPhotos" method
                 val allFound = (userUploadedPhotosCount - (userReceivedPhotosCount + 1)) <= 0
 
                 logger.debug("Spare photo has been found. User received the same amount of photos as he has uploaded: $allFound")
-                return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswer, allFound, ServerErrorCode.OK))
+                return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswer, allFound))
 
             } catch (error: Throwable) {
                 logger.error("Unknown error", error)
@@ -90,6 +92,7 @@ class GetPhotoAnswerHandler(
                 .flatMap { it }
     }
 
+    @Synchronized
     private suspend fun cleanUp() {
         val now = TimeUtils.getTimeFast()
         if (now - lastTimeCheck > FIVE_MINUTES) {

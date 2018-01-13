@@ -100,6 +100,7 @@ class UploadPhotoHandler(
 
                 } catch (error: Throwable) {
                     photoInfoRepo.deleteById(photoInfo.whoUploaded)
+                    return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
                 } finally {
                     if (tempFile.exists()) {
                         tempFile.delete()

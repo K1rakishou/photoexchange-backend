@@ -7,9 +7,12 @@ import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 
-open class MongoSequenceRepository(private val template: MongoTemplate) {
+open class MongoSequenceRepository(
+    private val template: MongoTemplate
+) {
+    private val PHOTO_INFO_SEQUENCE_NAME = "photo_info_sequence"
 
-    suspend fun getNextId(sequenceName: String): Long {
+    private suspend fun getNextId(sequenceName: String): Long {
         val mongoSequenceMono = template.findAndModify(
                 Query.query(Criteria.where("_id").`is`(sequenceName)),
                 Update().inc("id", 1),
@@ -17,5 +20,9 @@ open class MongoSequenceRepository(private val template: MongoTemplate) {
                 MongoSequence::class.java)
 
         return mongoSequenceMono!!.id
+    }
+
+    suspend fun getNextPhotoId(): Long {
+       return getNextId(PHOTO_INFO_SEQUENCE_NAME)
     }
 }

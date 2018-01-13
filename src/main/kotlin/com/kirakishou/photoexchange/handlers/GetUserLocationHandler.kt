@@ -14,28 +14,42 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
 
-class GetUserLocation(
+class GetUserLocationHandler(
     private val jsonConverter: JsonConverterService,
     private val photoInfoRepo: PhotoInfoRepository
 ) : WebHandler {
     private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
-    private val USER_ID_PATH_VARIABLE = "user_id"
-    private val PHOTO_ID_PATH_VARIABLE = "photo_id"
+    private val USER_ID_QUERY_PARAM = "user_id"
+    private val PHOTO_NAMES_QUERY_PARAM = "photo_names"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val result = async {
             logger.debug("New GetUserLocation request")
 
             try {
-                val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
-                val photoId = request.pathVariable(PHOTO_ID_PATH_VARIABLE)
-
-                val photoInfo = photoInfoRepo.findUploadedPhotoNewLocation(userId, photoId)
-                if (photoInfo.isEmpty()) {
-                    return@async formatResponse(HttpStatus.NOT_FOUND, GetUserLocationResponse.fail(ServerErrorCode.NOT_FOUND))
+                val userIdOpt = request.queryParam(USER_ID_QUERY_PARAM)
+                val photoNamesOpt = request.queryParam(PHOTO_NAMES_QUERY_PARAM)
+                if (!userIdOpt.isPresent || !photoNamesOpt.isPresent) {
+                    return@async formatResponse(HttpStatus.BAD_REQUEST, GetUserLocationResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
 
-                return@async formatResponse(HttpStatus.OK, GetUserLocationResponse.success(photoInfo.lat, photoInfo.lon))
+                val userId = userIdOpt.get()
+                val photoNames = photoNamesOpt.get()
+                val photoNameList = photoNames.split(',')
+                if (photoNameList.isEmpty()) {
+                    return@async formatResponse(HttpStatus.BAD_REQUEST, GetUserLocationResponse.fail(ServerErrorCode.BAD_REQUEST))
+                }
+
+                val photoInfoList = photoInfoRepo.findUploadedPhotosLocations(userId, photoNameList)
+                val candidateUserIdList = photoInfoList.map { it.candidateUserId }
+
+                val candidatesCoordinates = photoInfoRepo.findPhotoByCandidateUserIdList(candidateUserIdList)
+                val locationsList = candidatesCoordinates.map { candidate ->
+                    val currentUserPhotoInfo = photoInfoList.first { candidate.whoUploaded == it.candidateUserId }
+                    GetUserLocationResponse.UserNewLocation(currentUserPhotoInfo.photoName, candidate.lat, candidate.lon)
+                }
+
+                return@async formatResponse(HttpStatus.OK, GetUserLocationResponse.success(locationsList))
             } catch (error: Throwable) {
                 logger.error("Unknown error", error)
                 return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, GetUserLocationResponse.fail(ServerErrorCode.UNKNOWN_ERROR))

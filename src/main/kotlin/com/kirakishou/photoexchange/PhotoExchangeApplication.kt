@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange
 
+import com.kirakishou.photoexchange.config.DatabaseInfo
 import com.kirakishou.photoexchange.config.myBeans
 import org.slf4j.LoggerFactory
 import org.springframework.context.support.GenericApplicationContext
@@ -16,8 +17,10 @@ class PhotoExchangeApplication(port: Int = 8080) {
     private lateinit var nettyContext: BlockingNettyContext
 
     init {
+        val dbInfo = DatabaseInfo("192.168.99.100", 27017, "photoexhange")
+
         val context = GenericApplicationContext().apply {
-            myBeans().initialize(this)
+            myBeans(dbInfo).initialize(this)
             refresh()
         }
 

@@ -4,7 +4,6 @@ import com.kirakishou.photoexchange.model.PhotoInfo
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.ThreadPoolDispatcher
 import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.MongoTemplate
@@ -12,18 +11,16 @@ import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 
-open class PhotoInfoRepository(private val template: MongoTemplate,
-                               private val mongoSequenceRepo: MongoSequenceRepository) {
-
+open class PhotoInfoRepository(
+    private val template: MongoTemplate,
+    private val mongoSequenceRepo: MongoSequenceRepository,
+    private val mongoThreadPoolContext: ThreadPoolDispatcher
+) {
     private val logger = LoggerFactory.getLogger(PhotoInfoRepository::class.java)
-
-    private val mongoThreadPoolContext: ThreadPoolDispatcher by lazy {
-        newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), "mongo")
-    }
 
     suspend fun save(photoInfoParam: PhotoInfo): PhotoInfo {
         return async(mongoThreadPoolContext) {
-            val id = mongoSequenceRepo.getNextId(SEQUENCE_NAME)
+            val id = mongoSequenceRepo.getNextPhotoId()
             photoInfoParam.photoId = id
 
             try {
@@ -71,7 +68,26 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
         }.await()
     }
 
-    suspend fun findPhotoInfoByUserId(userId: String): PhotoInfo {
+    suspend fun findPhotoByCandidateUserIdList(userIdList: List<String>): List<PhotoInfo> {
+        return async(mongoThreadPoolContext) {
+            val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
+                    .addCriteria(Criteria.where("whoUploaded").`in`(userIdList))
+                    .addCriteria(Criteria.where("receivedPhotoBackOn").gt(0L))
+                    .addCriteria(Criteria.where("candidateFoundOn").gt(0L))
+                    .limit(1)
+
+            val result = try {
+                template.find(query, PhotoInfo::class.java)
+            } catch (error: Throwable) {
+                logger.error("DB error", error)
+                emptyList<PhotoInfo>()
+            }
+
+            return@async result
+        }.await()
+    }
+
+    suspend fun findOldestUploadedPhoto(userId: String): PhotoInfo {
         return async(mongoThreadPoolContext) {
             val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
                     .addCriteria(Criteria.where("whoUploaded").ne(userId))
@@ -94,11 +110,11 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
         }.await()
     }
 
-    suspend fun findUploadedPhotoNewLocation(userId: String, photoId: String): PhotoInfo {
+    suspend fun findUploadedPhotosLocations(userId: String, photoNameList: List<String>): List<PhotoInfo> {
         return async(mongoThreadPoolContext) {
             val query = Query()
                     .addCriteria(Criteria.where("whoUploaded").`is`(userId))
-                    .addCriteria(Criteria.where("photoName").`is`(photoId))
+                    .addCriteria(Criteria.where("photoName").`in`(photoNameList))
                     .addCriteria(Criteria.where("candidateFoundOn").gt(0L))
 
             val result = try {
@@ -108,11 +124,7 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
                 emptyList<PhotoInfo>()
             }
 
-            if (result.isNotEmpty()) {
-                return@async result.first()
-            } else {
-                return@async PhotoInfo.empty()
-            }
+            return@async result
         }.await()
     }
 
@@ -202,7 +214,6 @@ open class PhotoInfoRepository(private val template: MongoTemplate,
 
     companion object {
         const val COLLECTION_NAME = "photo_info"
-        const val SEQUENCE_NAME = "photo_info_sequence"
     }
 }
 
