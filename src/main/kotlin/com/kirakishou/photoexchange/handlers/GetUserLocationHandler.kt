@@ -29,6 +29,7 @@ class GetUserLocationHandler(
             try {
                 val userIdOpt = request.queryParam(USER_ID_QUERY_PARAM)
                 val photoNamesOpt = request.queryParam(PHOTO_NAMES_QUERY_PARAM)
+
                 if (!userIdOpt.isPresent || !photoNamesOpt.isPresent) {
                     return@async formatResponse(HttpStatus.BAD_REQUEST, GetUserLocationResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
@@ -36,14 +37,16 @@ class GetUserLocationHandler(
                 val userId = userIdOpt.get()
                 val photoNames = photoNamesOpt.get()
                 val photoNameList = photoNames.split(',')
+
                 if (photoNameList.isEmpty()) {
                     return@async formatResponse(HttpStatus.BAD_REQUEST, GetUserLocationResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
 
                 val photoInfoList = photoInfoRepo.findUploadedPhotosLocations(userId, photoNameList)
-                val candidateUserIdList = photoInfoList.map { it.candidateUserId }
 
+                val candidateUserIdList = photoInfoList.map { it.candidateUserId }
                 val candidatesCoordinates = photoInfoRepo.findPhotoByCandidateUserIdList(candidateUserIdList)
+
                 val locationsList = candidatesCoordinates.map { candidate ->
                     val currentUserPhotoInfo = photoInfoList.first { candidate.whoUploaded == it.candidateUserId }
                     GetUserLocationResponse.UserNewLocation(currentUserPhotoInfo.photoName, candidate.lat, candidate.lon)
