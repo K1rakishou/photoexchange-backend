@@ -32,6 +32,7 @@ import reactor.core.publisher.Mono
 import java.awt.Dimension
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 class UploadPhotoHandler(
     private val jsonConverter: JsonConverterService,
@@ -46,8 +47,8 @@ class UploadPhotoHandler(
     private val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
     private var fileDirectoryPath = "D:\\projects\\data\\photos"
     private var lastTimeCheck = 0L
-    private val ONE_HOUR = 1000L * 60L * 60L
-    private val SEVEN_DAYS = 1000L * 60L * 60L * 24L * 7L
+    private val ONE_HOUR = TimeUnit.HOURS.toMillis(1)
+    private val SEVEN_DAYS = TimeUnit.DAYS.toMillis(7)
     private val photoSizes = arrayOf("_o", "_s")
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
@@ -70,8 +71,6 @@ class UploadPhotoHandler(
                     return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
 
-                logger.debug("userId = ${packet.userId}")
-
                 if (!checkPhotoTotalSize(photoParts)) {
                     logger.debug("Bad photo size")
                     return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
@@ -83,14 +82,6 @@ class UploadPhotoHandler(
                     logger.debug("Could not save a photoInfo")
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
                 }
-
-                /*val photoExchangeInfo = createPhotoExchangeInfo(photoInfo)
-                val result2 = photoExchangeInfoRepo.createNew(photoExchangeInfo)
-                if (result2.isEmpty()) {
-                    logger.debug("Could not create a new photoExchangeInfo")
-                    photoInfoRepo.deleteUserById(photoInfo.whoUploaded)
-                    return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
-                }*/
 
                 val tempFile = saveTempFile(photoParts, photoInfo)
                 if (tempFile == null) {

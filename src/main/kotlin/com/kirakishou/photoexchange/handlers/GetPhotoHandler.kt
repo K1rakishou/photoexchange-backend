@@ -24,13 +24,14 @@ class GetPhotoHandler : WebHandler {
 
         if (!request.containsAllPathVars(PHOTO_NAME_PATH_VARIABLE, PHOTO_SIZE_PATH_VARIABLE)) {
             logger.debug("Request does not contain one of the required path variables")
-            return ServerResponse.badRequest().build()
+            return ServerResponse.notFound().build()
         }
 
         val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
         val photoSize = request.pathVariable(PHOTO_SIZE_PATH_VARIABLE)
 
         if (photoSize != "o" && photoSize != "s") {
+            logger.debug("Photo size param is neither \'o\' nor \'s\'")
             return ServerResponse.notFound().build()
         }
 

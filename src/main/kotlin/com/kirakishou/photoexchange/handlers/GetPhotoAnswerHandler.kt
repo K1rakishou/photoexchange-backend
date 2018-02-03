@@ -4,7 +4,6 @@ import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerJsonObject
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
-import com.kirakishou.photoexchange.model.repo.PhotoExchangeInfo
 import com.kirakishou.photoexchange.repository.PhotoExchangeInfoRepository
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -18,6 +17,7 @@ import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
+import java.util.concurrent.TimeUnit
 
 class GetPhotoAnswerHandler(
         private val jsonConverter: JsonConverterService,
@@ -28,7 +28,7 @@ class GetPhotoAnswerHandler(
     private val USER_ID_PATH_VARIABLE = "user_id"
     private val PHOTO_NAME_PATH_VARIABLE = "photo_name"
     private var lastTimeCheck = 0L
-    private val FIVE_MINUTES = 1000L * 60L * 5L
+    private val FIVE_MINUTES = TimeUnit.MINUTES.toMillis(5)
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         val result = async {
@@ -51,38 +51,18 @@ class GetPhotoAnswerHandler(
                     return@async checkUserPhotosCountResult
                 }
 
-                val photoExchangeInfo = photoExchangeInfoRepo.findVacantPhotoExchangeInfo()
-                if (photoExchangeInfo.isEmpty()) {
-                    val photoInfo = photoInfoRepo.find(userId, photoName)
-                    if (photoInfo.isEmpty()) {
-                        logger.debug("Could not find uploaded user photo")
-                        return@async formatResponse(HttpStatus.NOT_FOUND,
-                                PhotoAnswerResponse.fail(ServerErrorCode.NOT_FOUND))
-                    }
-
-                    if (!photoExchangeInfoRepo.exists(photoInfo.photoId)) {
-                        val newPhotoExchangeInfo = PhotoExchangeInfo.create(photoInfo.photoId)
-                        val createResult = photoExchangeInfoRepo.createNew(newPhotoExchangeInfo)
-                        if (createResult.isEmpty()) {
-                            logger.debug("Could not create new photo exchange")
-                            return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-                                    PhotoAnswerResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
-                        }
-                    }
-
+                val photoInfo = photoInfoRepo.find(userId, photoName)
+                if (photoInfo.isEmpty()) {
                     logger.debug("No spare photos were found.")
                     return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.NO_PHOTOS_TO_SEND_BACK))
                 }
 
-                val uploaderPhotoInfo = photoInfoRepo.findById(photoExchangeInfo.uploaderPhotoId)
-
-
                 val photoAnswer = PhotoAnswerJsonObject(
-                        uploaderPhotoInfo.photoId,
-                        uploaderPhotoInfo.whoUploaded,
-                        uploaderPhotoInfo.photoName,
-                        uploaderPhotoInfo.lon,
-                        uploaderPhotoInfo.lat)
+                        photoInfo.photoId,
+                        photoInfo.whoUploaded,
+                        photoInfo.photoName,
+                        photoInfo.lon,
+                        photoInfo.lat)
 
                 try {
                     cleanUp()
