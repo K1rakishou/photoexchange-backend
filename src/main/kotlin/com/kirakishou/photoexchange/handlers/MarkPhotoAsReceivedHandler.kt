@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.net.response.StatusResponse
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
@@ -28,14 +29,8 @@ class MarkPhotoAsReceivedHandler(
             logger.debug("MarkPhotoAsReceived request")
 
             try {
-                val pathVariables = request.pathVariables()
-                if (!pathVariables.containsKey(PHOTO_ID_PATH_VARIABLE)) {
-                    logger.debug("request does not contain photo_id variable")
-                    return@async formatResponse(HttpStatus.BAD_REQUEST, StatusResponse.from(ServerErrorCode.BAD_REQUEST))
-                }
-
-                if (!pathVariables.containsKey(USER_ID_PATH_VARIABLE)) {
-                    logger.debug("request does not contain user_id variable")
+                if (!request.containsAllPathVars(PHOTO_ID_PATH_VARIABLE, USER_ID_PATH_VARIABLE)) {
+                    logger.debug("Request does not contain one of the required path variables")
                     return@async formatResponse(HttpStatus.BAD_REQUEST, StatusResponse.from(ServerErrorCode.BAD_REQUEST))
                 }
 

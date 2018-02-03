@@ -1,6 +1,6 @@
 package com.kirakishou.photoexchange.repository
 
-import com.kirakishou.photoexchange.model.MongoSequence
+import com.kirakishou.photoexchange.model.repo.MongoSequence
 import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
@@ -11,6 +11,7 @@ open class MongoSequenceRepository(
     private val template: MongoTemplate
 ) {
     private val PHOTO_INFO_SEQUENCE_NAME = "photo_info_sequence"
+    private val PHOTO_EXCHANGE_INFO_SEQUENCE_NAME = "photo_exchange_info_sequence"
 
     private suspend fun getNextId(sequenceName: String): Long {
         val mongoSequenceMono = template.findAndModify(
@@ -24,5 +25,9 @@ open class MongoSequenceRepository(
 
     suspend fun getNextPhotoId(): Long {
        return getNextId(PHOTO_INFO_SEQUENCE_NAME)
+    }
+
+    suspend fun getNextPhotoExchangeId(): Long {
+        return getNextId(PHOTO_EXCHANGE_INFO_SEQUENCE_NAME)
     }
 }

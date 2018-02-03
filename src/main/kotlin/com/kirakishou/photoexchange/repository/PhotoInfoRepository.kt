@@ -1,9 +1,11 @@
 package com.kirakishou.photoexchange.repository
 
-import com.kirakishou.photoexchange.model.PhotoInfo
+import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.ThreadPoolDispatcher
 import kotlinx.coroutines.experimental.async
+import kotlinx.coroutines.experimental.sync.Mutex
+import kotlinx.coroutines.experimental.sync.withLock
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.MongoTemplate
@@ -17,20 +19,23 @@ open class PhotoInfoRepository(
     private val mongoThreadPoolContext: ThreadPoolDispatcher
 ) {
     private val logger = LoggerFactory.getLogger(PhotoInfoRepository::class.java)
+    private val mutex = Mutex()
 
     suspend fun save(photoInfoParam: PhotoInfo): PhotoInfo {
         return async(mongoThreadPoolContext) {
-            val id = mongoSequenceRepo.getNextPhotoId()
-            photoInfoParam.photoId = id
+            return@async mutex.withLock {
+                val id = mongoSequenceRepo.getNextPhotoId()
+                photoInfoParam.photoId = id
 
-            try {
-                template.save(photoInfoParam)
-            } catch (error: Throwable) {
-                logger.error("DB error", error)
-                return@async PhotoInfo.empty()
+                try {
+                    template.save(photoInfoParam)
+                } catch (error: Throwable) {
+                    logger.error("DB error", error)
+                    return@withLock PhotoInfo.empty()
+                }
+
+                return@withLock photoInfoParam
             }
-
-            return@async photoInfoParam
         }.await()
     }
 
@@ -68,6 +73,47 @@ open class PhotoInfoRepository(
         }.await()
     }
 
+    suspend fun find(userId: String, photoName: String): PhotoInfo {
+        return async(mongoThreadPoolContext) {
+            val query = Query()
+                    .addCriteria(Criteria.where("whoUploaded").`is`(userId))
+                    .addCriteria(Criteria.where("photoName").`is`(photoName))
+
+            val photoInfo = try {
+                template.findOne(query, PhotoInfo::class.java)
+            } catch (error: Throwable) {
+                logger.error("DB error", error)
+                PhotoInfo.empty()
+            }
+
+            if (photoInfo == null) {
+                return@async PhotoInfo.empty()
+            }
+
+            return@async photoInfo
+        }.await()
+    }
+
+    suspend fun findById(photoId: Long): PhotoInfo {
+        return async(mongoThreadPoolContext) {
+            val query = Query()
+                    .addCriteria(Criteria.where("photoId").`is`(photoId))
+
+            val photoInfo = try {
+                template.findOne(query, PhotoInfo::class.java)
+            } catch (error: Throwable) {
+                logger.error("DB error", error)
+                PhotoInfo.empty()
+            }
+
+            if (photoInfo == null) {
+                return@async PhotoInfo.empty()
+            }
+
+            return@async photoInfo
+        }.await()
+    }
+
     suspend fun findPhotoByCandidateUserIdList(userIdList: List<String>): List<PhotoInfo> {
         return async(mongoThreadPoolContext) {
             val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
@@ -87,7 +133,7 @@ open class PhotoInfoRepository(
         }.await()
     }
 
-    suspend fun findOldestUploadedPhoto(userId: String): PhotoInfo {
+    /*suspend fun findOldestUploadedPhoto(userId: String): PhotoInfo {
         return async(mongoThreadPoolContext) {
             val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
                     .addCriteria(Criteria.where("whoUploaded").ne(userId))
@@ -108,7 +154,7 @@ open class PhotoInfoRepository(
 
             return@async result
         }.await()
-    }
+    }*/
 
     suspend fun findUploadedPhotosLocations(userId: String, photoNameList: List<String>): List<PhotoInfo> {
         return async(mongoThreadPoolContext) {
@@ -183,7 +229,7 @@ open class PhotoInfoRepository(
         }.await()
     }
 
-    suspend fun deleteById(userId: String): Boolean {
+    suspend fun deleteUserById(userId: String): Boolean {
         return async(mongoThreadPoolContext) {
             val result = try {
                 template.remove(Query.query(Criteria.where("whoUploaded").`is`(userId))).wasAcknowledged()

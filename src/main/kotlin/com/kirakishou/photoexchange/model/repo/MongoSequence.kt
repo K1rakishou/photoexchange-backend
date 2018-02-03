@@ -1,4 +1,4 @@
-package com.kirakishou.photoexchange.model
+package com.kirakishou.photoexchange.model.repo
 
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document

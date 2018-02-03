@@ -1,11 +1,12 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.model.PhotoInfo
+import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.exception.EmptyFile
 import com.kirakishou.photoexchange.model.exception.EmptyPacket
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
+import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -29,6 +30,7 @@ import reactor.core.publisher.Mono
 import java.awt.Dimension
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 class UploadPhotoHandler(
     private val jsonConverter: JsonConverterService,
@@ -42,8 +44,8 @@ class UploadPhotoHandler(
     private val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
     private var fileDirectoryPath = "D:\\projects\\data\\photos"
     private var lastTimeCheck = 0L
-    private val ONE_HOUR = 1000L * 60L * 60L
-    private val SEVEN_DAYS = 1000L * 60L * 60L * 24L * 7L
+    private val ONE_HOUR = TimeUnit.HOURS.toMillis(1)
+    private val SEVEN_DAYS = TimeUnit.DAYS.toMillis(7)
     private val photoSizes = arrayOf("_o", "_s")
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
@@ -51,17 +53,12 @@ class UploadPhotoHandler(
             logger.debug("New UploadPhoto request")
 
             try {
+                if (!request.containsAllPathVars(PACKET_PART_KEY, PHOTO_PART_KEY)) {
+                    logger.debug("Request does not contain one of the required path variables")
+                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
+                }
+
                 val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitFirst()
-                if (!checkMultiValueMapPart(multiValueMap, PACKET_PART_KEY)) {
-                    logger.debug("multipart request does not contain \"packet\" part")
-                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
-                }
-
-                if (!checkMultiValueMapPart(multiValueMap, PHOTO_PART_KEY)) {
-                    logger.debug("multipart request does not contain \"photo\" part")
-                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
-                }
-
                 val packetParts = collectPacketParts(multiValueMap).awaitFirst()
                 val photoParts = collectPhotoParts(multiValueMap).awaitFirst()
 
@@ -70,8 +67,6 @@ class UploadPhotoHandler(
                     logger.debug("One or more of the packet's fields are incorrect")
                     return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
-
-                logger.debug("userId = ${packet.userId}")
 
                 if (!checkPhotoTotalSize(photoParts)) {
                     logger.debug("Bad photo size")
@@ -99,7 +94,7 @@ class UploadPhotoHandler(
                     ImageUtils.resizeAndSaveImageOnDisk(tempFile, Dimension(512, 512), "_s", fileDirectoryPath, photoInfo.photoName)
 
                 } catch (error: Throwable) {
-                    photoInfoRepo.deleteById(photoInfo.whoUploaded)
+                    photoInfoRepo.deleteUserById(photoInfo.whoUploaded)
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
                 } finally {
                     if (tempFile.exists()) {
@@ -201,11 +196,8 @@ class UploadPhotoHandler(
                 -1L,
                 packet.userId,
                 newPhotoName,
-                "",
                 packet.lon,
                 packet.lat,
-                0L,
-                0L,
                 TimeUtils.getTimeFast()
         )
     }
@@ -232,18 +224,6 @@ class UploadPhotoHandler(
                 }
                 .buffer()
                 .single()
-    }
-
-    private fun checkMultiValueMapPart(map: MultiValueMap<String, Part>, key: String): Boolean {
-        if (!map.contains(key)) {
-            return false
-        }
-
-        if (map.getFirst(key) == null) {
-            return false
-        }
-
-        return true
     }
 }
 
