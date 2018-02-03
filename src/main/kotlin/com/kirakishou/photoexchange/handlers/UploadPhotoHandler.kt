@@ -6,9 +6,7 @@ import com.kirakishou.photoexchange.model.exception.EmptyFile
 import com.kirakishou.photoexchange.model.exception.EmptyPacket
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
-import com.kirakishou.photoexchange.model.repo.PhotoExchangeInfo
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
-import com.kirakishou.photoexchange.repository.PhotoExchangeInfoRepository
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -37,7 +35,6 @@ import java.util.concurrent.TimeUnit
 class UploadPhotoHandler(
     private val jsonConverter: JsonConverterService,
     private val photoInfoRepo: PhotoInfoRepository,
-    private val photoExchangeInfoRepo: PhotoExchangeInfoRepository,
     private val generator: GeneratorServiceImpl
 ) : WebHandler {
 
@@ -203,10 +200,6 @@ class UploadPhotoHandler(
                 packet.lat,
                 TimeUtils.getTimeFast()
         )
-    }
-
-    private fun createPhotoExchangeInfo(photoInfo: PhotoInfo): PhotoExchangeInfo {
-        return PhotoExchangeInfo.create(photoInfo.photoId)
     }
 
     private fun collectPhotoParts(map: MultiValueMap<String, Part>): Mono<MutableList<DataBuffer>> {

@@ -4,7 +4,6 @@ import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerJsonObject
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
-import com.kirakishou.photoexchange.repository.PhotoExchangeInfoRepository
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.TimeUtils
@@ -21,8 +20,7 @@ import java.util.concurrent.TimeUnit
 
 class GetPhotoAnswerHandler(
         private val jsonConverter: JsonConverterService,
-        private val photoInfoRepo: PhotoInfoRepository,
-        private val photoExchangeInfoRepo: PhotoExchangeInfoRepository
+        private val photoInfoRepo: PhotoInfoRepository
         ) : WebHandler {
     private val logger = LoggerFactory.getLogger(GetPhotoAnswerHandler::class.java)
     private val USER_ID_PATH_VARIABLE = "user_id"
