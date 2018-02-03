@@ -1,11 +1,14 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.model.PhotoInfo
+import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.exception.EmptyFile
 import com.kirakishou.photoexchange.model.exception.EmptyPacket
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
+import com.kirakishou.photoexchange.model.repo.PhotoExchangeInfo
+import com.kirakishou.photoexchange.model.repo.PhotoInfo
+import com.kirakishou.photoexchange.repository.PhotoExchangeInfoRepository
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -33,6 +36,7 @@ import java.io.IOException
 class UploadPhotoHandler(
     private val jsonConverter: JsonConverterService,
     private val photoInfoRepo: PhotoInfoRepository,
+    private val photoExchangeInfoRepo: PhotoExchangeInfoRepository,
     private val generator: GeneratorServiceImpl
 ) : WebHandler {
 
@@ -51,17 +55,12 @@ class UploadPhotoHandler(
             logger.debug("New UploadPhoto request")
 
             try {
+                if (!request.containsAllPathVars(PACKET_PART_KEY, PHOTO_PART_KEY)) {
+                    logger.debug("Request does not contain one of the required path variables")
+                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
+                }
+
                 val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitFirst()
-                if (!checkMultiValueMapPart(multiValueMap, PACKET_PART_KEY)) {
-                    logger.debug("multipart request does not contain \"packet\" part")
-                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
-                }
-
-                if (!checkMultiValueMapPart(multiValueMap, PHOTO_PART_KEY)) {
-                    logger.debug("multipart request does not contain \"photo\" part")
-                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
-                }
-
                 val packetParts = collectPacketParts(multiValueMap).awaitFirst()
                 val photoParts = collectPhotoParts(multiValueMap).awaitFirst()
 
@@ -85,6 +84,14 @@ class UploadPhotoHandler(
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
                 }
 
+                /*val photoExchangeInfo = createPhotoExchangeInfo(photoInfo)
+                val result2 = photoExchangeInfoRepo.createNew(photoExchangeInfo)
+                if (result2.isEmpty()) {
+                    logger.debug("Could not create a new photoExchangeInfo")
+                    photoInfoRepo.deleteUserById(photoInfo.whoUploaded)
+                    return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
+                }*/
+
                 val tempFile = saveTempFile(photoParts, photoInfo)
                 if (tempFile == null) {
                     logger.debug("Could not save file to disk")
@@ -99,7 +106,7 @@ class UploadPhotoHandler(
                     ImageUtils.resizeAndSaveImageOnDisk(tempFile, Dimension(512, 512), "_s", fileDirectoryPath, photoInfo.photoName)
 
                 } catch (error: Throwable) {
-                    photoInfoRepo.deleteById(photoInfo.whoUploaded)
+                    photoInfoRepo.deleteUserById(photoInfo.whoUploaded)
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
                 } finally {
                     if (tempFile.exists()) {
@@ -201,13 +208,14 @@ class UploadPhotoHandler(
                 -1L,
                 packet.userId,
                 newPhotoName,
-                "",
                 packet.lon,
                 packet.lat,
-                0L,
-                0L,
                 TimeUtils.getTimeFast()
         )
+    }
+
+    private fun createPhotoExchangeInfo(photoInfo: PhotoInfo): PhotoExchangeInfo {
+        return PhotoExchangeInfo.create(photoInfo.photoId)
     }
 
     private fun collectPhotoParts(map: MultiValueMap<String, Part>): Mono<MutableList<DataBuffer>> {
@@ -232,18 +240,6 @@ class UploadPhotoHandler(
                 }
                 .buffer()
                 .single()
-    }
-
-    private fun checkMultiValueMapPart(map: MultiValueMap<String, Part>, key: String): Boolean {
-        if (!map.contains(key)) {
-            return false
-        }
-
-        if (map.getFirst(key) == null) {
-            return false
-        }
-
-        return true
     }
 }
 

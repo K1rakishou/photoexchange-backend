@@ -1,12 +1,8 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.net.response.GetUserLocationResponse
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
-import kotlinx.coroutines.experimental.CommonPool
-import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.reactor.asMono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -23,7 +19,7 @@ class GetUserLocationHandler(
     private val PHOTO_NAMES_QUERY_PARAM = "photo_names"
 
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
-        val result = async {
+        /*val result = async {
             logger.debug("New GetUserLocation request")
 
             try {
@@ -61,7 +57,9 @@ class GetUserLocationHandler(
 
         return result
                 .asMono(CommonPool)
-                .flatMap { it }
+                .flatMap { it }*/
+
+        return ServerResponse.ok().build()
     }
 
     private fun formatResponse(httpStatus: HttpStatus, response: GetUserLocationResponse): Mono<ServerResponse> {

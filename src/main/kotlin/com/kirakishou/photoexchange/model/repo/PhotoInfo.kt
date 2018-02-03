@@ -1,4 +1,4 @@
-package com.kirakishou.photoexchange.model
+package com.kirakishou.photoexchange.model.repo
 
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import org.springframework.data.annotation.Id
@@ -11,21 +11,16 @@ data class PhotoInfo(
     @Id
     var photoId: Long,
 
-    @Indexed(name = "who_uploaded")
+    @Indexed(name = "who_uploaded_index")
     val whoUploaded: String,
 
     @Indexed(name = "photo_name_index")
     val photoName: String,
 
-    @Indexed(name = "candidate_user_id")
-    val candidateUserId: String,
-
     val lon: Double,
     val lat: Double,
-    val receivedPhotoBackOn: Long,
-    val candidateFoundOn: Long,
 
-    @Indexed(name = "uploaded_on", direction = IndexDirection.DESCENDING)
+    @Indexed(name = "uploaded_on_index", direction = IndexDirection.DESCENDING)
     val uploadedOn: Long
 ) {
     fun isEmpty(): Boolean {
@@ -34,7 +29,7 @@ data class PhotoInfo(
 
     companion object {
         fun empty(): PhotoInfo {
-            return PhotoInfo(-1L, "", "", "", 0.0, 0.0, 0L, 0L, 0L)
+            return PhotoInfo(-1L, "", "", 0.0, 0.0, 0L)
         }
     }
 }

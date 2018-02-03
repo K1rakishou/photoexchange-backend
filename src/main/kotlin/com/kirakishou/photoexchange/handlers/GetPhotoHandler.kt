@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBufferUtils
 import org.springframework.core.io.buffer.DefaultDataBufferFactory
@@ -21,7 +22,11 @@ class GetPhotoHandler : WebHandler {
     override fun handle(request: ServerRequest): Mono<ServerResponse> {
         logger.debug("GetPhoto request")
 
-        //TODO: check PHOTO_NAME_PATH_VARIABLE existence
+        if (!request.containsAllPathVars(PHOTO_NAME_PATH_VARIABLE, PHOTO_SIZE_PATH_VARIABLE)) {
+            logger.debug("Request does not contain one of the required path variables")
+            return ServerResponse.badRequest().build()
+        }
+
         val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
         val photoSize = request.pathVariable(PHOTO_SIZE_PATH_VARIABLE)
 
