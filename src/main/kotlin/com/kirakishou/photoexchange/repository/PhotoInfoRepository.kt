@@ -1,7 +1,6 @@
 package com.kirakishou.photoexchange.repository
 
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
-import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.ThreadPoolDispatcher
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.sync.Mutex
@@ -21,20 +20,20 @@ open class PhotoInfoRepository(
     private val logger = LoggerFactory.getLogger(PhotoInfoRepository::class.java)
     private val mutex = Mutex()
 
-    suspend fun save(photoInfoParam: PhotoInfo): PhotoInfo {
+    suspend fun save(photoInfo: PhotoInfo): PhotoInfo {
         return async(mongoThreadPoolContext) {
             return@async mutex.withLock {
                 val id = mongoSequenceRepo.getNextPhotoId()
-                photoInfoParam.photoId = id
+                photoInfo.photoId = id
 
                 try {
-                    template.save(photoInfoParam)
+                    template.save(photoInfo)
                 } catch (error: Throwable) {
                     logger.error("DB error", error)
                     return@withLock PhotoInfo.empty()
                 }
 
-                return@withLock photoInfoParam
+                return@withLock photoInfo
             }
         }.await()
     }
@@ -94,85 +93,104 @@ open class PhotoInfoRepository(
         }.await()
     }
 
-    suspend fun findById(photoId: Long): PhotoInfo {
-        return async(mongoThreadPoolContext) {
-            val query = Query()
-                    .addCriteria(Criteria.where("photoId").`is`(photoId))
+//    suspend fun findById(photoId: Long): PhotoInfo {
+//        return async(mongoThreadPoolContext) {
+//            val query = Query()
+//                    .addCriteria(Criteria.where("photoId").`is`(photoId))
+//
+//            val photoInfo = try {
+//                template.findOne(query, PhotoInfo::class.java)
+//            } catch (error: Throwable) {
+//                logger.error("DB error", error)
+//                PhotoInfo.empty()
+//            }
+//
+//            if (photoInfo == null) {
+//                return@async PhotoInfo.empty()
+//            }
+//
+//            return@async photoInfo
+//        }.await()
+//    }
+//
+//    suspend fun findPhotoByCandidateUserIdList(userIdList: List<String>): List<PhotoInfo> {
+//        return async(mongoThreadPoolContext) {
+//            val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
+//                    .addCriteria(Criteria.where("whoUploaded").`in`(userIdList))
+//                    .addCriteria(Criteria.where("receivedPhotoBackOn").gt(0L))
+//                    .addCriteria(Criteria.where("candidateFoundOn").gt(0L))
+//                    .limit(1)
+//
+//            val result = try {
+//                template.find(query, PhotoInfo::class.java)
+//            } catch (error: Throwable) {
+//                logger.error("DB error", error)
+//                emptyList<PhotoInfo>()
+//            }
+//
+//            return@async result
+//        }.await()
+//    }
 
-            val photoInfo = try {
-                template.findOne(query, PhotoInfo::class.java)
+//    suspend fun findOldestUploadedPhoto(userId: String): PhotoInfo {
+//        return async(mongoThreadPoolContext) {
+//            val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
+//                    .addCriteria(Criteria.where("whoUploaded").ne(userId))
+//                    .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
+//                    .addCriteria(Criteria.where("candidateFoundOn").`is`(0L))
+//                    .limit(1)
+//
+//            val update = Update()
+//                    .set("candidateFoundOn", TimeUtils.getTimeFast())
+//                    .set("candidateUserId", userId)
+//
+//            val result = try {
+//                template.findAndModify(query, update, PhotoInfo::class.java) ?: PhotoInfo.empty()
+//            } catch (error: Throwable) {
+//                logger.error("DB error", error)
+//                PhotoInfo.empty()
+//            }
+//
+//            return@async result
+//        }.await()
+//    }
+
+    suspend fun findOldestUploadedPhoto(uploaderUserId: String, uploadingPhotoName: String): PhotoInfo {
+        return async(mongoThreadPoolContext) {
+            val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
+                    .addCriteria(Criteria.where("whoUploaded").ne(uploaderUserId))
+                    .addCriteria(Criteria.where("photoName").ne(uploadingPhotoName))
+                    .addCriteria(Criteria.where("whoReceived").`is`(""))
+                    .addCriteria(Criteria.where("receivedOn").`is`(0L))
+
+            val result = try {
+                template.findOne(query, PhotoInfo::class.java) ?: PhotoInfo.empty()
             } catch (error: Throwable) {
                 logger.error("DB error", error)
                 PhotoInfo.empty()
             }
 
-            if (photoInfo == null) {
-                return@async PhotoInfo.empty()
-            }
-
-            return@async photoInfo
-        }.await()
-    }
-
-    suspend fun findPhotoByCandidateUserIdList(userIdList: List<String>): List<PhotoInfo> {
-        return async(mongoThreadPoolContext) {
-            val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
-                    .addCriteria(Criteria.where("whoUploaded").`in`(userIdList))
-                    .addCriteria(Criteria.where("receivedPhotoBackOn").gt(0L))
-                    .addCriteria(Criteria.where("candidateFoundOn").gt(0L))
-                    .limit(1)
-
-            val result = try {
-                template.find(query, PhotoInfo::class.java)
-            } catch (error: Throwable) {
-                logger.error("DB error", error)
-                emptyList<PhotoInfo>()
-            }
-
             return@async result
         }.await()
     }
 
-    /*suspend fun findOldestUploadedPhoto(userId: String): PhotoInfo {
-        return async(mongoThreadPoolContext) {
-            val query = Query().with(Sort(Sort.Direction.ASC, "uploadedOn"))
-                    .addCriteria(Criteria.where("whoUploaded").ne(userId))
-                    .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
-                    .addCriteria(Criteria.where("candidateFoundOn").`is`(0L))
-                    .limit(1)
-
-            val update = Update()
-                    .set("candidateFoundOn", TimeUtils.getTimeFast())
-                    .set("candidateUserId", userId)
-
-            val result = try {
-                template.findAndModify(query, update, PhotoInfo::class.java) ?: PhotoInfo.empty()
-            } catch (error: Throwable) {
-                logger.error("DB error", error)
-                PhotoInfo.empty()
-            }
-
-            return@async result
-        }.await()
-    }*/
-
-    suspend fun findUploadedPhotosLocations(userId: String, photoNameList: List<String>): List<PhotoInfo> {
-        return async(mongoThreadPoolContext) {
-            val query = Query()
-                    .addCriteria(Criteria.where("whoUploaded").`is`(userId))
-                    .addCriteria(Criteria.where("photoName").`in`(photoNameList))
-                    .addCriteria(Criteria.where("candidateFoundOn").gt(0L))
-
-            val result = try {
-                template.find(query, PhotoInfo::class.java)
-            } catch (error: Throwable) {
-                logger.error("DB error", error)
-                emptyList<PhotoInfo>()
-            }
-
-            return@async result
-        }.await()
-    }
+//    suspend fun findUploadedPhotosLocations(userId: String, photoNameList: List<String>): List<PhotoInfo> {
+//        return async(mongoThreadPoolContext) {
+//            val query = Query()
+//                    .addCriteria(Criteria.where("whoUploaded").`is`(userId))
+//                    .addCriteria(Criteria.where("photoName").`in`(photoNameList))
+//                    .addCriteria(Criteria.where("candidateFoundOn").gt(0L))
+//
+//            val result = try {
+//                template.find(query, PhotoInfo::class.java)
+//            } catch (error: Throwable) {
+//                logger.error("DB error", error)
+//                emptyList<PhotoInfo>()
+//            }
+//
+//            return@async result
+//        }.await()
+//    }
 
     suspend fun cleanCandidatesFromPhotosOverTime(time: Long) {
         async(mongoThreadPoolContext) {
@@ -208,7 +226,7 @@ open class PhotoInfoRepository(
         }.await()
     }
 
-    suspend fun updateSetPhotoSuccessfullyDelivered(photoId: Long, userId: String): Boolean {
+    suspend fun updateSetPhotoSuccessfullyDelivered(photoId: Long, userId: String, time: Long): Boolean {
         return async(mongoThreadPoolContext) {
             val query = Query()
                     .addCriteria(Criteria.where("photoId").`is`(photoId))
@@ -216,7 +234,28 @@ open class PhotoInfoRepository(
                     .addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
 
             val update = Update()
-                    .set("receivedPhotoBackOn", TimeUtils.getTimeFast())
+                    .set("receivedPhotoBackOn", time)
+
+            val result = try {
+                template.updateFirst(query, update, PhotoInfo::class.java).wasAcknowledged()
+            } catch (error: Throwable) {
+                logger.error("DB error", error)
+                false
+            }
+
+            return@async result
+        }.await()
+    }
+
+    suspend fun updateSetPhotoReceiver(userId: String, photoName: String, receiverId: String, time: Long): Boolean {
+        return async(mongoThreadPoolContext) {
+            val query = Query()
+                    .addCriteria(Criteria.where("whoUploaded").`is`(userId))
+                    .addCriteria(Criteria.where("photoName").`is`(photoName))
+
+            val update = Update()
+                    .set("whoReceived", receiverId)
+                    .set("receivedOn", time)
 
             val result = try {
                 template.updateFirst(query, update, PhotoInfo::class.java).wasAcknowledged()

@@ -12,7 +12,7 @@ data class PhotoInfo(
     var photoId: Long,
 
     @Indexed(name = "who_uploaded_index")
-    val whoUploaded: String,
+    var whoUploaded: String,
 
     @Indexed(name = "photo_name_index")
     val photoName: String,

@@ -73,14 +73,15 @@ class UploadPhotoHandler(
                     return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
                 }
 
-                val photoInfo = createPhotoInfo(packet)
-                val result = photoInfoRepo.save(photoInfo)
+                val newUploadingPhoto = createPhotoInfo(packet)
+                val result = photoInfoRepo.save(newUploadingPhoto)
+
                 if (result.isEmpty()) {
                     logger.debug("Could not save a photoInfo")
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
                 }
 
-                val tempFile = saveTempFile(photoParts, photoInfo)
+                val tempFile = saveTempFile(photoParts, newUploadingPhoto)
                 if (tempFile == null) {
                     logger.debug("Could not save file to disk")
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
@@ -88,17 +89,38 @@ class UploadPhotoHandler(
 
                 try {
                     //save resized (original) version of the image
-                    ImageUtils.resizeAndSaveImageOnDisk(tempFile, Dimension(1536, 1536), "_o", fileDirectoryPath, photoInfo.photoName)
+                    ImageUtils.resizeAndSaveImageOnDisk(tempFile, Dimension(1536, 1536), "_o", fileDirectoryPath, newUploadingPhoto.photoName)
 
                     //save small version of the image
-                    ImageUtils.resizeAndSaveImageOnDisk(tempFile, Dimension(512, 512), "_s", fileDirectoryPath, photoInfo.photoName)
+                    ImageUtils.resizeAndSaveImageOnDisk(tempFile, Dimension(512, 512), "_s", fileDirectoryPath, newUploadingPhoto.photoName)
 
                 } catch (error: Throwable) {
-                    photoInfoRepo.deleteUserById(photoInfo.whoUploaded)
+                    photoInfoRepo.deleteUserById(newUploadingPhoto.whoUploaded)
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
                 } finally {
                     if (tempFile.exists()) {
                         tempFile.delete()
+                    }
+                }
+
+                val lastUploadedPhoto = photoInfoRepo.findOldestUploadedPhoto(packet.userId, newUploadingPhoto.photoName)
+                if (!lastUploadedPhoto.isEmpty()) {
+                    val now = TimeUtils.getTimeFast()
+
+                    if (!photoInfoRepo.updateSetPhotoReceiver(
+                            lastUploadedPhoto.whoUploaded,
+                            lastUploadedPhoto.photoName,
+                            newUploadingPhoto.whoUploaded,
+                            now)) {
+
+                    }
+
+                    if (!photoInfoRepo.updateSetPhotoReceiver(
+                            newUploadingPhoto.whoUploaded,
+                            newUploadingPhoto.photoName,
+                            lastUploadedPhoto.whoUploaded,
+                            now)) {
+
                     }
                 }
 
@@ -109,7 +131,7 @@ class UploadPhotoHandler(
                 }
 
                 logger.debug("Photo has been successfully uploaded")
-                return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(photoInfo.photoName))
+                return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(newUploadingPhoto.photoName))
 
             } catch (error: Throwable) {
                 logger.error("Unknown error", error)
@@ -195,7 +217,7 @@ class UploadPhotoHandler(
         return PhotoInfo(
                 -1L,
                 packet.userId,
-                newPhotoName,
+                "",
                 packet.lon,
                 packet.lat,
                 TimeUtils.getTimeFast()

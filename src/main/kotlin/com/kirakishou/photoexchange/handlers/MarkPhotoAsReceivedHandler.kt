@@ -6,6 +6,7 @@ import com.kirakishou.photoexchange.model.net.response.StatusResponse
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.CommonPool
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.reactor.asMono
@@ -48,7 +49,7 @@ class MarkPhotoAsReceivedHandler(
                     return@async formatResponse(HttpStatus.BAD_REQUEST, StatusResponse.from(ServerErrorCode.BAD_PHOTO_ID))
                 }
 
-                if (!photoInfoRepo.updateSetPhotoSuccessfullyDelivered(photoId, userId)) {
+                if (!photoInfoRepo.updateSetPhotoSuccessfullyDelivered(photoId, userId, TimeUtils.getTimeFast())) {
                     logger.debug("Couldn't update photo delivered")
                     return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, StatusResponse.from(ServerErrorCode.UNKNOWN_ERROR))
                 }
