@@ -1,10 +1,10 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerJsonObject
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
-import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.CommonPool
@@ -42,7 +42,7 @@ class GetPhotoAnswerHandler(
                 logger.debug("New GetPhotoAnswer request. UserId: $userId, photoName: $photoName")
 
                 val userUploadedPhotosCount = photoInfoRepo.countUserUploadedPhotos(userId)
-                val userReceivedPhotosCount = photoInfoRepo.countUserReceivedBackPhotos(userId)
+                val userReceivedPhotosCount = photoInfoRepo.countUserReceivedPhotos(userId)
 
                 val checkUserPhotosCountResult = checkUserPhotosCount(userUploadedPhotosCount, userReceivedPhotosCount)
                 if (checkUserPhotosCountResult != null) {
@@ -128,7 +128,7 @@ class GetPhotoAnswerHandler(
     }
 
     private suspend fun cleanPhotoCandidates(time: Long) {
-        photoInfoRepo.cleanCandidatesFromPhotosOverTime(time)
+        //photoInfoRepo.cleanCandidatesFromPhotosOverTime(time)
     }
 
     private fun formatResponse(httpStatus: HttpStatus, response: PhotoAnswerResponse): Mono<ServerResponse> {

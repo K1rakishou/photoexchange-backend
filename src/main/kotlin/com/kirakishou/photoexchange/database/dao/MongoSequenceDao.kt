@@ -1,4 +1,4 @@
-package com.kirakishou.photoexchange.repository
+package com.kirakishou.photoexchange.database.dao
 
 import com.kirakishou.photoexchange.model.repo.MongoSequence
 import org.springframework.data.mongodb.core.FindAndModifyOptions
@@ -7,7 +7,7 @@ import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 
-open class MongoSequenceRepository(
+open class MongoSequenceDao(
     private val template: MongoTemplate
 ) {
     private val PHOTO_INFO_SEQUENCE_NAME = "photo_info_sequence"

@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.exception.EmptyFile
@@ -7,7 +8,6 @@ import com.kirakishou.photoexchange.model.exception.EmptyPacket
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
-import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.IOUtils
@@ -33,9 +33,9 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 class UploadPhotoHandler(
-    private val jsonConverter: JsonConverterService,
-    private val photoInfoRepo: PhotoInfoRepository,
-    private val generator: GeneratorServiceImpl
+        private val jsonConverter: JsonConverterService,
+        private val photoInfoRepo: PhotoInfoRepository,
+        private val generator: GeneratorServiceImpl
 ) : WebHandler {
 
     private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
@@ -103,26 +103,26 @@ class UploadPhotoHandler(
                     }
                 }
 
-                val lastUploadedPhoto = photoInfoRepo.findOldestUploadedPhoto(packet.userId, newUploadingPhoto.photoName)
-                if (!lastUploadedPhoto.isEmpty()) {
-                    val now = TimeUtils.getTimeFast()
-
-                    if (!photoInfoRepo.updateSetPhotoReceiver(
-                            lastUploadedPhoto.whoUploaded,
-                            lastUploadedPhoto.photoName,
-                            newUploadingPhoto.whoUploaded,
-                            now)) {
-
-                    }
-
-                    if (!photoInfoRepo.updateSetPhotoReceiver(
-                            newUploadingPhoto.whoUploaded,
-                            newUploadingPhoto.photoName,
-                            lastUploadedPhoto.whoUploaded,
-                            now)) {
-
-                    }
-                }
+//                val lastUploadedPhoto = photoInfoRepo.findOldestUploadedPhoto(packet.userId, newUploadingPhoto.photoName)
+//                if (!lastUploadedPhoto.isEmpty()) {
+//                    val now = TimeUtils.getTimeFast()
+//
+//                    if (!photoInfoRepo.updateSetPhotoReceiver(
+//                            lastUploadedPhoto.whoUploaded,
+//                            lastUploadedPhoto.photoName,
+//                            newUploadingPhoto.whoUploaded,
+//                            now)) {
+//
+//                    }
+//
+//                    if (!photoInfoRepo.updateSetPhotoReceiver(
+//                            newUploadingPhoto.whoUploaded,
+//                            newUploadingPhoto.photoName,
+//                            lastUploadedPhoto.whoUploaded,
+//                            now)) {
+//
+//                    }
+//                }
 
                 try {
                     deleteOldPhotos()
@@ -214,14 +214,12 @@ class UploadPhotoHandler(
 
     private fun createPhotoInfo(packet: SendPhotoPacket): PhotoInfo {
         val newPhotoName = generator.generateNewPhotoName()
-        return PhotoInfo(
-                -1L,
+        return PhotoInfo.create(
                 packet.userId,
-                "",
+                newPhotoName,
                 packet.lon,
                 packet.lat,
-                TimeUtils.getTimeFast()
-        )
+                TimeUtils.getTimeFast())
     }
 
     private fun collectPhotoParts(map: MultiValueMap<String, Part>): Mono<MutableList<DataBuffer>> {

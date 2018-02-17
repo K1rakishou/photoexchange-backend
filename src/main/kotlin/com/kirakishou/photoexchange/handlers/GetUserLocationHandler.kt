@@ -1,7 +1,7 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.model.net.response.GetUserLocationResponse
-import com.kirakishou.photoexchange.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono
 
 class GetUserLocationHandler(
     private val jsonConverter: JsonConverterService,
-    private val photoInfoRepo: PhotoInfoRepository
+    private val photoInfoRepo: PhotoInfoDao
 ) : WebHandler {
     private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
     private val USER_ID_QUERY_PARAM = "user_id"
