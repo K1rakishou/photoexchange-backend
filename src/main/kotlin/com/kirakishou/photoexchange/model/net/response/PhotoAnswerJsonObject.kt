@@ -4,18 +4,18 @@ import com.google.gson.annotations.SerializedName
 
 class PhotoAnswerJsonObject(
 
-        @SerializedName("id")
-        val id: Long,
+	@SerializedName("id")
+	val id: Long,
 
-        @SerializedName("user_id")
-        val userId: String,
+	@SerializedName("user_id")
+	val userId: String,
 
-        @SerializedName("photo_name")
-        val photoName: String,
+	@SerializedName("photo_name")
+	val photoName: String,
 
-        @SerializedName("lon")
-        val lon: Double,
+	@SerializedName("lon")
+	val lon: Double,
 
-        @SerializedName("lat")
-        val lat: Double
+	@SerializedName("lat")
+	val lat: Double
 )

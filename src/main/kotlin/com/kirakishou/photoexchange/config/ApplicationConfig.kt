@@ -25,55 +25,56 @@ import org.springframework.web.reactive.function.server.HandlerStrategies
 import org.springframework.web.reactive.function.server.RouterFunctions
 
 fun myBeans(dbInfo: DatabaseInfo) = beans {
-    //router
-    bean<Router>()
+	//router
+	bean<Router>()
 
-    //handler
-    bean<UploadPhotoHandler>()
-    bean<GetPhotoAnswerHandler>()
-    bean<GetPhotoHandler>()
-    bean<MarkPhotoAsReceivedHandler>()
-    bean<GetUserLocationHandler>()
+	bean { GsonBuilder().create() }
+	bean { JsonConverterService(ref()) }
+	bean { MongoRepositoryFactory(ref()) }
+	bean { MongoTemplate(SimpleMongoDbFactory(MongoClient(dbInfo.host, dbInfo.port), dbInfo.dbName)) }
 
-    //thread pool
-    bean(MONGO_POOL_BEAN_NAME) { newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), MONGO_POOL_NAME) }
+	//handler
+	bean<UploadPhotoHandler>()
+	bean<GetPhotoAnswerHandler>()
+	bean<GetPhotoHandler>()
+	bean<MarkPhotoAsReceivedHandler>()
+	bean<GetUserLocationHandler>()
 
-    //dao
-    bean { MongoSequenceDao(ref()) }
-    bean { PhotoInfoDao(ref()) }
-    bean { PhotoInfoExchangeDao(ref()) }
+	//thread pool
+	bean(MONGO_POOL_BEAN_NAME) { newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), MONGO_POOL_NAME) }
 
-    //repository
-    bean { PhotoInfoRepository(ref(), ref(), ref(), ref(MONGO_POOL_BEAN_NAME)) }
-    bean { PhotoInfoExchangeRepository(ref(), ref(), ref(MONGO_POOL_BEAN_NAME)) }
+	//dao
+	bean { MongoSequenceDao(ref()).also { it.init() } }
+	bean { PhotoInfoDao(ref()).also { it.init() } }
+	bean { PhotoInfoExchangeDao(ref()).also { it.init() } }
 
-    //service
-    bean { GeneratorServiceImpl() }
+	//repository
+	bean { PhotoInfoRepository(ref(), ref(), ref(), ref(MONGO_POOL_BEAN_NAME)) }
+	bean { PhotoInfoExchangeRepository(ref(), ref(), ref(MONGO_POOL_BEAN_NAME)) }
 
-    //etc
-    bean { GsonBuilder().create() }
-    bean { JsonConverterService(ref()) }
-    bean { MongoRepositoryFactory(ref()) }
-    bean { MongoTemplate(SimpleMongoDbFactory(MongoClient(dbInfo.host, dbInfo.port), dbInfo.dbName)) }
-    bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }
-    bean {
-        val prefix = "classpath:/templates/"
-        val suffix = ".mustache"
-        val loader = MustacheResourceTemplateLoader(prefix, suffix)
-        MustacheViewResolver(Mustache.compiler().withLoader(loader)).apply {
-            setPrefix(prefix)
-            setSuffix(suffix)
-        }
-    }
+	//service
+	bean { GeneratorServiceImpl() }
+
+	//etc
+	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }
+	bean {
+		val prefix = "classpath:/templates/"
+		val suffix = ".mustache"
+		val loader = MustacheResourceTemplateLoader(prefix, suffix)
+		MustacheViewResolver(Mustache.compiler().withLoader(loader)).apply {
+			setPrefix(prefix)
+			setSuffix(suffix)
+		}
+	}
 }
 
 class DatabaseInfo(
-        val host: String,
-        val port: Int,
-        val dbName: String
+	val host: String,
+	val port: Int,
+	val dbName: String
 )
 
 object Settings {
-    const val MONGO_POOL_NAME = "mongo"
-    const val MONGO_POOL_BEAN_NAME = "mongoPool"
+	const val MONGO_POOL_NAME = "mongo"
+	const val MONGO_POOL_BEAN_NAME = "mongoPool"
 }

@@ -1,13 +1,14 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.exception.EmptyFile
 import com.kirakishou.photoexchange.model.exception.EmptyPacket
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
+import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.IOUtils
@@ -33,218 +34,211 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 class UploadPhotoHandler(
-        private val jsonConverter: JsonConverterService,
-        private val photoInfoRepo: PhotoInfoRepository,
-        private val generator: GeneratorServiceImpl
+	private val jsonConverter: JsonConverterService,
+	private val photoInfoRepo: PhotoInfoRepository,
+	private val photoInfoExchangeRepo: PhotoInfoExchangeRepository,
+	private val generator: GeneratorServiceImpl
 ) : WebHandler {
 
-    private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
-    private val PACKET_PART_KEY = "packet"
-    private val PHOTO_PART_KEY = "photo"
-    private val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
-    private var fileDirectoryPath = "D:\\projects\\data\\photos"
-    private var lastTimeCheck = 0L
-    private val ONE_HOUR = TimeUnit.HOURS.toMillis(1)
-    private val SEVEN_DAYS = TimeUnit.DAYS.toMillis(7)
-    private val photoSizes = arrayOf("_o", "_s")
+	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
+	private val PACKET_PART_KEY = "packet"
+	private val PHOTO_PART_KEY = "photo"
+	private val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
+	private var fileDirectoryPath = "D:\\projects\\data\\photos"
+	private var lastTimeCheck = 0L
+	private val ONE_HOUR = TimeUnit.HOURS.toMillis(1)
+	private val SEVEN_DAYS = TimeUnit.DAYS.toMillis(7)
+	private val photoSizes = arrayOf("_o", "_s")
 
-    override fun handle(request: ServerRequest): Mono<ServerResponse> {
-        val result = async {
-            logger.debug("New UploadPhoto request")
+	override fun handle(request: ServerRequest): Mono<ServerResponse> {
+		val result = async {
+			logger.debug("New UploadPhoto request")
 
-            try {
-                if (!request.containsAllPathVars(PACKET_PART_KEY, PHOTO_PART_KEY)) {
-                    logger.debug("Request does not contain one of the required path variables")
-                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
-                }
-
-                val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitFirst()
-                val packetParts = collectPacketParts(multiValueMap).awaitFirst()
-                val photoParts = collectPhotoParts(multiValueMap).awaitFirst()
-
-                val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
-                if (!packet.isPacketOk()) {
-                    logger.debug("One or more of the packet's fields are incorrect")
-                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
-                }
-
-                if (!checkPhotoTotalSize(photoParts)) {
-                    logger.debug("Bad photo size")
-                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
-                }
-
-                val newUploadingPhoto = createPhotoInfo(packet)
-                val result = photoInfoRepo.save(newUploadingPhoto)
-
-                if (result.isEmpty()) {
-                    logger.debug("Could not save a photoInfo")
-                    return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
-                }
-
-                val tempFile = saveTempFile(photoParts, newUploadingPhoto)
-                if (tempFile == null) {
-                    logger.debug("Could not save file to disk")
-                    return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
-                }
-
-                try {
-                    //save resized (original) version of the image
-                    ImageUtils.resizeAndSaveImageOnDisk(tempFile, Dimension(1536, 1536), "_o", fileDirectoryPath, newUploadingPhoto.photoName)
-
-                    //save small version of the image
-                    ImageUtils.resizeAndSaveImageOnDisk(tempFile, Dimension(512, 512), "_s", fileDirectoryPath, newUploadingPhoto.photoName)
-
-                } catch (error: Throwable) {
-                    photoInfoRepo.deleteUserById(newUploadingPhoto.whoUploaded)
-                    return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
-                } finally {
-                    if (tempFile.exists()) {
-                        tempFile.delete()
-                    }
-                }
-
-//                val lastUploadedPhoto = photoInfoRepo.findOldestUploadedPhoto(packet.userId, newUploadingPhoto.photoName)
-//                if (!lastUploadedPhoto.isEmpty()) {
-//                    val now = TimeUtils.getTimeFast()
-//
-//                    if (!photoInfoRepo.updateSetPhotoReceiver(
-//                            lastUploadedPhoto.whoUploaded,
-//                            lastUploadedPhoto.photoName,
-//                            newUploadingPhoto.whoUploaded,
-//                            now)) {
-//
-//                    }
-//
-//                    if (!photoInfoRepo.updateSetPhotoReceiver(
-//                            newUploadingPhoto.whoUploaded,
-//                            newUploadingPhoto.photoName,
-//                            lastUploadedPhoto.whoUploaded,
-//                            now)) {
-//
-//                    }
+			try {
+//                if (!request.containsAllPathVars(PACKET_PART_KEY, PHOTO_PART_KEY)) {
+//                    logger.debug("Request does not contain one of the required path variables")
+//                    return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
 //                }
 
-                try {
-                    deleteOldPhotos()
-                } catch (error: Throwable) {
-                    logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
-                }
+				val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitFirst()
+				val packetParts = collectPacketParts(multiValueMap).awaitFirst()
+				val photoParts = collectPhotoParts(multiValueMap).awaitFirst()
 
-                logger.debug("Photo has been successfully uploaded")
-                return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(newUploadingPhoto.photoName))
+				val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
+				if (!packet.isPacketOk()) {
+					logger.debug("One or more of the packet's fields are incorrect")
+					return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
+				}
 
-            } catch (error: Throwable) {
-                logger.error("Unknown error", error)
-                return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.UNKNOWN_ERROR))
-            }
-        }
+				if (!checkPhotoTotalSize(photoParts)) {
+					logger.debug("Bad photo size")
+					return@async formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
+				}
 
-        return result
-                .asMono(CommonPool)
-                .flatMap { it }
-    }
+				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(packet))
+				if (newUploadingPhoto.isEmpty()) {
+					logger.debug("Could not save a photoInfo")
+					return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
+				}
 
-    private suspend fun deleteOldPhotos() {
-        val now = TimeUtils.getTimeFast()
+				val tempFile = saveTempFile(photoParts, newUploadingPhoto)
+				if (tempFile == null) {
+					logger.debug("Could not save file to disk")
+					return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
+				}
 
-        //execute every hour
-        if (now - lastTimeCheck > ONE_HOUR) {
-            logger.debug("Start cleanDatabaseAndPhotos routine")
+				try {
+					//save resized (original) version of the image
+					ImageUtils.resizeAndSaveImageOnDisk(tempFile, Dimension(1536, 1536), "_o", fileDirectoryPath, newUploadingPhoto.photoName)
 
-            lastTimeCheck = now
-            cleanDatabaseAndPhotos(now - SEVEN_DAYS)
+					//save small version of the image
+					ImageUtils.resizeAndSaveImageOnDisk(tempFile, Dimension(512, 512), "_s", fileDirectoryPath, newUploadingPhoto.photoName)
 
-            logger.debug("End cleanDatabaseAndPhotos routine")
-        }
-    }
+				} catch (error: Throwable) {
+					photoInfoRepo.deleteUserById(newUploadingPhoto.whoUploaded)
+					return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
+				} finally {
+					if (tempFile.exists()) {
+						tempFile.delete()
+					}
+				}
 
-    private suspend fun cleanDatabaseAndPhotos(time: Long) {
-        val photosToDelete = photoInfoRepo.findOlderThan(time)
-        if (photosToDelete.isEmpty()) {
-            return
-        }
+				val oldestPhotoReadyToExchange = photoInfoExchangeRepo.findOldestPhotoReadyToExchange(newUploadingPhoto.photoId)
+				if (!oldestPhotoReadyToExchange.isEmpty()) {
+					try {
+						val now = TimeUtils.getTimeFast()
+						val uploaderPhotoInfo = photoInfoRepo.find(oldestPhotoReadyToExchange.uploaderPhotoInfoId)
 
-        val ids = photosToDelete.map { it.photoId }
-        val isOk = photoInfoRepo.deleteAll(ids)
+						//TODO: we probably don't even need to do anything here anymore
+						//photoInfoRepo.doExchange(uploaderPhotoInfo, newUploadingPhoto)
+					} catch (error: Throwable) {
+						//TODO: restore oldest photo's properties
+					}
+				} else {
+					photoInfoExchangeRepo.save(PhotoInfoExchange.create(newUploadingPhoto.photoId))
+				}
 
-        if (!isOk) {
-            return
-        }
+				try {
+					deleteOldPhotos()
+				} catch (error: Throwable) {
+					logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
+				}
 
-        for (photo in photosToDelete) {
-            for (size in photoSizes) {
-                val filePath = "$fileDirectoryPath\\${photo.photoName}$size"
-                val file = File(filePath)
+				logger.debug("Photo has been successfully uploaded")
+				return@async formatResponse(HttpStatus.OK, UploadPhotoResponse.success(newUploadingPhoto.photoName))
 
-                if (file.exists() && file.isFile) {
-                    file.delete()
-                }
-            }
-        }
-    }
+			} catch (error: Throwable) {
+				logger.error("Unknown error", error)
+				return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ServerErrorCode.UNKNOWN_ERROR))
+			}
+		}
 
-    private fun formatResponse(httpStatus: HttpStatus, response: UploadPhotoResponse): Mono<ServerResponse> {
-        val photoAnswerJson = jsonConverter.toJson(response)
-        return ServerResponse.status(httpStatus).body(Mono.just(photoAnswerJson))
-    }
+		return result
+			.asMono(CommonPool)
+			.flatMap { it }
+	}
 
-    private fun saveTempFile(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): File? {
-        val filePath = "$fileDirectoryPath\\${photoInfo.photoName}"
-        val outFile = File(filePath)
+	private suspend fun deleteOldPhotos() {
+		val now = TimeUtils.getTimeFast()
 
-        try {
-            IOUtils.copyDataBuffersToFile(photoChunks, outFile)
-        } catch (e: IOException) {
-            logger.error("Error while trying to save file to the disk", e)
+		//execute every hour
+		if (now - lastTimeCheck > ONE_HOUR) {
+			logger.debug("Start cleanDatabaseAndPhotos routine")
 
-            return null
-        }
+			lastTimeCheck = now
+			cleanDatabaseAndPhotos(now - SEVEN_DAYS)
 
-        return outFile
-    }
+			logger.debug("End cleanDatabaseAndPhotos routine")
+		}
+	}
 
-    private fun checkPhotoTotalSize(photo: MutableList<DataBuffer>): Boolean {
-        val totalLength = photo.sumBy { it.readableByteCount() }
-        if (totalLength > MAX_PHOTO_SIZE) {
-            return false
-        }
+	private suspend fun cleanDatabaseAndPhotos(time: Long) {
+		val photosToDelete = photoInfoRepo.findOlderThan(time)
+		if (photosToDelete.isEmpty()) {
+			return
+		}
 
-        return true
-    }
+		val ids = photosToDelete.map { it.photoId }
+		val isOk = photoInfoRepo.deleteAll(ids)
 
-    private fun createPhotoInfo(packet: SendPhotoPacket): PhotoInfo {
-        val newPhotoName = generator.generateNewPhotoName()
-        return PhotoInfo.create(
-                packet.userId,
-                newPhotoName,
-                packet.lon,
-                packet.lat,
-                TimeUtils.getTimeFast())
-    }
+		if (!isOk) {
+			return
+		}
 
-    private fun collectPhotoParts(map: MultiValueMap<String, Part>): Mono<MutableList<DataBuffer>> {
-        return map.getFirst(PHOTO_PART_KEY)!!
-                .content()
-                .doOnNext { dataBuffer ->
-                    if (dataBuffer.readableByteCount() == 0) {
-                        throw EmptyFile()
-                    }
-                }
-                .buffer()
-                .single()
-    }
+		for (photo in photosToDelete) {
+			for (size in photoSizes) {
+				val filePath = "$fileDirectoryPath\\${photo.photoName}$size"
+				val file = File(filePath)
 
-    private fun collectPacketParts(map: MultiValueMap<String, Part>): Mono<MutableList<DataBuffer>> {
-        return map.getFirst(PACKET_PART_KEY)!!
-                .content()
-                .doOnNext { dataBuffer ->
-                    if (dataBuffer.readableByteCount() == 0) {
-                        throw EmptyPacket()
-                    }
-                }
-                .buffer()
-                .single()
-    }
+				if (file.exists() && file.isFile) {
+					file.delete()
+				}
+			}
+		}
+	}
+
+	private fun formatResponse(httpStatus: HttpStatus, response: UploadPhotoResponse): Mono<ServerResponse> {
+		val photoAnswerJson = jsonConverter.toJson(response)
+		return ServerResponse.status(httpStatus).body(Mono.just(photoAnswerJson))
+	}
+
+	private fun saveTempFile(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): File? {
+		val filePath = "$fileDirectoryPath\\${photoInfo.photoName}"
+		val outFile = File(filePath)
+
+		try {
+			IOUtils.copyDataBuffersToFile(photoChunks, outFile)
+		} catch (e: IOException) {
+			logger.error("Error while trying to save file to the disk", e)
+
+			return null
+		}
+
+		return outFile
+	}
+
+	private fun checkPhotoTotalSize(photo: MutableList<DataBuffer>): Boolean {
+		val totalLength = photo.sumBy { it.readableByteCount() }
+		if (totalLength > MAX_PHOTO_SIZE) {
+			return false
+		}
+
+		return true
+	}
+
+	private fun createPhotoInfo(packet: SendPhotoPacket): PhotoInfo {
+		val newPhotoName = generator.generateNewPhotoName()
+		return PhotoInfo.create(
+			packet.userId,
+			newPhotoName,
+			packet.lon,
+			packet.lat,
+			TimeUtils.getTimeFast())
+	}
+
+	private fun collectPhotoParts(map: MultiValueMap<String, Part>): Mono<MutableList<DataBuffer>> {
+		return map.getFirst(PHOTO_PART_KEY)!!
+			.content()
+			.doOnNext { dataBuffer ->
+				if (dataBuffer.readableByteCount() == 0) {
+					throw EmptyFile()
+				}
+			}
+			.buffer()
+			.single()
+	}
+
+	private fun collectPacketParts(map: MultiValueMap<String, Part>): Mono<MutableList<DataBuffer>> {
+		return map.getFirst(PACKET_PART_KEY)!!
+			.content()
+			.doOnNext { dataBuffer ->
+				if (dataBuffer.readableByteCount() == 0) {
+					throw EmptyPacket()
+				}
+			}
+			.buffer()
+			.single()
+	}
 }
 
 

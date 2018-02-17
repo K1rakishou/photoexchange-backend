@@ -8,26 +8,35 @@ import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 
 open class MongoSequenceDao(
-    private val template: MongoTemplate
+	private val template: MongoTemplate
 ) {
-    private val PHOTO_INFO_SEQUENCE_NAME = "photo_info_sequence"
-    private val PHOTO_EXCHANGE_INFO_SEQUENCE_NAME = "photo_exchange_info_sequence"
+	private val PHOTO_INFO_SEQUENCE_NAME = "photo_info_sequence"
+	private val PHOTO_EXCHANGE_INFO_SEQUENCE_NAME = "photo_exchange_info_sequence"
 
-    private suspend fun getNextId(sequenceName: String): Long {
-        val mongoSequenceMono = template.findAndModify(
-                Query.query(Criteria.where("_id").`is`(sequenceName)),
-                Update().inc("id", 1),
-                FindAndModifyOptions.options().returnNew(true).upsert(true),
-                MongoSequence::class.java)
+	fun init() {
+		if (!template.collectionExists(MongoSequence::class.java)) {
+			template.createCollection(MongoSequence::class.java)
+		}
+	}
 
-        return mongoSequenceMono!!.id
-    }
+	private suspend fun getNextId(sequenceName: String): Long {
+		val query = Query()
+			.addCriteria(Criteria.where(MongoSequence.Mongo.Field.SEQUENCE_NAME).`is`(sequenceName))
 
-    suspend fun getNextPhotoId(): Long {
-       return getNextId(PHOTO_INFO_SEQUENCE_NAME)
-    }
+		val update = Update()
+			.inc(MongoSequence.Mongo.Field.SEQUENCE_ID, 1)
 
-    suspend fun getNextPhotoExchangeId(): Long {
-        return getNextId(PHOTO_EXCHANGE_INFO_SEQUENCE_NAME)
-    }
+		val options = FindAndModifyOptions.options().returnNew(true).upsert(true)
+
+		val mongoSequenceMono = template.findAndModify(query, update, options, MongoSequence::class.java)
+		return mongoSequenceMono!!.id
+	}
+
+	suspend fun getNextPhotoId(): Long {
+		return getNextId(PHOTO_INFO_SEQUENCE_NAME)
+	}
+
+	suspend fun getNextPhotoExchangeId(): Long {
+		return getNextId(PHOTO_EXCHANGE_INFO_SEQUENCE_NAME)
+	}
 }

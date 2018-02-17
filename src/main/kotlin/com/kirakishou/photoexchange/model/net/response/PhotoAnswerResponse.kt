@@ -6,22 +6,22 @@ import com.kirakishou.photoexchange.model.ServerErrorCode
 class PhotoAnswerResponse
 private constructor(
 
-    @SerializedName("photo_answer")
-    val photoAnswer: PhotoAnswerJsonObject?,
+	@SerializedName("photo_answer")
+	val photoAnswer: PhotoAnswerJsonObject?,
 
-    @SerializedName("all_found")
-    val allFound: Boolean?,
+	@SerializedName("all_found")
+	val allFound: Boolean?,
 
-    errorCode: ServerErrorCode
+	errorCode: ServerErrorCode
 ) : StatusResponse(errorCode.value) {
 
-    companion object {
-        fun success(photoAnswer: PhotoAnswerJsonObject, allFound: Boolean): PhotoAnswerResponse {
-            return PhotoAnswerResponse(photoAnswer, allFound, ServerErrorCode.OK)
-        }
+	companion object {
+		fun success(photoAnswer: PhotoAnswerJsonObject, allFound: Boolean): PhotoAnswerResponse {
+			return PhotoAnswerResponse(photoAnswer, allFound, ServerErrorCode.OK)
+		}
 
-        fun fail(errorCode: ServerErrorCode): PhotoAnswerResponse {
-            return PhotoAnswerResponse(null, null, errorCode)
-        }
-    }
+		fun fail(errorCode: ServerErrorCode): PhotoAnswerResponse {
+			return PhotoAnswerResponse(null, null, errorCode)
+		}
+	}
 }

@@ -24,5 +24,9 @@ class PhotoInfoExchangeRepository(
         }.await()
     }
 
-
+    suspend fun findOldestPhotoReadyToExchange(receiverPhotoId: Long): PhotoInfoExchange {
+        return async(mongoThreadPoolContext) {
+            return@async photoInfoExchangeDao.findOldestPhotoReadyToExchange(receiverPhotoId)
+        }.await()
+    }
 }
