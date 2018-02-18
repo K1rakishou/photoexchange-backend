@@ -20,7 +20,7 @@ import com.kirakishou.photoexchange.util.ImageUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.CommonPool
 import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.reactive.awaitFirst
+import kotlinx.coroutines.experimental.reactive.awaitSingle
 import kotlinx.coroutines.experimental.reactor.asMono
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBuffer
@@ -59,15 +59,15 @@ class UploadPhotoHandler(
 			logger.debug("New UploadPhoto request")
 
 			try {
-				val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitFirst()
+				val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitSingle()
 				if (!multiValueMap.containsAllParts(PACKET_PART_KEY, PHOTO_PART_KEY)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@async formatResponse(HttpStatus.BAD_REQUEST,
 						UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
 				}
 
-				val packetParts = collectPart(multiValueMap, PACKET_PART_KEY).awaitFirst()
-				val photoParts = collectPart(multiValueMap, PHOTO_PART_KEY).awaitFirst()
+				val packetParts = collectPart(multiValueMap, PACKET_PART_KEY).awaitSingle()
+				val photoParts = collectPart(multiValueMap, PHOTO_PART_KEY).awaitSingle()
 
 				val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
 				if (!packet.isPacketOk()) {

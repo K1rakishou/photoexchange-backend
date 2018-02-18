@@ -44,8 +44,7 @@ class GetPhotoAnswerHandler(
 				val userUploadedPhotosCount = photoInfoRepo.countUserUploadedPhotos(userId)
 				val userReceivedPhotosCount = photoInfoRepo.countUserReceivedPhotos(userId)
 
-				val checkUserPhotosCountResult = checkUserPhotosCount(
-					userUploadedPhotosCount, userReceivedPhotosCount)
+				val checkUserPhotosCountResult = checkUserPhotosCount(userUploadedPhotosCount, userReceivedPhotosCount)
 				if (checkUserPhotosCountResult != null) {
 					return@async checkUserPhotosCountResult
 				}
