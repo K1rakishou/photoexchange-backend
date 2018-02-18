@@ -75,6 +75,8 @@ open class PhotoInfoExchangeDao(
 	suspend fun countAllReceivedByIdList(ids: List<Long>): Long {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_PHOTO_INFO_ID).`in`(ids))
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_OK_TIME).gt(0L))
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_OK_TIME).gt(0L))
 
 		val result = try {
 			template.count(query, PhotoInfoExchange::class.java)

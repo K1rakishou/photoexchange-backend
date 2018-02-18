@@ -43,6 +43,20 @@ open class PhotoInfoDao(
 		return uploadedPhotos.map { it.photoId }
 	}
 
+	suspend fun countAllUserUploadedPhotos(userId: String): Long {
+		val getUploadedPhotosQuery = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.WHO_UPLOADED).`is`(userId))
+
+		val result = try {
+			template.count(getUploadedPhotosQuery, PhotoInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			0L
+		}
+
+		return result
+	}
+
 	suspend fun find(photoId: Long): PhotoInfo {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))

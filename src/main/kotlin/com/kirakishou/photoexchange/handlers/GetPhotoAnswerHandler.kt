@@ -44,6 +44,7 @@ class GetPhotoAnswerHandler(
 				val userUploadedPhotosCount = photoInfoRepo.countUserUploadedPhotos(userId)
 				val userReceivedPhotosCount = photoInfoRepo.countUserReceivedPhotos(userId)
 
+				println()
 				val checkUserPhotosCountResult = checkUserPhotosCount(userUploadedPhotosCount, userReceivedPhotosCount)
 				if (checkUserPhotosCountResult != null) {
 					return@async checkUserPhotosCountResult
@@ -92,6 +93,8 @@ class GetPhotoAnswerHandler(
 
 	private fun checkUserPhotosCount(userUploadedPhotosCount: Long,
 									 userReceivedPhotosCount: Long): Mono<ServerResponse>? {
+		logger.debug("userUploadedPhotosCount: $userUploadedPhotosCount, userReceivedPhotosCount: $userReceivedPhotosCount")
+
 		if (userUploadedPhotosCount == -1L) {
 			logger.debug("Could not get user's uploaded photos count from the DB")
 			return formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,

@@ -40,12 +40,7 @@ class PhotoInfoRepository(
 
 	suspend fun countUserUploadedPhotos(userId: String): Long {
 		return async(mongoThreadPoolContext) {
-			val idList = photoInfoDao.findAllUserUploadedPhotoInfoIds(userId)
-			if (idList.isEmpty()) {
-				return@async 0L
-			}
-
-			return@async photoInfoExchangeDao.countAllUploadedByIdList(idList)
+			return@async photoInfoDao.countAllUserUploadedPhotos(userId)
 		}.await()
 	}
 
