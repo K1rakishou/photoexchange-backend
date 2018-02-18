@@ -1,20 +1,20 @@
 package com.kirakishou.photoexchange.extensions
 
 fun String.extractExtension(): String {
-    val sb = StringBuilder()
-    val strLen = this.length - 1
+	val sb = StringBuilder()
+	val strLen = this.length - 1
 
-    if (!this.contains(".")) {
-        return ""
-    }
+	if (!this.contains(".")) {
+		return ""
+	}
 
-    for (index in (strLen downTo 0)) {
-        if (this[index] == '.') {
-            break
-        }
+	for (index in (strLen downTo 0)) {
+		if (this[index] == '.') {
+			break
+		}
 
-        sb.insert(0, this[index])
-    }
+		sb.insert(0, this[index])
+	}
 
-    return sb.toString()
+	return sb.toString()
 }

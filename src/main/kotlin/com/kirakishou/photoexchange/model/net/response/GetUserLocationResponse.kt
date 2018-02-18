@@ -5,30 +5,30 @@ import com.kirakishou.photoexchange.model.ServerErrorCode
 
 class GetUserLocationResponse
 private constructor(
-    @SerializedName("locations")
-    val locationList: List<UserNewLocation>,
+	@SerializedName("locations")
+	val locationList: List<UserNewLocation>,
 
-    errorCode: ServerErrorCode
+	errorCode: ServerErrorCode
 ) : StatusResponse(errorCode.value) {
 
-    companion object {
-        fun success(locations: List<UserNewLocation>): GetUserLocationResponse {
-            return GetUserLocationResponse(locations, ServerErrorCode.OK)
-        }
+	companion object {
+		fun success(locations: List<UserNewLocation>): GetUserLocationResponse {
+			return GetUserLocationResponse(locations, ServerErrorCode.OK)
+		}
 
-        fun fail(errorCode: ServerErrorCode): GetUserLocationResponse {
-            return GetUserLocationResponse(emptyList(), errorCode)
-        }
-    }
+		fun fail(errorCode: ServerErrorCode): GetUserLocationResponse {
+			return GetUserLocationResponse(emptyList(), errorCode)
+		}
+	}
 
-    class UserNewLocation(
-        @SerializedName("photo_name")
-        val photoName: String,
+	class UserNewLocation(
+		@SerializedName("photo_name")
+		val photoName: String,
 
-        @SerializedName("lat")
-        val lat: Double,
+		@SerializedName("lat")
+		val lat: Double,
 
-        @SerializedName("lon")
-        val lon: Double
-    )
+		@SerializedName("lon")
+		val lon: Double
+	)
 }
