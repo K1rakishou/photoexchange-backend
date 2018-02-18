@@ -1,7 +1,7 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.extensions.containsAllParts
+import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerJsonObject
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
@@ -31,7 +31,7 @@ class GetPhotoAnswerHandler(
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		val result = async {
 			try {
-				if (!request.containsAllParts(USER_ID_PATH_VARIABLE, PHOTO_NAME_PATH_VARIABLE)) {
+				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_NAME_PATH_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@async formatResponse(HttpStatus.BAD_REQUEST,
 						PhotoAnswerResponse.fail(ServerErrorCode.BAD_REQUEST))
@@ -57,7 +57,6 @@ class GetPhotoAnswerHandler(
 				}
 
 				val photoAnswer = PhotoAnswerJsonObject(
-					photoInfo.photoId,
 					photoInfo.whoUploaded,
 					photoInfo.photoName,
 					photoInfo.lon,
