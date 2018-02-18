@@ -19,7 +19,7 @@ class Router(
 				}
 
 				accept(MediaType.APPLICATION_JSON).nest {
-					POST("/received/{photo_id}/{user_id}", markPhotoAsReceived::handle)
+					POST("/received/{photo_name}/{user_id}", markPhotoAsReceived::handle)
 					GET("/get_answer/{user_id}", getPhotoAnswerHandler::handle)
 				}
 

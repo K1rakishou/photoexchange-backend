@@ -112,6 +112,7 @@ open class PhotoInfoExchangeDao(
 		val query = Query().with(Sort(Sort.Direction.ASC, PhotoInfoExchange.Mongo.Field.CREATED_ON))
 			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_PHOTO_INFO_ID).gt(0L)
 				.andOperator(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_PHOTO_INFO_ID).ne(receiverPhotoId)))
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_PHOTO_INFO_ID).`is`(0L))
 			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_OK_TIME).`is`(0L))
 			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_OK_TIME).`is`(0L))
 			.limit(1)
