@@ -94,9 +94,9 @@ open class PhotoInfoExchangeDao(
 			.limit(1)
 
 		val update = if (isUplodaer) {
-			Update().set(PhotoInfoExchange.Mongo.Field.UPLOADER_PHOTO_INFO_ID, time)
+			Update().set(PhotoInfoExchange.Mongo.Field.UPLOADER_OK_TIME, time)
 		} else {
-			Update().set(PhotoInfoExchange.Mongo.Field.RECEIVER_PHOTO_INFO_ID, time)
+			Update().set(PhotoInfoExchange.Mongo.Field.RECEIVER_OK_TIME, time)
 		}
 
 		val result = try {
