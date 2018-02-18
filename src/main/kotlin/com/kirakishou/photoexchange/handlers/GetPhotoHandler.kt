@@ -1,6 +1,7 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.extensions.containsAllPathVars
+import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
+import com.kirakishou.photoexchange.extensions.containsAllParts
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBufferUtils
 import org.springframework.core.io.buffer.DefaultDataBufferFactory
@@ -17,12 +18,11 @@ class GetPhotoHandler : WebHandler {
 	private val readChuckSize = 16384
 	private val PHOTO_NAME_PATH_VARIABLE = "photo_name"
 	private val PHOTO_SIZE_PATH_VARIABLE = "photo_size"
-	private var fileDirectoryPath = "D:\\projects\\data\\photos"
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		logger.debug("GetPhoto request")
 
-		if (!request.containsAllPathVars(PHOTO_NAME_PATH_VARIABLE, PHOTO_SIZE_PATH_VARIABLE)) {
+		if (!request.containsAllParts(PHOTO_NAME_PATH_VARIABLE, PHOTO_SIZE_PATH_VARIABLE)) {
 			logger.debug("Request does not contain one of the required path variables")
 			return ServerResponse.notFound().build()
 		}
@@ -36,10 +36,11 @@ class GetPhotoHandler : WebHandler {
 		}
 
 		val photoStreamFlux = Flux.using({
-			val path = "$fileDirectoryPath\\${photoName}_${photoSize}"
+			val path = "$FILE_DIR_PATH\\${photoName}_${photoSize}"
 			return@using File(path).inputStream()
 		}, { inputStream ->
-			return@using DataBufferUtils.read(inputStream, DefaultDataBufferFactory(false, readChuckSize), readChuckSize)
+			return@using DataBufferUtils.read(inputStream,
+				DefaultDataBufferFactory(false, readChuckSize), readChuckSize)
 		}, { inputStream ->
 			inputStream.close()
 		})

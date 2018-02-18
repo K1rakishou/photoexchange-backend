@@ -13,6 +13,9 @@ class PhotoInfo(
 	@Field(Mongo.Field.PHOTO_ID)
 	var photoId: Long,
 
+	@Field(Mongo.Field.EXCHANGE_ID)
+	var exchangeId: Long,
+
 	@Indexed(name = Mongo.Index.WHO_UPLOADED)
 	@Field(Mongo.Field.WHO_UPLOADED)
 	var whoUploaded: String,
@@ -37,17 +40,18 @@ class PhotoInfo(
 
 	companion object {
 		fun empty(): PhotoInfo {
-			return PhotoInfo(-1L, "", "", 0.0, 0.0, 0L)
+			return PhotoInfo(-1L, -1L, "", "", 0.0, 0.0, 0L)
 		}
 
 		fun create(userId: String, photoName: String, lon: Double, lat: Double, time: Long): PhotoInfo {
-			return PhotoInfo(-1, userId, photoName, lon, lat, time)
+			return PhotoInfo(-1, -1L, userId, photoName, lon, lat, time)
 		}
 	}
 
 	object Mongo {
 		object Field {
-			const val PHOTO_ID = "photo_id"
+			const val PHOTO_ID = "_id"
+			const val EXCHANGE_ID = "exchange_id"
 			const val WHO_UPLOADED = "who_uploaded"
 			const val PHOTO_NAME = "photo_name"
 			const val LONGITUDE = "longitude"

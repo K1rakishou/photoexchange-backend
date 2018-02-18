@@ -1,7 +1,7 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.extensions.containsAllPathVars
+import com.kirakishou.photoexchange.extensions.containsAllParts
 import com.kirakishou.photoexchange.model.ServerErrorCode
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerJsonObject
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
@@ -31,7 +31,7 @@ class GetPhotoAnswerHandler(
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		val result = async {
 			try {
-				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_NAME_PATH_VARIABLE)) {
+				if (!request.containsAllParts(USER_ID_PATH_VARIABLE, PHOTO_NAME_PATH_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@async formatResponse(HttpStatus.BAD_REQUEST,
 						PhotoAnswerResponse.fail(ServerErrorCode.BAD_REQUEST))
@@ -44,7 +44,8 @@ class GetPhotoAnswerHandler(
 				val userUploadedPhotosCount = photoInfoRepo.countUserUploadedPhotos(userId)
 				val userReceivedPhotosCount = photoInfoRepo.countUserReceivedPhotos(userId)
 
-				val checkUserPhotosCountResult = checkUserPhotosCount(userUploadedPhotosCount, userReceivedPhotosCount)
+				val checkUserPhotosCountResult = checkUserPhotosCount(
+					userUploadedPhotosCount, userReceivedPhotosCount)
 				if (checkUserPhotosCountResult != null) {
 					return@async checkUserPhotosCountResult
 				}
@@ -52,7 +53,8 @@ class GetPhotoAnswerHandler(
 				val photoInfo = photoInfoRepo.find(userId, photoName)
 				if (photoInfo.isEmpty()) {
 					logger.debug("No spare photos were found.")
-					return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.fail(ServerErrorCode.NO_PHOTOS_TO_SEND_BACK))
+					return@async formatResponse(HttpStatus.OK,
+						PhotoAnswerResponse.fail(ServerErrorCode.NO_PHOTOS_TO_SEND_BACK))
 				}
 
 				val photoAnswer = PhotoAnswerJsonObject(
@@ -69,15 +71,19 @@ class GetPhotoAnswerHandler(
 				}
 
 				//"userReceivedPhotosCount + 1" because we are receiving a photo right now
-				//and it's not marked in the database at the point of executing "photoInfoRepo.countUserReceivedBackPhotos" method
+				//and it's not marked in the database at the point of executing
+				//"photoInfoRepo.countUserReceivedBackPhotos" method
 				val allFound = (userUploadedPhotosCount - (userReceivedPhotosCount + 1)) <= 0
 
-				logger.debug("Spare photo has been found. User received the same amount of photos as he has uploaded: $allFound")
-				return@async formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswer, allFound))
+				logger.debug("Spare photo has been found. User received the same " +
+					"amount of photos as he has uploaded: $allFound")
+				return@async formatResponse(HttpStatus.OK,
+					PhotoAnswerResponse.success(photoAnswer, allFound))
 
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
-				return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, PhotoAnswerResponse.fail(ServerErrorCode.UNKNOWN_ERROR))
+				return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+					PhotoAnswerResponse.fail(ServerErrorCode.UNKNOWN_ERROR))
 			}
 		}
 
@@ -86,7 +92,8 @@ class GetPhotoAnswerHandler(
 			.flatMap { it }
 	}
 
-	private fun checkUserPhotosCount(userUploadedPhotosCount: Long, userReceivedPhotosCount: Long): Mono<ServerResponse>? {
+	private fun checkUserPhotosCount(userUploadedPhotosCount: Long,
+									 userReceivedPhotosCount: Long): Mono<ServerResponse>? {
 		if (userUploadedPhotosCount == -1L) {
 			logger.debug("Could not get user's uploaded photos count from the DB")
 			return formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,

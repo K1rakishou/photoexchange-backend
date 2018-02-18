@@ -48,7 +48,7 @@ open class PhotoInfoDao(
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
 
 		val photoInfo = try {
-			template.findOne(query, PhotoInfo::class.java)
+			template.findOne(query, PhotoInfo::class.java) ?: PhotoInfo.empty()
 		} catch (error: Throwable) {
 			logger.error("DB error", error)
 			PhotoInfo.empty()
@@ -185,18 +185,38 @@ open class PhotoInfoDao(
 		return result
 	}
 
+	fun updateSetExchangeId(photoId: Long, exchangeId: Long): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		val update = Update()
+			.set(PhotoInfo.Mongo.Field.EXCHANGE_ID, exchangeId)
+
+		val result = try {
+			val updateResult = template.updateFirst(query, update, PhotoInfo::class.java)
+			updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			false
+		}
+
+		return result
+	}
+
 	//TODO: remake
 	suspend fun updateSetPhotoSuccessfullyDelivered(photoId: Long, userId: String, time: Long): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where("photoId").`is`(photoId))
 			.addCriteria(Criteria.where("candidateUserId").`is`(userId))
 			.addCriteria(Criteria.where("receivedPhotoBackOn").`is`(0L))
+			.limit(1)
 
 		val update = Update()
 			.set("receivedPhotoBackOn", time)
 
 		val result = try {
-			template.updateFirst(query, update, PhotoInfo::class.java).wasAcknowledged()
+			val updateResult = template.updateFirst(query, update, PhotoInfo::class.java)
+			updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L
 		} catch (error: Throwable) {
 			logger.error("DB error", error)
 			false
@@ -232,14 +252,15 @@ open class PhotoInfoDao(
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).`is`(userId))
 			.limit(1)
 
-		val deleteResult = try {
-			template.remove(query, PhotoInfo::class.java)
+		val result = try {
+			val deleteResult = template.remove(query, PhotoInfo::class.java)
+			deleteResult.wasAcknowledged() && deleteResult.deletedCount == 1L
 		} catch (error: Throwable) {
 			logger.error("DB error", error)
-			return false
+			false
 		}
 
-		return deleteResult.wasAcknowledged() && deleteResult.deletedCount == 1L
+		return result
 	}
 
 	suspend fun deleteAll(ids: List<Long>): Boolean {
@@ -249,14 +270,15 @@ open class PhotoInfoDao(
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(ids))
 			.limit(count)
 
-		val deleteResult = try {
-			template.remove(query, PhotoInfo::class.java)
+		val result = try {
+			val deleteResult = template.remove(query, PhotoInfo::class.java)
+			deleteResult.wasAcknowledged() && deleteResult.deletedCount == count.toLong()
 		} catch (error: Throwable) {
 			logger.error("DB error", error)
 			return false
 		}
 
-		return deleteResult.wasAcknowledged() && deleteResult.deletedCount == count.toLong()
+		return result
 	}
 
 	companion object {

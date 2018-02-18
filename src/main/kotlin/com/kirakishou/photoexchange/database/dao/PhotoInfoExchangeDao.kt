@@ -44,19 +44,12 @@ open class PhotoInfoExchangeDao(
 		return result
 	}
 
-	suspend fun findOldestPhotoReadyToExchange(receiverPhotoId: Long): PhotoInfoExchange {
-		val query = Query().with(Sort(Sort.Direction.ASC, PhotoInfoExchange.Mongo.Field.CREATED_ON))
-			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_PHOTO_INFO_ID).gt(0L)
-				.andOperator(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_PHOTO_INFO_ID).ne(receiverPhotoId)))
-			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_OK).`is`(false))
-			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_OK).`is`(false))
-			.limit(1)
-
-		val update = Update()
-			.set(PhotoInfoExchange.Mongo.Field.RECEIVER_PHOTO_INFO_ID, receiverPhotoId)
+	suspend fun findById(exchangeId: Long): PhotoInfoExchange {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.EXCHANGE_ID).`is`(exchangeId))
 
 		val result = try {
-			template.findAndModify(query, update, PhotoInfoExchange::class.java) ?: PhotoInfoExchange.empty()
+			template.findOne(query, PhotoInfoExchange::class.java) ?: PhotoInfoExchange.empty()
 		} catch (error: Throwable) {
 			logger.error("DB error", error)
 			PhotoInfoExchange.empty()
@@ -88,6 +81,49 @@ open class PhotoInfoExchangeDao(
 		} catch (error: Throwable) {
 			logger.error("DB error", error)
 			0L
+		}
+
+		return result
+	}
+
+	fun updateSetPhotoSuccessfullyDelivered(exchangeId: Long, isUplodaer: Boolean, time: Long): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.EXCHANGE_ID).`is`(exchangeId))
+			.limit(1)
+
+		val update = if (isUplodaer) {
+			Update().set(PhotoInfoExchange.Mongo.Field.UPLOADER_PHOTO_INFO_ID, time)
+		} else {
+			Update().set(PhotoInfoExchange.Mongo.Field.RECEIVER_PHOTO_INFO_ID, time)
+		}
+
+		val result = try {
+			val updateResult = template.updateFirst(query, update, PhotoInfoExchange::class.java)
+			updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			false
+		}
+
+		return result
+	}
+
+	suspend fun tryDoExchangeWithOldestPhoto(receiverPhotoId: Long): PhotoInfoExchange {
+		val query = Query().with(Sort(Sort.Direction.ASC, PhotoInfoExchange.Mongo.Field.CREATED_ON))
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_PHOTO_INFO_ID).gt(0L)
+				.andOperator(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_PHOTO_INFO_ID).ne(receiverPhotoId)))
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_OK_TIME).`is`(0L))
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_OK_TIME).`is`(0L))
+			.limit(1)
+
+		val update = Update()
+			.set(PhotoInfoExchange.Mongo.Field.RECEIVER_PHOTO_INFO_ID, receiverPhotoId)
+
+		val result = try {
+			template.findAndModify(query, update, PhotoInfoExchange::class.java) ?: PhotoInfoExchange.empty()
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			return PhotoInfoExchange.empty()
 		}
 
 		return result

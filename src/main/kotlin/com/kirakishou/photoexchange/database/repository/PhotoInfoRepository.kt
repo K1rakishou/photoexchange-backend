@@ -20,6 +20,24 @@ class PhotoInfoRepository(
 		}.await()
 	}
 
+	suspend fun find(userId: String, photoName: String): PhotoInfo {
+		return async(mongoThreadPoolContext) {
+			return@async photoInfoDao.find(userId, photoName)
+		}.await()
+	}
+
+	suspend fun find(photoId: Long): PhotoInfo {
+		return async(mongoThreadPoolContext) {
+			return@async photoInfoDao.find(photoId)
+		}.await()
+	}
+
+	suspend fun findOlderThan(time: Long): List<PhotoInfo> {
+		return async(mongoThreadPoolContext) {
+			return@async photoInfoDao.findOlderThan(time)
+		}.await()
+	}
+
 	suspend fun countUserUploadedPhotos(userId: String): Long {
 		return async(mongoThreadPoolContext) {
 			val idList = photoInfoDao.findAllUserUploadedPhotoInfoIds(userId)
@@ -42,32 +60,42 @@ class PhotoInfoRepository(
 		}.await()
 	}
 
-	suspend fun updateSetPhotoSuccessfullyDelivered(photoId: Long, userId: String, time: Long): Boolean {
-		TODO()
-	}
-
-	suspend fun find(userId: String, photoName: String): PhotoInfo {
+	suspend fun updateSetPhotoSuccessfullyDelivered(photoName: String, userId: String, time: Long): Boolean {
 		return async(mongoThreadPoolContext) {
-			return@async photoInfoDao.find(userId, photoName)
+			val photoInfo = photoInfoDao.find(userId, photoName)
+			if (photoInfo.isEmpty()) {
+				return@async false
+			}
+
+			val photoExchangeInfo = photoInfoExchangeDao.findById(photoInfo.exchangeId)
+			if (photoExchangeInfo.isEmpty()) {
+				return@async false
+			}
+
+			val isUploader = when {
+				photoInfo.photoId == photoExchangeInfo.uploaderPhotoInfoId -> true
+				photoInfo.photoId == photoExchangeInfo.receiverPhotoInfoId -> false
+				else -> throw IllegalStateException("Neither of uploaderPhotoInfoId and " +
+					"receiverPhotoInfoId equals to photoInfo.photoId " +
+					"(photoId: ${photoInfo.photoId}, " +
+					"uploaderPhotoInfoId: ${photoExchangeInfo.uploaderPhotoInfoId}, " +
+					"receiverPhotoInfoId: ${photoExchangeInfo.receiverPhotoInfoId})")
+			}
+
+			return@async photoInfoExchangeDao.updateSetPhotoSuccessfullyDelivered(photoInfo.exchangeId, isUploader, time)
 		}.await()
 	}
 
-	suspend fun find(photoId: Long): PhotoInfo {
+	suspend fun updateSetExchangeInfoId(photoId: Long, exchangeId: Long): Boolean {
 		return async(mongoThreadPoolContext) {
-			return@async photoInfoDao.find(photoId)
+//			val photoInfo = photoInfoDao.find(photoId)
+//			if (photoInfo.isEmpty()) {
+//				return@async false
+//			}
+//
+//			photoInfo.exchangeId = exchangeId
+			return@async photoInfoDao.updateSetExchangeId(photoId, exchangeId)
 		}.await()
-	}
-
-	suspend fun findOlderThan(time: Long): List<PhotoInfo> {
-		return async(mongoThreadPoolContext) {
-			return@async photoInfoDao.findOlderThan(time)
-		}.await()
-	}
-
-	suspend fun doExchange(uploaderPhotoInfo: PhotoInfo, receiverPhotoInfo: PhotoInfo) {
-		async(mongoThreadPoolContext) {
-
-		}
 	}
 
 	suspend fun deleteUserById(userId: String): Boolean {

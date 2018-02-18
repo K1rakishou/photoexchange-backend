@@ -1,8 +1,11 @@
 package com.kirakishou.photoexchange.config
 
 import com.google.gson.GsonBuilder
-import com.kirakishou.photoexchange.config.Settings.MONGO_POOL_BEAN_NAME
-import com.kirakishou.photoexchange.config.Settings.MONGO_POOL_NAME
+import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.DB_NAME
+import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.HOST
+import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
+import com.kirakishou.photoexchange.config.ServerSettings.MONGO_POOL_BEAN_NAME
+import com.kirakishou.photoexchange.config.ServerSettings.MONGO_POOL_NAME
 import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
@@ -24,21 +27,14 @@ import org.springframework.data.mongodb.repository.support.MongoRepositoryFactor
 import org.springframework.web.reactive.function.server.HandlerStrategies
 import org.springframework.web.reactive.function.server.RouterFunctions
 
-fun myBeans(dbInfo: DatabaseInfo) = beans {
+fun myBeans() = beans {
 	//router
 	bean<Router>()
 
 	bean { GsonBuilder().create() }
 	bean { JsonConverterService(ref()) }
 	bean { MongoRepositoryFactory(ref()) }
-	bean { MongoTemplate(SimpleMongoDbFactory(MongoClient(dbInfo.host, dbInfo.port), dbInfo.dbName)) }
-
-	//handler
-	bean<UploadPhotoHandler>()
-	bean<GetPhotoAnswerHandler>()
-	bean<GetPhotoHandler>()
-	bean<MarkPhotoAsReceivedHandler>()
-	bean<GetUserLocationHandler>()
+	bean { MongoTemplate(SimpleMongoDbFactory(MongoClient(HOST, PORT), DB_NAME)) }
 
 	//thread pool
 	bean(MONGO_POOL_BEAN_NAME) { newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), MONGO_POOL_NAME) }
@@ -50,10 +46,17 @@ fun myBeans(dbInfo: DatabaseInfo) = beans {
 
 	//repository
 	bean { PhotoInfoRepository(ref(), ref(), ref(), ref(MONGO_POOL_BEAN_NAME)) }
-	bean { PhotoInfoExchangeRepository(ref(), ref(), ref(MONGO_POOL_BEAN_NAME)) }
+	bean { PhotoInfoExchangeRepository(ref(), ref(), ref(), ref(MONGO_POOL_BEAN_NAME)) }
 
 	//service
 	bean { GeneratorServiceImpl() }
+
+	//handler
+	bean<UploadPhotoHandler>()
+	bean<GetPhotoAnswerHandler>()
+	bean<GetPhotoHandler>()
+	bean<MarkPhotoAsReceivedHandler>()
+	bean<GetUserLocationHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }
@@ -66,15 +69,4 @@ fun myBeans(dbInfo: DatabaseInfo) = beans {
 			setSuffix(suffix)
 		}
 	}
-}
-
-class DatabaseInfo(
-	val host: String,
-	val port: Int,
-	val dbName: String
-)
-
-object Settings {
-	const val MONGO_POOL_NAME = "mongo"
-	const val MONGO_POOL_BEAN_NAME = "mongoPool"
 }
