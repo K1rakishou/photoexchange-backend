@@ -4,38 +4,31 @@ import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
-import kotlinx.coroutines.experimental.ThreadPoolDispatcher
-import kotlinx.coroutines.experimental.async
+import com.kirakishou.photoexchange.service.ConcurrencyService
 
 class PhotoInfoExchangeRepository(
 	private val mongoSequenceDao: MongoSequenceDao,
 	private val photoInfoDao: PhotoInfoDao,
 	private val photoInfoExchangeDao: PhotoInfoExchangeDao,
-	private val mongoThreadPoolContext: ThreadPoolDispatcher
+	private val concurrentService: ConcurrencyService
 ) {
 	suspend fun save(photoInfoExchange: PhotoInfoExchange): PhotoInfoExchange {
-		return async(mongoThreadPoolContext) {
+		return concurrentService.asyncMongo {
 			photoInfoExchange.exchangeId = mongoSequenceDao.getNextPhotoExchangeId()
-			return@async photoInfoExchangeDao.save(photoInfoExchange)
+			return@asyncMongo photoInfoExchangeDao.save(photoInfoExchange)
 		}.await()
 	}
 
 	suspend fun findAllByIdList(ids: List<Long>): List<PhotoInfoExchange> {
-		return async(mongoThreadPoolContext) {
-			return@async photoInfoExchangeDao.findAllByIdList(ids)
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoExchangeDao.findAllByIdList(ids)
 		}.await()
 	}
 
 	suspend fun tryDoExchangeWithOldestPhoto(receiverPhotoId: Long): PhotoInfoExchange {
-		return async(mongoThreadPoolContext) {
-			val photoInfoExchange =  photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(receiverPhotoId)
-			if (!photoInfoExchange.isEmpty()) {
-				//for some reason template.findAndModify returns old object (not updated)
-				//so this is a temporary solution
-				photoInfoExchange.receiverPhotoInfoId = receiverPhotoId
-			}
-
-			return@async photoInfoExchange
+		return concurrentService.asyncMongo {
+			//TODO: may not work
+			return@asyncMongo photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(receiverPhotoId)
 		}.await()
 	}
 }

@@ -4,67 +4,66 @@ import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
-import kotlinx.coroutines.experimental.ThreadPoolDispatcher
-import kotlinx.coroutines.experimental.async
+import com.kirakishou.photoexchange.service.ConcurrencyService
 
 class PhotoInfoRepository(
 	private val mongoSequenceDao: MongoSequenceDao,
 	private val photoInfoDao: PhotoInfoDao,
 	private val photoInfoExchangeDao: PhotoInfoExchangeDao,
-	private val mongoThreadPoolContext: ThreadPoolDispatcher
+	private val concurrentService: ConcurrencyService
 ) {
 	suspend fun save(photoInfo: PhotoInfo): PhotoInfo {
-		return async(mongoThreadPoolContext) {
+		return concurrentService.asyncMongo {
 			photoInfo.photoId = mongoSequenceDao.getNextPhotoId()
-			return@async photoInfoDao.save(photoInfo)
+			return@asyncMongo photoInfoDao.save(photoInfo)
 		}.await()
 	}
 
 	suspend fun find(userId: String, photoName: String): PhotoInfo {
-		return async(mongoThreadPoolContext) {
-			return@async photoInfoDao.find(userId, photoName)
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.find(userId, photoName)
 		}.await()
 	}
 
 	suspend fun find(photoId: Long): PhotoInfo {
-		return async(mongoThreadPoolContext) {
-			return@async photoInfoDao.find(photoId)
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.find(photoId)
 		}.await()
 	}
 
 	suspend fun findOlderThan(time: Long): List<PhotoInfo> {
-		return async(mongoThreadPoolContext) {
-			return@async photoInfoDao.findOlderThan(time)
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.findOlderThan(time)
 		}.await()
 	}
 
 	suspend fun countUserUploadedPhotos(userId: String): Long {
-		return async(mongoThreadPoolContext) {
-			return@async photoInfoDao.countAllUserUploadedPhotos(userId)
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.countAllUserUploadedPhotos(userId)
 		}.await()
 	}
 
 	suspend fun countUserReceivedPhotos(userId: String): Long {
-		return async(mongoThreadPoolContext) {
+		return concurrentService.asyncMongo {
 			val idList = photoInfoDao.findAllUserUploadedPhotoInfoIds(userId)
 			if (idList.isEmpty()) {
-				return@async 0L
+				return@asyncMongo 0L
 			}
 
-			return@async photoInfoExchangeDao.countAllReceivedByIdList(idList)
+			return@asyncMongo photoInfoExchangeDao.countAllReceivedByIdList(idList)
 		}.await()
 	}
 
 	suspend fun updateSetPhotoSuccessfullyDelivered(photoName: String, userId: String, time: Long): Boolean {
-		return async(mongoThreadPoolContext) {
+		return concurrentService.asyncMongo {
 			val photoInfo = photoInfoDao.find(userId, photoName)
 			if (photoInfo.isEmpty()) {
-				return@async false
+				return@asyncMongo false
 			}
 
 			val photoExchangeInfo = photoInfoExchangeDao.findById(photoInfo.exchangeId)
 			if (photoExchangeInfo.isEmpty()) {
-				return@async false
+				return@asyncMongo false
 			}
 
 			val isUploader = when {
@@ -77,31 +76,25 @@ class PhotoInfoRepository(
 					"receiverPhotoInfoId: ${photoExchangeInfo.receiverPhotoInfoId})")
 			}
 
-			return@async photoInfoExchangeDao.updateSetPhotoSuccessfullyDelivered(photoInfo.exchangeId, isUploader, time)
+			return@asyncMongo photoInfoExchangeDao.updateSetPhotoSuccessfullyDelivered(photoInfo.exchangeId, isUploader, time)
 		}.await()
 	}
 
 	suspend fun updateSetExchangeInfoId(photoId: Long, exchangeId: Long): Boolean {
-		return async(mongoThreadPoolContext) {
-//			val photoInfo = photoInfoDao.find(photoId)
-//			if (photoInfo.isEmpty()) {
-//				return@async false
-//			}
-//
-//			photoInfo.exchangeId = exchangeId
-			return@async photoInfoDao.updateSetExchangeId(photoId, exchangeId)
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.updateSetExchangeId(photoId, exchangeId)
 		}.await()
 	}
 
 	suspend fun deleteUserById(userId: String): Boolean {
-		return async(mongoThreadPoolContext) {
-			return@async photoInfoDao.deleteUserById(userId)
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.deleteUserById(userId)
 		}.await()
 	}
 
 	suspend fun deleteAll(ids: List<Long>): Boolean {
-		return async(mongoThreadPoolContext) {
-			return@async photoInfoDao.deleteAll(ids)
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.deleteAll(ids)
 		}.await()
 	}
 }

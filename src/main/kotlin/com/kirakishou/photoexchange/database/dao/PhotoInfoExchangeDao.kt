@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.database.dao
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
+import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
@@ -122,8 +123,10 @@ open class PhotoInfoExchangeDao(
 		val update = Update()
 			.set(PhotoInfoExchange.Mongo.Field.RECEIVER_PHOTO_INFO_ID, receiverPhotoId)
 
+		val options = FindAndModifyOptions.options().returnNew(true)
+
 		val result = try {
-			template.findAndModify(query, update, PhotoInfoExchange::class.java) ?: PhotoInfoExchange.empty()
+			template.findAndModify(query, update, options, PhotoInfoExchange::class.java) ?: PhotoInfoExchange.empty()
 		} catch (error: Throwable) {
 			logger.error("DB error", error)
 			return PhotoInfoExchange.empty()

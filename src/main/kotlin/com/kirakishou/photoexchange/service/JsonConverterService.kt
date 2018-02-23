@@ -13,7 +13,7 @@ class JsonConverterService(
 		return gson.fromJson(Utils.dataBufferToString(dataBufferList), T::class.java) as T
 	}
 
-	fun toJson(data: Any): String {
+	fun <T> toJson(data: T): String {
 		return gson.toJson(data)
 	}
 }

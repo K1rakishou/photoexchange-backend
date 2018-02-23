@@ -4,20 +4,21 @@ import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.DB_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.HOST
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
-import com.kirakishou.photoexchange.config.ServerSettings.MONGO_POOL_BEAN_NAME
-import com.kirakishou.photoexchange.config.ServerSettings.MONGO_POOL_NAME
 import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
 import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.handlers.*
+import com.kirakishou.photoexchange.handlers.GetPhotoAnswerHandler
+import com.kirakishou.photoexchange.handlers.GetPhotoHandler
+import com.kirakishou.photoexchange.handlers.MarkPhotoAsReceivedHandler
+import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.routers.Router
+import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.mongodb.MongoClient
 import com.samskivert.mustache.Mustache
-import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 import org.springframework.boot.autoconfigure.mustache.MustacheResourceTemplateLoader
 import org.springframework.boot.web.reactive.result.view.MustacheViewResolver
 import org.springframework.context.support.beans
@@ -35,9 +36,7 @@ fun myBeans() = beans {
 	bean { JsonConverterService(ref()) }
 	bean { MongoRepositoryFactory(ref()) }
 	bean { MongoTemplate(SimpleMongoDbFactory(MongoClient(HOST, PORT), DB_NAME)) }
-
-	//thread pool
-	bean(MONGO_POOL_BEAN_NAME) { newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), MONGO_POOL_NAME) }
+	bean<ConcurrencyService>()
 
 	//dao
 	bean { MongoSequenceDao(ref()).also { it.init() } }
@@ -45,8 +44,8 @@ fun myBeans() = beans {
 	bean { PhotoInfoExchangeDao(ref()).also { it.init() } }
 
 	//repository
-	bean { PhotoInfoRepository(ref(), ref(), ref(), ref(MONGO_POOL_BEAN_NAME)) }
-	bean { PhotoInfoExchangeRepository(ref(), ref(), ref(), ref(MONGO_POOL_BEAN_NAME)) }
+	bean<PhotoInfoRepository>()
+	bean<PhotoInfoExchangeRepository>()
 
 	//service
 	bean { GeneratorServiceImpl() }
@@ -56,7 +55,6 @@ fun myBeans() = beans {
 	bean<GetPhotoAnswerHandler>()
 	bean<GetPhotoHandler>()
 	bean<MarkPhotoAsReceivedHandler>()
-	bean<GetUserLocationHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }

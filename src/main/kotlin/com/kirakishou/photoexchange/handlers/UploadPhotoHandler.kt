@@ -13,13 +13,12 @@ import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
+import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.ImageUtils
 import com.kirakishou.photoexchange.util.TimeUtils
-import kotlinx.coroutines.experimental.CommonPool
-import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.reactive.awaitSingle
 import kotlinx.coroutines.experimental.reactor.asMono
 import org.slf4j.LoggerFactory
@@ -30,18 +29,18 @@ import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
-import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
 import java.awt.Dimension
 import java.io.File
 import java.io.IOException
 
 class UploadPhotoHandler(
-	private val jsonConverter: JsonConverterService,
+	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
 	private val photoInfoExchangeRepo: PhotoInfoExchangeRepository,
-	private val generator: GeneratorServiceImpl
-) : WebHandler {
+	private val generator: GeneratorServiceImpl,
+	private val concurrentService: ConcurrencyService
+) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
 	private val PACKET_PART_KEY = "packet"
@@ -55,14 +54,14 @@ class UploadPhotoHandler(
 	private val photoSizes = arrayOf(BIG_PHOTO_SUFFIX, SMALL_PHOTO_SUFFIX)
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		val result = async {
+		val result = concurrentService.asyncCommon {
 			logger.debug("New UploadPhoto request")
 
 			try {
 				val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitSingle()
 				if (!multiValueMap.containsAllParts(PACKET_PART_KEY, PHOTO_PART_KEY)) {
 					logger.debug("Request does not contain one of the required path variables")
-					return@async formatResponse(HttpStatus.BAD_REQUEST,
+					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
 						UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
 				}
 
@@ -72,27 +71,27 @@ class UploadPhotoHandler(
 				val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
 				if (!packet.isPacketOk()) {
 					logger.debug("One or more of the packet's fields are incorrect")
-					return@async formatResponse(HttpStatus.BAD_REQUEST,
+					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
 						UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
 				}
 
 				if (!checkPhotoTotalSize(photoParts)) {
 					logger.debug("Bad photo size")
-					return@async formatResponse(HttpStatus.BAD_REQUEST,
+					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
 						UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
 				}
 
 				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(packet))
 				if (newUploadingPhoto.isEmpty()) {
 					logger.debug("Could not save a photoInfo")
-					return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
 				}
 
 				val tempFile = saveTempFile(photoParts, newUploadingPhoto)
 				if (tempFile == null) {
 					logger.debug("Could not save file to disk")
-					return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
 				}
 
@@ -109,7 +108,7 @@ class UploadPhotoHandler(
 
 				} catch (error: Throwable) {
 					photoInfoRepo.deleteUserById(newUploadingPhoto.whoUploaded)
-					return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
 				} finally {
 					if (tempFile.exists()) {
@@ -119,9 +118,11 @@ class UploadPhotoHandler(
 
 				val photoInfoExchange = photoInfoExchangeRepo.tryDoExchangeWithOldestPhoto(newUploadingPhoto.photoId)
 				if (photoInfoExchange.isEmpty()) {
+					//there is no photo to do exchange with, create a new exchange request
 					val newPhotoInfoExchange = photoInfoExchangeRepo.save(PhotoInfoExchange.create(newUploadingPhoto.photoId))
 					photoInfoRepo.updateSetExchangeInfoId(newUploadingPhoto.photoId, newPhotoInfoExchange.exchangeId)
 				} else {
+					//there is a photo, update exchange request with info about our photo
 					photoInfoRepo.updateSetExchangeInfoId(photoInfoExchange.receiverPhotoInfoId, photoInfoExchange.exchangeId)
 				}
 
@@ -132,18 +133,18 @@ class UploadPhotoHandler(
 				}
 
 				logger.debug("Photo has been successfully uploaded")
-				return@async formatResponse(HttpStatus.OK,
+				return@asyncCommon formatResponse(HttpStatus.OK,
 					UploadPhotoResponse.success(newUploadingPhoto.photoName))
 
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
-				return@async formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 					UploadPhotoResponse.fail(ServerErrorCode.UNKNOWN_ERROR))
 			}
 		}
 
 		return result
-			.asMono(CommonPool)
+			.asMono(concurrentService.commonThreadPool)
 			.flatMap { it }
 	}
 
@@ -184,11 +185,6 @@ class UploadPhotoHandler(
 				}
 			}
 		}
-	}
-
-	private fun formatResponse(httpStatus: HttpStatus, response: UploadPhotoResponse): Mono<ServerResponse> {
-		val photoAnswerJson = jsonConverter.toJson(response)
-		return ServerResponse.status(httpStatus).body(Mono.just(photoAnswerJson))
 	}
 
 	private fun saveTempFile(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): File? {
