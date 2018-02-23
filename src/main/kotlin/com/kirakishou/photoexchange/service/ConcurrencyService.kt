@@ -9,11 +9,13 @@ import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 
 class ConcurrencyService {
-	val mongoThreadPool = newFixedThreadPoolContext(getThreadsCount(MONGO_THREADS_PERCENTAGE), MONGO_POOL_NAME)
-	val commonThreadPool = newFixedThreadPoolContext(getThreadsCount(COMMON_THREADS_PERCENTAGE), COMMON_POOL_NAME)
+	val mongoThreadPool = newFixedThreadPoolContext(getThreadsCount(MONGO_THREADS_PERCENTAGE,
+		Runtime.getRuntime().availableProcessors()), MONGO_POOL_NAME)
+	val commonThreadPool = newFixedThreadPoolContext(getThreadsCount(COMMON_THREADS_PERCENTAGE,
+		Runtime.getRuntime().availableProcessors()), COMMON_POOL_NAME)
 
-	private fun getThreadsCount(percentage: Double): Int {
-		var count = (Runtime.getRuntime().availableProcessors().toDouble() * percentage).toInt()
+	fun getThreadsCount(percentage: Double, processorsCount: Int): Int {
+		var count = (processorsCount.toDouble() * percentage).toInt()
 		if (count < 1) {
 			count = 1
 		}
