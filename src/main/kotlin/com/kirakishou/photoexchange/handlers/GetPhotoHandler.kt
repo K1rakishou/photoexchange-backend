@@ -14,7 +14,6 @@ import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.io.File
-import java.util.concurrent.Callable
 
 class GetPhotoHandler(
 	jsonConverter: JsonConverterService,
@@ -50,7 +49,7 @@ class GetPhotoHandler(
 		val photoStreamFlux = Flux.using({
 			return@using file.inputStream()
 		}, { inputStream ->
-			return@using DataBufferUtils.readInputStream(Callable { inputStream },
+			return@using DataBufferUtils.read(inputStream,
 				DefaultDataBufferFactory(false, readChuckSize), readChuckSize)
 		}, { inputStream ->
 			inputStream.close()
