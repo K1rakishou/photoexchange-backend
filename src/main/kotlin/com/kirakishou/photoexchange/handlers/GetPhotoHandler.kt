@@ -14,6 +14,7 @@ import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.io.File
+import java.util.concurrent.Callable
 
 class GetPhotoHandler(
 	jsonConverter: JsonConverterService,
@@ -42,13 +43,14 @@ class GetPhotoHandler(
 
 		val file = File("$FILE_DIR_PATH\\${photoName}_$photoSize")
 		if (!file.exists()) {
+			logger.debug("Photo not found on the disk")
 			return ServerResponse.notFound().build()
 		}
 
 		val photoStreamFlux = Flux.using({
 			return@using file.inputStream()
 		}, { inputStream ->
-			return@using DataBufferUtils.read(inputStream,
+			return@using DataBufferUtils.readInputStream(Callable { inputStream },
 				DefaultDataBufferFactory(false, readChuckSize), readChuckSize)
 		}, { inputStream ->
 			inputStream.close()
