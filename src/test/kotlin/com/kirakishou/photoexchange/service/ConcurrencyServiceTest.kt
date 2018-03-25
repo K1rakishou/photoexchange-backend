@@ -1,0 +1,31 @@
+package com.kirakishou.photoexchange.service
+
+import org.junit.Before
+import org.junit.Test
+
+class ConcurrencyServiceTest {
+
+	private lateinit var concurrencyService: ConcurrencyService
+
+	@Before
+	fun setup() {
+		concurrencyService = ConcurrencyService()
+	}
+
+	@Test
+	fun `should return one thread`() {
+		assert(concurrencyService.getThreadsCount(0.25, 1) == 1)
+		assert(concurrencyService.getThreadsCount(0.25, 4) == 1)
+	}
+
+	@Test
+	fun `should return three threads`() {
+		assert(concurrencyService.getThreadsCount(0.25, 12) == 3)
+		assert(concurrencyService.getThreadsCount(0.75, 4) == 3)
+	}
+
+	@Test
+	fun `should return 12 threads`() {
+		assert(concurrencyService.getThreadsCount(1.0, 12) == 12)
+	}
+}
