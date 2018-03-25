@@ -16,9 +16,9 @@ class PhotoInfo(
 	@Field(Mongo.Field.EXCHANGE_ID)
 	var exchangeId: Long,
 
-	@Indexed(name = Mongo.Index.WHO_UPLOADED)
-	@Field(Mongo.Field.WHO_UPLOADED)
-	var whoUploaded: String,
+	@Indexed(name = Mongo.Index.USER_ID)
+	@Field(Mongo.Field.USER_ID)
+	var userId: String,
 
 	@Indexed(name = Mongo.Index.PHOTO_NAME)
 	@Field(Mongo.Field.PHOTO_NAME)
@@ -44,7 +44,7 @@ class PhotoInfo(
 		}
 
 		fun create(userId: String, photoName: String, lon: Double, lat: Double, time: Long): PhotoInfo {
-			return PhotoInfo(-1, -1L, userId, photoName, lon, lat, time)
+			return PhotoInfo(-1L, -1L, userId, photoName, lon, lat, time)
 		}
 	}
 
@@ -52,7 +52,7 @@ class PhotoInfo(
 		object Field {
 			const val PHOTO_ID = "_id"
 			const val EXCHANGE_ID = "exchange_id"
-			const val WHO_UPLOADED = "who_uploaded"
+			const val USER_ID = "user_id"
 			const val PHOTO_NAME = "photo_name"
 			const val LONGITUDE = "longitude"
 			const val LATITUDE = "latitude"
@@ -60,7 +60,7 @@ class PhotoInfo(
 		}
 
 		object Index {
-			const val WHO_UPLOADED = "who_uploaded_index"
+			const val USER_ID = "user_id_index"
 			const val PHOTO_NAME = "photo_name_index"
 			const val UPLOADED_ON = "uploaded_on_index"
 		}

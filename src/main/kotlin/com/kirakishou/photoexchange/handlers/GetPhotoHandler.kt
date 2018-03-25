@@ -40,9 +40,13 @@ class GetPhotoHandler(
 			return ServerResponse.notFound().build()
 		}
 
+		val file = File("$FILE_DIR_PATH\\${photoName}_$photoSize")
+		if (!file.exists()) {
+			return ServerResponse.notFound().build()
+		}
+
 		val photoStreamFlux = Flux.using({
-			val path = "$FILE_DIR_PATH\\${photoName}_${photoSize}"
-			return@using File(path).inputStream()
+			return@using file.inputStream()
 		}, { inputStream ->
 			return@using DataBufferUtils.read(inputStream,
 				DefaultDataBufferFactory(false, readChuckSize), readChuckSize)

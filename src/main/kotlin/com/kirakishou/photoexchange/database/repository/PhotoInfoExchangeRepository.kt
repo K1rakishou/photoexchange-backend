@@ -14,7 +14,7 @@ class PhotoInfoExchangeRepository(
 ) {
 	suspend fun save(photoInfoExchange: PhotoInfoExchange): PhotoInfoExchange {
 		return concurrentService.asyncMongo {
-			photoInfoExchange.exchangeId = mongoSequenceDao.getNextPhotoExchangeId()
+			photoInfoExchange.id = mongoSequenceDao.getNextPhotoExchangeId()
 			return@asyncMongo photoInfoExchangeDao.save(photoInfoExchange)
 		}.await()
 	}

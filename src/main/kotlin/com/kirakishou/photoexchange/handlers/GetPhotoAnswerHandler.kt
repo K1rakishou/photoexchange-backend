@@ -56,7 +56,7 @@ class GetPhotoAnswerHandler(
 				}
 
 				val photoAnswer = PhotoAnswerJsonObject(
-					photoInfo.whoUploaded,
+					photoInfo.userId,
 					photoInfo.photoName,
 					photoInfo.lon,
 					photoInfo.lat)
