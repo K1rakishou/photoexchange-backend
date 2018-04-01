@@ -19,7 +19,6 @@ import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.ImageUtils
 import com.kirakishou.photoexchange.util.TimeUtils
-import kotlinx.coroutines.experimental.delay
 import kotlinx.coroutines.experimental.reactive.awaitSingle
 import kotlinx.coroutines.experimental.reactor.asMono
 import org.slf4j.LoggerFactory
@@ -34,7 +33,6 @@ import reactor.core.publisher.Mono
 import java.awt.Dimension
 import java.io.File
 import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
@@ -60,8 +58,6 @@ class UploadPhotoHandler(
 			logger.debug("New UploadPhoto request")
 
 			try {
-				delay(5, TimeUnit.SECONDS)
-
 				val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitSingle()
 				if (!multiValueMap.containsAllParts(PACKET_PART_KEY, PHOTO_PART_KEY)) {
 					logger.debug("Request does not contain one of the required path variables")
@@ -111,6 +107,7 @@ class UploadPhotoHandler(
 						ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
 
 				} catch (error: Throwable) {
+					logger.error("Unknown error", error)
 					photoInfoRepo.deleteUserById(newUploadingPhoto.userId)
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
@@ -120,7 +117,7 @@ class UploadPhotoHandler(
 					}
 				}
 
-				val photoInfoExchange = photoInfoExchangeRepo.tryDoExchangeWithOldestPhoto(newUploadingPhoto.photoId)
+				val photoInfoExchange = photoInfoExchangeRepo.tryDoExchangeWithOldestPhoto(newUploadingPhoto.userId)
 				if (photoInfoExchange.isEmpty()) {
 					//there is no photo to do exchange with, create a new exchange request
 					val newPhotoInfoExchange = photoInfoExchangeRepo.save(PhotoInfoExchange.create(newUploadingPhoto.userId))
