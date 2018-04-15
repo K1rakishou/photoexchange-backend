@@ -35,8 +35,8 @@ class GetPhotoHandler(
 		val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
 		val photoSize = request.pathVariable(PHOTO_SIZE_PATH_VARIABLE)
 
-		if (photoSize != "o" && photoSize != "s") {
-			logger.debug("Photo size param is neither \'o\' nor \'s\'")
+		if (photoSize != "b" && photoSize != "s") {
+			logger.debug("Photo size param is neither \'b\' nor \'s\'")
 			return ServerResponse.notFound().build()
 		}
 

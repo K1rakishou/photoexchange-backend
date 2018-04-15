@@ -2,9 +2,8 @@ package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
-import com.kirakishou.photoexchange.model.ServerErrorCode
+import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.StatusResponse
-import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.TimeUtils
@@ -28,12 +27,11 @@ class MarkPhotoAsReceivedHandler(
 		val result = concurrentService.asyncCommon {
 			logger.debug("MarkPhotoAsReceived request")
 
-			//TODO: change photoId to photoName, client side as well
 			try {
 				if (!request.containsAllPathVars(PHOTO_NAME_PATH_VARIABLE, USER_ID_PATH_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						StatusResponse.from(ServerErrorCode.BAD_REQUEST))
+						StatusResponse.from(ErrorCode.MarkPhotoAsReceivedErrors.BadRequest()))
 				}
 
 				val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
@@ -42,21 +40,22 @@ class MarkPhotoAsReceivedHandler(
 				if (photoName.isEmpty() || userId.isEmpty()) {
 					logger.debug("Either photoName or userId is empty. photoName: $photoName, userId: $userId")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						StatusResponse.from(ServerErrorCode.BAD_PHOTO_ID))
+						StatusResponse.from(ErrorCode.MarkPhotoAsReceivedErrors.BadPhotoId()))
 				}
 
 				if (!photoInfoRepo.updateSetPhotoSuccessfullyDelivered(photoName, userId, TimeUtils.getTimeFast())) {
 					logger.debug("Couldn't update photo delivered")
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						StatusResponse.from(ServerErrorCode.UNKNOWN_ERROR))
+						StatusResponse.from(ErrorCode.MarkPhotoAsReceivedErrors.UnknownError()))
 				}
 
-				return@asyncCommon formatResponse(HttpStatus.OK, StatusResponse.from(ServerErrorCode.OK))
+				return@asyncCommon formatResponse(HttpStatus.OK,
+					ErrorCode.MarkPhotoAsReceivedErrors.Ok().value)
 
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					UploadPhotoResponse.fail(ServerErrorCode.UNKNOWN_ERROR))
+					ErrorCode.MarkPhotoAsReceivedErrors.UnknownError().value)
 			}
 		}
 

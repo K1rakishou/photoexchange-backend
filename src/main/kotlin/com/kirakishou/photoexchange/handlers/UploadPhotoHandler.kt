@@ -7,7 +7,7 @@ import com.kirakishou.photoexchange.config.ServerSettings.OLD_PHOTOS_CLEANUP_ROU
 import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
-import com.kirakishou.photoexchange.model.ServerErrorCode
+import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.exception.EmptyPacket
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
@@ -45,8 +45,8 @@ class UploadPhotoHandler(
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
 	private val PACKET_PART_KEY = "packet"
 	private val PHOTO_PART_KEY = "photo"
-	private val BIG_PHOTO_SIZE = 1536
-	private val SMALL_PHOTO_SIZE = 384
+	private val BIG_PHOTO_SIZE = 3072
+	private val SMALL_PHOTO_SIZE = 1024
 	private val BIG_PHOTO_SUFFIX = "_b"
 	private val SMALL_PHOTO_SUFFIX = "_s"
 
@@ -62,7 +62,7 @@ class UploadPhotoHandler(
 				if (!multiValueMap.containsAllParts(PACKET_PART_KEY, PHOTO_PART_KEY)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest()))
 				}
 
 				val packetParts = collectPart(multiValueMap, PACKET_PART_KEY).awaitSingle()
@@ -72,27 +72,27 @@ class UploadPhotoHandler(
 				if (!packet.isPacketOk()) {
 					logger.debug("One or more of the packet's fields are incorrect")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest()))
 				}
 
 				if (!checkPhotoTotalSize(photoParts)) {
 					logger.debug("Bad photo size")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						UploadPhotoResponse.fail(ServerErrorCode.BAD_REQUEST))
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest()))
 				}
 
 				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(packet))
 				if (newUploadingPhoto.isEmpty()) {
 					logger.debug("Could not save a photoInfo")
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError()))
 				}
 
 				val tempFile = saveTempFile(photoParts, newUploadingPhoto)
 				if (tempFile == null) {
 					logger.debug("Could not save file to disk")
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError()))
 				}
 
 				try {
@@ -110,7 +110,7 @@ class UploadPhotoHandler(
 					logger.error("Unknown error", error)
 					photoInfoRepo.deleteUserById(newUploadingPhoto.userId)
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ServerErrorCode.DISK_ERROR))
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError()))
 				} finally {
 					if (tempFile.exists()) {
 						tempFile.delete()
@@ -140,7 +140,7 @@ class UploadPhotoHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					UploadPhotoResponse.fail(ServerErrorCode.UNKNOWN_ERROR))
+					UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.UnknownError()))
 			}
 		}
 

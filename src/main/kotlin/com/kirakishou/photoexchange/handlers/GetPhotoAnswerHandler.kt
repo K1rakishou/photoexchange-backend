@@ -2,12 +2,14 @@ package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
-import com.kirakishou.photoexchange.model.ServerErrorCode
+import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerJsonObject
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
+import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.TimeUtils
+import kotlinx.coroutines.experimental.Deferred
 import kotlinx.coroutines.experimental.reactor.asMono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -23,7 +25,8 @@ class GetPhotoAnswerHandler(
 ) : AbstractWebHandler(jsonConverter) {
 	private val logger = LoggerFactory.getLogger(GetPhotoAnswerHandler::class.java)
 	private val USER_ID_PATH_VARIABLE = "user_id"
-	private val PHOTO_NAME_PATH_VARIABLE = "photo_name"
+	private val PHOTO_NAME_PATH_VARIABLE = "photo_names"
+	private val DELIMITER = ','
 	private var lastTimeCheck = 0L
 	private val FIVE_MINUTES = TimeUnit.MINUTES.toMillis(5)
 
@@ -33,54 +36,72 @@ class GetPhotoAnswerHandler(
 				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_NAME_PATH_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						PhotoAnswerResponse.fail(ServerErrorCode.BAD_REQUEST))
+						PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.BadRequest()))
 				}
 
 				val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
-				val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
-				logger.debug("New GetPhotoAnswer request. UserId: $userId, photoName: $photoName")
+				val photoNames = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
+				logger.debug("New GetPhotoAnswer request. UserId: $userId, photoNames: $photoNames")
 
-				val userUploadedPhotosCount = photoInfoRepo.countUserUploadedPhotos(userId)
-				val userReceivedPhotosCount = photoInfoRepo.countUserReceivedPhotos(userId)
+				val userUploadedPhotosCountDeferred = photoInfoRepo.countUserUploadedPhotos(userId)
+				val userReceivedPhotosCountDeferred = photoInfoRepo.countUserReceivedPhotos(userId)
+
+				val userUploadedPhotosCount = userUploadedPhotosCountDeferred.await()
+				val userReceivedPhotosCount = userReceivedPhotosCountDeferred.await()
+				val userCanReceivePhotosCount = userUploadedPhotosCount - userReceivedPhotosCount
 
 				val checkUserPhotosCountResult = checkUserPhotosCount(userUploadedPhotosCount, userReceivedPhotosCount)
 				if (checkUserPhotosCountResult != null) {
 					return@asyncCommon checkUserPhotosCountResult
 				}
 
-				val photoInfo = photoInfoRepo.find(userId, photoName)
-				if (photoInfo.isEmpty()) {
-					logger.debug("No spare photos were found.")
-					return@asyncCommon formatResponse(HttpStatus.OK,
-						PhotoAnswerResponse.fail(ServerErrorCode.NO_PHOTOS_TO_SEND_BACK))
+				val photoNameList = photoNames.split(DELIMITER)
+				if (photoNameList.isEmpty()) {
+					logger.debug("photoNameList is empty")
+					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+						PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.NoPhotosInRequest()))
 				}
 
-				val photoAnswer = PhotoAnswerJsonObject(
-					photoInfo.userId,
-					photoInfo.photoName,
-					photoInfo.lon,
-					photoInfo.lat)
-
-				try {
-					cleanUp()
-				} catch (error: Throwable) {
-					logger.error("Error while cleaning up (cleanPhotoCandidates)", error)
+				if (photoNameList.size > userCanReceivePhotosCount) {
+					logger.debug("photoNameList size is bigger than userCanReceivePhotosCount (${photoNameList.size}, $userCanReceivePhotosCount)")
+					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+						PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.TooManyPhotosRequested()))
 				}
 
-				//"userReceivedPhotosCount + 1" because we are receiving a photo right now
+				val deferredPhotoAnswerList = arrayListOf<Pair<Deferred<PhotoInfo>, String>>()
+				for (uploadedPhotoName in photoNameList) {
+					deferredPhotoAnswerList += Pair(photoInfoRepo.findAsync(userId, uploadedPhotoName), uploadedPhotoName)
+				}
+
+				val photoAnswerList = deferredPhotoAnswerList
+					.map { deferredPhotoAnswer -> Pair(deferredPhotoAnswer.first.await(), deferredPhotoAnswer.second) }
+					.filter { photoAnswerList -> !photoAnswerList.first.isEmpty() }
+					.map { (photoInfo, uploadedPhotoName) ->
+						PhotoAnswerJsonObject(photoInfo.userId, photoInfo.photoName, uploadedPhotoName, photoInfo.lon, photoInfo.lat)
+					}
+
+				if (photoAnswerList.isEmpty()) {
+					logger.debug("photoAnswerList is empty")
+					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+						PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.NoPhotosToSendBack()))
+				}
+
+				cleanUp()
+
+				//"userReceivedPhotosCount + photoAnswerList.size" because we are receiving a photo right now
 				//and it's not marked in the database at the point of executing
 				//"photoInfoRepo.countUserReceivedBackPhotos" method
-				val allFound = (userUploadedPhotosCount - (userReceivedPhotosCount + 1)) <= 0
+				val allFound = (userUploadedPhotosCount - (userReceivedPhotosCount + photoAnswerList.size)) <= 0
 
-				logger.debug("Spare photo has been found. User received the same " +
+				logger.debug("Spare photos have been found. Has user received the same " +
 					"amount of photos as he has uploaded: $allFound")
 				return@asyncCommon formatResponse(HttpStatus.OK,
-					PhotoAnswerResponse.success(photoAnswer, allFound))
+					PhotoAnswerResponse.success(photoAnswerList, allFound))
 
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					PhotoAnswerResponse.fail(ServerErrorCode.UNKNOWN_ERROR))
+					PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.UnknownError()))
 			}
 		}
 
@@ -96,25 +117,25 @@ class GetPhotoAnswerHandler(
 		if (userUploadedPhotosCount == -1L) {
 			logger.debug("Could not get user's uploaded photos count from the DB")
 			return formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-				PhotoAnswerResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
+				PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.DatabaseError()))
 		}
 
 		if (userReceivedPhotosCount == -1L) {
 			logger.debug("Could not get user's received photos count from the DB")
 			return formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-				PhotoAnswerResponse.fail(ServerErrorCode.REPOSITORY_ERROR))
+				PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.DatabaseError()))
 		}
 
 		if (userUploadedPhotosCount <= userReceivedPhotosCount) {
 			logger.debug("User has less (or equal) amount of uploaded photos than received")
 			return formatResponse(HttpStatus.OK,
-				PhotoAnswerResponse.fail(ServerErrorCode.UPLOAD_MORE_PHOTOS))
+				PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.NotEnoughPhotosUploaded()))
 		}
 
-		if (userUploadedPhotosCount <= 0) {
+		if (userUploadedPhotosCount == 0L) {
 			logger.debug("User has not uploaded any photos yet")
 			return formatResponse(HttpStatus.OK,
-				PhotoAnswerResponse.fail(ServerErrorCode.UPLOAD_MORE_PHOTOS))
+				PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.NotEnoughPhotosUploaded()))
 		}
 
 		return null
@@ -123,14 +144,20 @@ class GetPhotoAnswerHandler(
 	@Synchronized
 	private suspend fun cleanUp() {
 		val now = TimeUtils.getTimeFast()
-		if (now - lastTimeCheck > FIVE_MINUTES) {
-			logger.debug("Start cleanPhotoCandidates routine")
-
-			lastTimeCheck = now
-			cleanPhotoCandidates(now - FIVE_MINUTES)
-
-			logger.debug("End cleanPhotoCandidates routine")
+		if (now - lastTimeCheck <= FIVE_MINUTES) {
+			return
 		}
+
+		logger.debug("Start cleanPhotoCandidates routine")
+		lastTimeCheck = now
+
+		try {
+			cleanPhotoCandidates(now - FIVE_MINUTES)
+		} catch (error: Throwable) {
+			logger.error("Error while cleaning up (cleanPhotoCandidates)", error)
+		}
+
+		logger.debug("End cleanPhotoCandidates routine")
 	}
 
 	private suspend fun cleanPhotoCandidates(time: Long) {
