@@ -6,8 +6,11 @@ class PhotoAnswerJsonObject(
 	@SerializedName("user_id")
 	val userId: String,
 
-	@SerializedName("photo_name")
-	val photoName: String,
+	@SerializedName("uploaded_photo_name")
+	val uploadedPhotoName: String,
+
+	@SerializedName("photo_answer_name")
+	val photoAnswerName: String,
 
 	@SerializedName("lon")
 	val lon: Double,

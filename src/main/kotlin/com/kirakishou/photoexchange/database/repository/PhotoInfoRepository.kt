@@ -5,6 +5,7 @@ import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.ConcurrencyService
+import kotlinx.coroutines.experimental.Deferred
 
 class PhotoInfoRepository(
 	private val mongoSequenceDao: MongoSequenceDao,
@@ -20,9 +21,13 @@ class PhotoInfoRepository(
 	}
 
 	suspend fun find(userId: String, photoName: String): PhotoInfo {
-		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.find(userId, photoName)
-		}.await()
+		return findAsync(userId, photoName).await()
+	}
+
+	suspend fun findAsync(userId: String, photoName: String): Deferred<PhotoInfo> {
+		return concurrentService.asyncCommon {
+			return@asyncCommon photoInfoDao.find(userId, photoName)
+		}
 	}
 
 	suspend fun find(photoId: Long): PhotoInfo {
@@ -67,13 +72,13 @@ class PhotoInfoRepository(
 		}.await()
 	}
 
-	suspend fun countUserUploadedPhotos(userId: String): Long {
+	suspend fun countUserUploadedPhotos(userId: String): Deferred<Long> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoDao.countAllUserUploadedPhotos(userId)
-		}.await()
+		}
 	}
 
-	suspend fun countUserReceivedPhotos(userId: String): Long {
+	suspend fun countUserReceivedPhotos(userId: String): Deferred<Long> {
 		return concurrentService.asyncMongo {
 			val idList = photoInfoDao.findAllPhotoIdsByUserId(userId)
 			if (idList.isEmpty()) {
@@ -81,7 +86,7 @@ class PhotoInfoRepository(
 			}
 
 			return@asyncMongo photoInfoExchangeDao.countAllReceivedByIdList(idList)
-		}.await()
+		}
 	}
 
 	suspend fun updateSetPhotoSuccessfullyDelivered(photoName: String, userId: String, time: Long): Boolean {
