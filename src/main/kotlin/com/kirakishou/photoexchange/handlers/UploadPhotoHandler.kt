@@ -45,13 +45,15 @@ class UploadPhotoHandler(
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
 	private val PACKET_PART_KEY = "packet"
 	private val PHOTO_PART_KEY = "photo"
-	private val BIG_PHOTO_SIZE = 1536
-	private val SMALL_PHOTO_SIZE = 384
+	private val BIG_PHOTO_SIZE = 3072
+	private val MEDIUM_PHOTO_SIZE = 1536
+	private val SMALL_PHOTO_SIZE = 512
 	private val BIG_PHOTO_SUFFIX = "_b"
+	private val MEDIUM_PHOTO_SUFFIX = "_b"
 	private val SMALL_PHOTO_SUFFIX = "_s"
 
 	private var lastTimeCheck = 0L
-	private val photoSizes = arrayOf(BIG_PHOTO_SUFFIX, SMALL_PHOTO_SUFFIX)
+	private val photoSizes = arrayOf(BIG_PHOTO_SUFFIX, MEDIUM_PHOTO_SUFFIX, SMALL_PHOTO_SUFFIX)
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		val result = concurrentService.asyncCommon {
@@ -99,6 +101,11 @@ class UploadPhotoHandler(
 					//save resized (big) version of the image
 					val bigDimension = Dimension(BIG_PHOTO_SIZE, BIG_PHOTO_SIZE)
 					ImageUtils.resizeAndSaveImageOnDisk(tempFile, bigDimension, BIG_PHOTO_SUFFIX,
+						ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
+
+					//save resized (medium) version of the image
+					val mediumDimension = Dimension(MEDIUM_PHOTO_SIZE, MEDIUM_PHOTO_SIZE)
+					ImageUtils.resizeAndSaveImageOnDisk(tempFile, mediumDimension, MEDIUM_PHOTO_SUFFIX,
 						ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
 
 					//save resized (small) version of the image
