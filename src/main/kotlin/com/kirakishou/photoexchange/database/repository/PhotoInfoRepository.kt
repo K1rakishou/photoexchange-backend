@@ -24,9 +24,21 @@ class PhotoInfoRepository(
 		}.await()
 	}
 
+	suspend fun find(userId: String, photoName: String): PhotoInfo {
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.find(userId, photoName)
+		}.await()
+	}
+
 	suspend fun findAsync(userId: String, photoName: String): Deferred<PhotoInfo> {
-		return concurrentService.asyncCommon {
-			return@asyncCommon photoInfoDao.find(userId, photoName)
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.find(userId, photoName)
+		}
+	}
+
+	suspend fun findByExchangeIdAndUserIdAsync(userId: String, exchangeId: Long): Deferred<PhotoInfo> {
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.findByExchangeIdAndUserId(userId, exchangeId)
 		}
 	}
 

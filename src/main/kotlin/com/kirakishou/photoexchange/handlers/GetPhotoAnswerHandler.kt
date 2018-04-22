@@ -1,15 +1,14 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswer
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
-import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.TimeUtils
-import kotlinx.coroutines.experimental.Deferred
 import kotlinx.coroutines.experimental.reactor.asMono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -21,6 +20,7 @@ import java.util.concurrent.TimeUnit
 class GetPhotoAnswerHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
+	private val photoInfoExchangeRepository: PhotoInfoExchangeRepository,
 	private val concurrentService: ConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
 	private val logger = LoggerFactory.getLogger(GetPhotoAnswerHandler::class.java)
@@ -70,17 +70,36 @@ class GetPhotoAnswerHandler(
 						PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.TooManyPhotosRequested()))
 				}
 
-				val deferredPhotoAnswerList = arrayListOf<Pair<Deferred<PhotoInfo>, String>>()
+				val photoAnswerList = arrayListOf<PhotoAnswer>()
 				for (uploadedPhotoName in photoNameList) {
-					deferredPhotoAnswerList += Pair(photoInfoRepo.findAsync(userId, uploadedPhotoName), uploadedPhotoName)
-				}
-
-				val photoAnswerList = deferredPhotoAnswerList
-					.map { deferredPhotoAnswer -> Pair(deferredPhotoAnswer.first.await(), deferredPhotoAnswer.second) }
-					.filter { photoAnswerList -> !photoAnswerList.first.isEmpty() }
-					.map { (photoInfo, uploadedPhotoName) ->
-						PhotoAnswer(photoInfo.photoName, uploadedPhotoName, photoInfo.lon, photoInfo.lat)
+					val photoInfo = photoInfoRepo.find(userId, uploadedPhotoName)
+					if (photoInfo.isEmpty()) {
+						logger.debug("Could not find photoInfo = userId: $userId, uploadedPhotoName: $uploadedPhotoName")
+						continue
 					}
+
+					val exchangeId = photoInfo.exchangeId
+					val photoInfoExchange = photoInfoExchangeRepository.findById(exchangeId)
+
+					val otherUserId = if (photoInfoExchange.receiverUserId == userId) {
+						photoInfoExchange.uploaderUserId
+					} else {
+						photoInfoExchange.receiverUserId
+					}
+
+					if (otherUserId.isEmpty()) {
+						logger.debug("Other user has not not received photo yet (???)")
+						continue
+					}
+
+					val otherUserPhotoInfo = photoInfoRepo.findByExchangeIdAndUserIdAsync(otherUserId, exchangeId).await()
+					if (otherUserPhotoInfo.isEmpty()) {
+						logger.debug("Could not find other user's photoInfo = otherUserId: $otherUserId, exchangeId: $exchangeId")
+						continue
+					}
+
+					photoAnswerList += PhotoAnswer(uploadedPhotoName, otherUserPhotoInfo.photoName, otherUserPhotoInfo.lon, otherUserPhotoInfo.lat)
+				}
 
 				if (photoAnswerList.isEmpty()) {
 					logger.debug("photoAnswerList is empty")

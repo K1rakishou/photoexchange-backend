@@ -22,6 +22,7 @@ sealed class ErrorCode(val value: Int) {
 		class TooManyPhotosRequested : GetPhotoAnswerErrors(4)
 		class NoPhotosToSendBack : GetPhotoAnswerErrors(5)
 		class NotEnoughPhotosUploaded : GetPhotoAnswerErrors(6)
+		class PhotoInfoNotFound : GetPhotoAnswerErrors(7)
 	}
 
 	sealed class MarkPhotoAsReceivedErrors(value: Int) : ErrorCode(value) {
