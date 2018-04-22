@@ -22,11 +22,11 @@ class PhotoInfoExchange(
 	@Field(Mongo.Field.RECEIVER_USER_ID)
 	var receiverUserId: String,
 
-	@Field(Mongo.Field.UPLOADER_OK_TIME)
-	var uploaderOkTime: Long,
+	@Field(Mongo.Field.UPLOADER_SENT_OK)
+	var uploaderSentOk: Boolean,
 
-	@Field(Mongo.Field.RECEIVER_OK_TIME)
-	var receiverOkTime: Long,
+	@Field(Mongo.Field.RECEIVER_SENT_OK)
+	var receiverSentOk: Boolean,
 
 	@Indexed(name = Mongo.Index.CREATED_ON, direction = IndexDirection.DESCENDING)
 	@Field(Mongo.Field.CREATED_ON)
@@ -38,22 +38,18 @@ class PhotoInfoExchange(
 	}
 
 	fun isExchangeSuccessful(): Boolean {
-		return (uploaderOkTime > 0L) &&
-			(receiverOkTime > 0L) &&
-			uploaderUserId.isNotEmpty() &&
+		return uploaderUserId.isNotEmpty() &&
 			receiverUserId.isNotEmpty()
 	}
 
 	companion object {
 		fun empty(): PhotoInfoExchange {
-			return PhotoInfoExchange(-1L, "", "", 0L, 0L, 0L)
+			return PhotoInfoExchange(-1L, "", "", false, false, 0L)
 		}
 
 		fun create(uploaderUserId: String): PhotoInfoExchange {
-			return PhotoInfoExchange(-1L, uploaderUserId, "", 0L, 0L, TimeUtils.getTimeFast())
+			return PhotoInfoExchange(-1L, uploaderUserId, "", false, false, TimeUtils.getTimeFast())
 		}
-
-
 	}
 
 	object Mongo {
@@ -61,8 +57,8 @@ class PhotoInfoExchange(
 			const val ID = "_id"
 			const val UPLOADER_USER_ID = "uploader_user_id"
 			const val RECEIVER_USER_ID = "receiver_user_id"
-			const val UPLOADER_OK_TIME = "uploader_ok_time"
-			const val RECEIVER_OK_TIME = "receiver_ok_time"
+			const val UPLOADER_SENT_OK = "uploader_sent_ok"
+			const val RECEIVER_SENT_OK = "receiver_sent_ok"
 			const val CREATED_ON = "created_on"
 		}
 

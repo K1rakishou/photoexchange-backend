@@ -81,8 +81,6 @@ open class PhotoInfoExchangeDao(
 	suspend fun countAllReceivedByIdList(ids: List<Long>): Long {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_USER_ID).`in`(ids))
-			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_OK_TIME).ne(""))
-			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_OK_TIME).ne(""))
 
 		val result = try {
 			template.count(query, PhotoInfoExchange::class.java)
@@ -94,15 +92,15 @@ open class PhotoInfoExchangeDao(
 		return result
 	}
 
-	fun updateSetPhotoSuccessfullyDelivered(exchangeId: Long, isUplodaer: Boolean, time: Long): Boolean {
+	fun updateSetPhotoSuccessfullyDelivered(exchangeId: Long, isUploader: Boolean): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.ID).`is`(exchangeId))
 			.limit(1)
 
-		val update = if (isUplodaer) {
-			Update().set(PhotoInfoExchange.Mongo.Field.UPLOADER_OK_TIME, time)
+		val update = if (isUploader) {
+			Update().set(PhotoInfoExchange.Mongo.Field.UPLOADER_SENT_OK, true)
 		} else {
-			Update().set(PhotoInfoExchange.Mongo.Field.RECEIVER_OK_TIME, time)
+			Update().set(PhotoInfoExchange.Mongo.Field.RECEIVER_SENT_OK, true)
 		}
 
 		val result = try {
@@ -121,8 +119,6 @@ open class PhotoInfoExchangeDao(
 			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_USER_ID).ne("")
 				.andOperator(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_USER_ID).ne(receiverUserId)))
 			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_USER_ID).`is`(""))
-			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_OK_TIME).`is`(0L))
-			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_OK_TIME).`is`(0L))
 			.limit(1)
 
 		val update = Update()

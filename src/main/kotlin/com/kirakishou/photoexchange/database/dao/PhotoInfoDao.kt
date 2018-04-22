@@ -94,6 +94,25 @@ open class PhotoInfoDao(
 		return photoInfo
 	}
 
+	suspend fun findByExchangeIdAndUserId(userId: String, exchangeId: Long): PhotoInfo {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`is`(exchangeId))
+
+		val photoInfo = try {
+			template.findOne(query, PhotoInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			PhotoInfo.empty()
+		}
+
+		if (photoInfo == null) {
+			return PhotoInfo.empty()
+		}
+
+		return photoInfo
+	}
+
 	suspend fun findMany(userId: String, photoNames: List<String>): List<PhotoInfo> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))

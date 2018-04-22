@@ -6,7 +6,6 @@ import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.StatusResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.reactor.asMono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -43,24 +42,43 @@ class MarkPhotoAsReceivedHandler(
 						StatusResponse.from(ErrorCode.MarkPhotoAsReceivedErrors.BadPhotoId()))
 				}
 
-				if (!photoInfoRepo.updateSetPhotoSuccessfullyDelivered(photoName, userId, TimeUtils.getTimeFast())) {
-					logger.debug("Couldn't update photo delivered")
-					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						StatusResponse.from(ErrorCode.MarkPhotoAsReceivedErrors.UnknownError()))
+				val updateResult = photoInfoRepo.updateSetPhotoSuccessfullyDelivered(photoName, userId)
+				if (updateResult !is PhotoInfoRepository.UpdateSetPhotoDeliveredResult.Ok) {
+					return@asyncCommon formatResponse(photoName, userId, updateResult)
 				}
 
 				return@asyncCommon formatResponse(HttpStatus.OK,
-					ErrorCode.MarkPhotoAsReceivedErrors.Ok().value)
+					StatusResponse.from(ErrorCode.MarkPhotoAsReceivedErrors.Ok()))
 
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					ErrorCode.MarkPhotoAsReceivedErrors.UnknownError().value)
+					StatusResponse.from(ErrorCode.MarkPhotoAsReceivedErrors.UnknownError()))
 			}
 		}
 
 		return result
 			.asMono(concurrentService.commonThreadPool)
 			.flatMap { it }
+	}
+
+	private fun formatResponse(photoName: String, userId: String, result: PhotoInfoRepository.UpdateSetPhotoDeliveredResult): Mono<ServerResponse> {
+		return when (result) {
+			is PhotoInfoRepository.UpdateSetPhotoDeliveredResult.Ok -> {
+				throw IllegalArgumentException("Should not happen!")
+			}
+			is PhotoInfoRepository.UpdateSetPhotoDeliveredResult.PhotoInfoNotFound -> {
+				logger.debug("Couldn't find photoInfo = photoName: $photoName, userId: $userId")
+				formatResponse(HttpStatus.NOT_FOUND, StatusResponse.from(ErrorCode.MarkPhotoAsReceivedErrors.PhotoInfoNotFound()))
+			}
+			is PhotoInfoRepository.UpdateSetPhotoDeliveredResult.PhotoInfoExchangeNotFound -> {
+				logger.debug("Couldn't find photoInfoExchange = photoName: $photoName, userId: $userId")
+				formatResponse(HttpStatus.NOT_FOUND, StatusResponse.from(ErrorCode.MarkPhotoAsReceivedErrors.PhotoInfoExchangeNotFound()))
+			}
+			is PhotoInfoRepository.UpdateSetPhotoDeliveredResult.UpdateError -> {
+				logger.debug("Couldn't update photo delivered = photoName: $photoName, userId: $userId")
+				formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, StatusResponse.from(ErrorCode.MarkPhotoAsReceivedErrors.UpdateError()))
+			}
+		}
 	}
 }

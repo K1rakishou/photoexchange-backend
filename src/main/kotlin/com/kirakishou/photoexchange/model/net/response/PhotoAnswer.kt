@@ -2,10 +2,7 @@ package com.kirakishou.photoexchange.model.net.response
 
 import com.google.gson.annotations.SerializedName
 
-class PhotoAnswerJsonObject(
-	@SerializedName("user_id")
-	val userId: String,
-
+class PhotoAnswer(
 	@SerializedName("uploaded_photo_name")
 	val uploadedPhotoName: String,
 
