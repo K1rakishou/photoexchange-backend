@@ -84,21 +84,13 @@ class GetPhotoAnswerHandler(
 
 				if (photoAnswerList.isEmpty()) {
 					logger.debug("photoAnswerList is empty")
-					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+					return@asyncCommon formatResponse(HttpStatus.OK,
 						PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.NoPhotosToSendBack()))
 				}
 
 				cleanUp()
 
-				//"userReceivedPhotosCount + photoAnswerList.size" because we are receiving a photo right now
-				//and it's not marked in the database at the point of executing
-				//"photoInfoRepo.countUserReceivedBackPhotos" method
-				val allFound = (userUploadedPhotosCount - (userReceivedPhotosCount + photoAnswerList.size)) <= 0
-
-				logger.debug("Spare photos have been found. Has user received the same " +
-					"amount of photos as he has uploaded: $allFound")
-				return@asyncCommon formatResponse(HttpStatus.OK,
-					PhotoAnswerResponse.success(photoAnswerList, allFound))
+				return@asyncCommon formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswerList))
 
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
