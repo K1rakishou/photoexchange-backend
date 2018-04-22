@@ -3,7 +3,7 @@ package com.kirakishou.photoexchange.handlers
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.PhotoAnswerJsonObject
+import com.kirakishou.photoexchange.model.net.response.PhotoAnswer
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.ConcurrencyService
@@ -31,6 +31,8 @@ class GetPhotoAnswerHandler(
 	private val FIVE_MINUTES = TimeUnit.MINUTES.toMillis(5)
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
+		logger.debug("New GetPhotoAnswer request")
+
 		val result = concurrentService.asyncCommon {
 			try {
 				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_NAME_PATH_VARIABLE)) {
@@ -41,7 +43,7 @@ class GetPhotoAnswerHandler(
 
 				val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
 				val photoNames = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
-				logger.debug("New GetPhotoAnswer request. UserId: $userId, photoNames: $photoNames")
+				logger.debug("UserId: $userId, photoNames: $photoNames")
 
 				val userUploadedPhotosCountDeferred = photoInfoRepo.countUserUploadedPhotos(userId)
 				val userReceivedPhotosCountDeferred = photoInfoRepo.countUserReceivedPhotos(userId)
@@ -77,7 +79,7 @@ class GetPhotoAnswerHandler(
 					.map { deferredPhotoAnswer -> Pair(deferredPhotoAnswer.first.await(), deferredPhotoAnswer.second) }
 					.filter { photoAnswerList -> !photoAnswerList.first.isEmpty() }
 					.map { (photoInfo, uploadedPhotoName) ->
-						PhotoAnswerJsonObject(photoInfo.userId, photoInfo.photoName, uploadedPhotoName, photoInfo.lon, photoInfo.lat)
+						PhotoAnswer(photoInfo.photoName, uploadedPhotoName, photoInfo.lon, photoInfo.lat)
 					}
 
 				if (photoAnswerList.isEmpty()) {

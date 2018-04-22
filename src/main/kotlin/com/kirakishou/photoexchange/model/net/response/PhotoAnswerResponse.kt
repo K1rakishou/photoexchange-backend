@@ -7,7 +7,7 @@ class PhotoAnswerResponse
 private constructor(
 
 	@SerializedName("photo_answers")
-	val photoAnswers: List<PhotoAnswerJsonObject>,
+	val photoAnswers: List<PhotoAnswer>,
 
 	@SerializedName("all_found")
 	val allFound: Boolean?,
@@ -16,7 +16,7 @@ private constructor(
 ) : StatusResponse(errorCode.value) {
 
 	companion object {
-		fun success(photoAnswerList: List<PhotoAnswerJsonObject>, allFound: Boolean): PhotoAnswerResponse {
+		fun success(photoAnswerList: List<PhotoAnswer>, allFound: Boolean): PhotoAnswerResponse {
 			return PhotoAnswerResponse(photoAnswerList, allFound, ErrorCode.GetPhotoAnswerErrors.Ok())
 		}
 

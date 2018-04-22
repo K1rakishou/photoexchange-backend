@@ -6,6 +6,8 @@ import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import kotlinx.coroutines.experimental.Deferred
+import kotlinx.coroutines.experimental.sync.Mutex
+import kotlinx.coroutines.experimental.sync.withLock
 
 class PhotoInfoRepository(
 	private val mongoSequenceDao: MongoSequenceDao,
@@ -13,15 +15,13 @@ class PhotoInfoRepository(
 	private val photoInfoExchangeDao: PhotoInfoExchangeDao,
 	private val concurrentService: ConcurrencyService
 ) {
+	private val mutex = Mutex()
+
 	suspend fun save(photoInfo: PhotoInfo): PhotoInfo {
 		return concurrentService.asyncMongo {
 			photoInfo.photoId = mongoSequenceDao.getNextPhotoId()
 			return@asyncMongo photoInfoDao.save(photoInfo)
 		}.await()
-	}
-
-	suspend fun find(userId: String, photoName: String): PhotoInfo {
-		return findAsync(userId, photoName).await()
 	}
 
 	suspend fun findAsync(userId: String, photoName: String): Deferred<PhotoInfo> {
@@ -30,45 +30,9 @@ class PhotoInfoRepository(
 		}
 	}
 
-	suspend fun find(photoId: Long): PhotoInfo {
-		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.find(photoId)
-		}.await()
-	}
-
 	suspend fun findOlderThan(time: Long): List<PhotoInfo> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoDao.findOlderThan(time)
-		}.await()
-	}
-
-	suspend fun findOldest(userId: String): PhotoInfo {
-		return concurrentService.asyncMongo {
-//			val userAllPhotos = photoInfoDao.findAllPhotosByUserId(userId)
-//			if (userAllPhotos.isEmpty()) {
-//				return@asyncMongo PhotoInfo.empty()
-//			}
-//
-//			val id = userAllPhotos.first()
-//
-//			val allExchanges = photoInfoExchangeDao.findAllByIdList(userAllPhotos, false)
-//
-//			if (allExchanges.isEmpty()) {
-//				return@asyncMongo PhotoInfo.empty()
-//			}
-//
-//			val lastExchange = allExchanges
-//				.lastOrNull { !it.isExchangeSuccessful() }
-//
-//			if (lastExchange == null) {
-//				return@asyncMongo PhotoInfo.empty()
-//			}
-//
-//			val lastExchangeId = lastExchange.
-//
-//			return@asyncMongo lastOne
-
-			return@asyncMongo PhotoInfo.empty()
 		}.await()
 	}
 
@@ -80,38 +44,46 @@ class PhotoInfoRepository(
 
 	suspend fun countUserReceivedPhotos(userId: String): Deferred<Long> {
 		return concurrentService.asyncMongo {
-			val idList = photoInfoDao.findAllPhotoIdsByUserId(userId)
-			if (idList.isEmpty()) {
-				return@asyncMongo 0L
-			}
+			return@asyncMongo mutex.withLock {
+				val idList = photoInfoDao.findAllPhotoIdsByUserId(userId)
+				if (idList.isEmpty()) {
+					return@withLock 0L
+				}
 
-			return@asyncMongo photoInfoExchangeDao.countAllReceivedByIdList(idList)
+				return@withLock photoInfoExchangeDao.countAllReceivedByIdList(idList)
+			}
 		}
 	}
 
-	suspend fun updateSetPhotoSuccessfullyDelivered(photoName: String, userId: String, time: Long): Boolean {
+	suspend fun updateSetPhotoSuccessfullyDelivered(photoName: String, userId: String): UpdateSetPhotoDeliveredResult {
 		return concurrentService.asyncMongo {
-			val photoInfo = photoInfoDao.find(userId, photoName)
-			if (photoInfo.isEmpty()) {
-				return@asyncMongo false
-			}
+			return@asyncMongo mutex.withLock {
+				val photoInfo = photoInfoDao.find(userId, photoName)
+				if (photoInfo.isEmpty()) {
+					return@withLock UpdateSetPhotoDeliveredResult.PhotoInfoNotFound()
+				}
 
-			val photoExchangeInfo = photoInfoExchangeDao.findById(photoInfo.exchangeId)
-			if (photoExchangeInfo.isEmpty()) {
-				return@asyncMongo false
-			}
+				val photoExchangeInfo = photoInfoExchangeDao.findById(photoInfo.exchangeId)
+				if (photoExchangeInfo.isEmpty()) {
+					return@withLock UpdateSetPhotoDeliveredResult.PhotoInfoExchangeNotFound()
+				}
 
-			val isUploader = when {
-				photoInfo.userId == photoExchangeInfo.uploaderUserId -> true
-				photoInfo.userId == photoExchangeInfo.receiverUserId -> false
-				else -> throw IllegalStateException("Neither of uploaderUserId and " +
-					"receiverUserId equals to photoInfo.photoId " +
-					"(photoId: ${photoInfo.photoId}, " +
-					"uploaderUserId: ${photoExchangeInfo.uploaderUserId}, " +
-					"receiverUserId: ${photoExchangeInfo.receiverUserId})")
-			}
+				val isUploader = when {
+					photoInfo.userId == photoExchangeInfo.uploaderUserId -> true
+					photoInfo.userId == photoExchangeInfo.receiverUserId -> false
+					else -> throw IllegalStateException("Neither of uploaderUserId and " +
+						"receiverUserId equals to photoInfo.photoId " +
+						"(photoId: ${photoInfo.photoId}, " +
+						"uploaderUserId: ${photoExchangeInfo.uploaderUserId}, " +
+						"receiverUserId: ${photoExchangeInfo.receiverUserId})")
+				}
 
-			return@asyncMongo photoInfoExchangeDao.updateSetPhotoSuccessfullyDelivered(photoInfo.exchangeId, isUploader, time)
+				if (!photoInfoExchangeDao.updateSetPhotoSuccessfullyDelivered(photoInfo.exchangeId, isUploader)) {
+					return@withLock UpdateSetPhotoDeliveredResult.UpdateError()
+				}
+
+				return@withLock UpdateSetPhotoDeliveredResult.Ok()
+			}
 		}.await()
 	}
 
@@ -131,6 +103,13 @@ class PhotoInfoRepository(
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoDao.deleteAll(ids)
 		}.await()
+	}
+
+	sealed class UpdateSetPhotoDeliveredResult {
+		class Ok : UpdateSetPhotoDeliveredResult()
+		class PhotoInfoNotFound : UpdateSetPhotoDeliveredResult()
+		class PhotoInfoExchangeNotFound : UpdateSetPhotoDeliveredResult()
+		class UpdateError : UpdateSetPhotoDeliveredResult()
 	}
 }
 

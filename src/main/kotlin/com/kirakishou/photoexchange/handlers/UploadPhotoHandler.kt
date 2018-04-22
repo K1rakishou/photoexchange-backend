@@ -21,6 +21,8 @@ import com.kirakishou.photoexchange.util.ImageUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.reactive.awaitSingle
 import kotlinx.coroutines.experimental.reactor.asMono
+import kotlinx.coroutines.experimental.sync.Mutex
+import kotlinx.coroutines.experimental.sync.withLock
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
@@ -49,7 +51,7 @@ class UploadPhotoHandler(
 	private val SMALL_PHOTO_SIZE = 1024
 	private val BIG_PHOTO_SUFFIX = "_b"
 	private val SMALL_PHOTO_SUFFIX = "_s"
-
+	private val mutex = Mutex()
 	private var lastTimeCheck = 0L
 	private val photoSizes = arrayOf(BIG_PHOTO_SUFFIX, SMALL_PHOTO_SUFFIX)
 
@@ -117,20 +119,22 @@ class UploadPhotoHandler(
 					}
 				}
 
-				val photoInfoExchange = photoInfoExchangeRepo.tryDoExchangeWithOldestPhoto(newUploadingPhoto.userId)
-				if (photoInfoExchange.isEmpty()) {
-					//there is no photo to do exchange with, create a new exchange request
-					val newPhotoInfoExchange = photoInfoExchangeRepo.save(PhotoInfoExchange.create(newUploadingPhoto.userId))
-					photoInfoRepo.updateSetExchangeInfoId(newUploadingPhoto.photoId, newPhotoInfoExchange.id)
-				} else {
-					//there is a photo, update exchange request with info about our photo
-					photoInfoRepo.updateSetExchangeInfoId(newUploadingPhoto.photoId, photoInfoExchange.id)
-				}
-
 				try {
 					deleteOldPhotos()
 				} catch (error: Throwable) {
 					logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
+				}
+
+				mutex.withLock {
+					val photoInfoExchange = photoInfoExchangeRepo.tryDoExchangeWithOldestPhoto(newUploadingPhoto.userId)
+					if (photoInfoExchange.isEmpty()) {
+						//there is no photo to do exchange with, create a new exchange request
+						val newPhotoInfoExchange = photoInfoExchangeRepo.save(PhotoInfoExchange.create(newUploadingPhoto.userId))
+						photoInfoRepo.updateSetExchangeInfoId(newUploadingPhoto.photoId, newPhotoInfoExchange.id)
+					} else {
+						//there is a photo, update exchange request with info about our photo
+						photoInfoRepo.updateSetExchangeInfoId(newUploadingPhoto.photoId, photoInfoExchange.id)
+					}
 				}
 
 				logger.debug("Photo has been successfully uploaded")

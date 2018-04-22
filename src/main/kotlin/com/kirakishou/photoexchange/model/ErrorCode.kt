@@ -29,5 +29,8 @@ sealed class ErrorCode(val value: Int) {
 		class Ok : MarkPhotoAsReceivedErrors(0)
 		class BadRequest : MarkPhotoAsReceivedErrors(1)
 		class BadPhotoId : MarkPhotoAsReceivedErrors(2)
+		class PhotoInfoNotFound : MarkPhotoAsReceivedErrors(3)
+		class PhotoInfoExchangeNotFound : MarkPhotoAsReceivedErrors(4)
+		class UpdateError : MarkPhotoAsReceivedErrors(5)
 	}
 }
