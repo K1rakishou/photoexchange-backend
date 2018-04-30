@@ -43,7 +43,7 @@ class GetGalleryPhotosHandler(
 				val photos = galleryPhotosRepository.findPaged(lastId)
 				val galleryPhotos = photos.map { GalleryPhotoAnswer(it.photoName, it.lon, it.lat, it.uploadedOn) }
 
-				logger.debug("Found ${galleryPhotos.size} photo from gallery")
+				logger.debug("Found ${galleryPhotos.size} photos from gallery")
 
 				return@asyncCommon formatResponse(HttpStatus.OK, GalleryPhotosResponse.success(galleryPhotos))
 			} catch (error: Throwable) {
