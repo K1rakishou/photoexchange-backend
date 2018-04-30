@@ -114,7 +114,6 @@ class GetPhotoAnswerHandler(
 				cleanUp()
 
 				return@asyncCommon formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswerList))
-
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,

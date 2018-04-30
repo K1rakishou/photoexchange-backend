@@ -132,7 +132,6 @@ class UploadPhotoHandler(
 				logger.debug("Photo has been successfully uploaded")
 				return@asyncCommon formatResponse(HttpStatus.OK,
 					UploadPhotoResponse.success(newUploadingPhoto.photoName))
-
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,

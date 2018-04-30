@@ -25,24 +25,32 @@ class GetGalleryPhotosHandler(
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		val result = concurrentService.asyncCommon {
-			logger.debug("New GetGalleryPhotos request")
+			try {
+				logger.debug("New GetGalleryPhotos request")
 
-			if (!request.containsAllPathVars(LAST_ID_VARIABLE)) {
-				logger.debug("Request does not contain one of the required path variables")
-				return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-					GetGalleryPhotosResponse.fail(ErrorCode.GetGalleryPhotosErrors.BadRequest()))
+				if (!request.containsAllPathVars(LAST_ID_VARIABLE)) {
+					logger.debug("Request does not contain one of the required path variables")
+					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+						GetGalleryPhotosResponse.fail(ErrorCode.GetGalleryPhotosErrors.BadRequest()))
+				}
+
+				val lastId = try {
+					request.pathVariable(LAST_ID_VARIABLE).toLong()
+				} catch (error: NumberFormatException) {
+					Long.MAX_VALUE
+				}
+
+				val photos = galleryPhotosRepository.findPaged(lastId)
+				val galleryPhotos = photos.map { GalleryPhotoAnswer(it.photoName, it.lon, it.lat, it.uploadedOn) }
+
+				logger.debug("Found ${galleryPhotos.size} photo from gallery")
+
+				return@asyncCommon formatResponse(HttpStatus.OK, GetGalleryPhotosResponse.success(galleryPhotos))
+			} catch (error: Throwable) {
+				logger.error("Unknown error", error)
+				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+					GetGalleryPhotosResponse.fail(ErrorCode.GetGalleryPhotosErrors.UnknownError()))
 			}
-
-			val lastId = try {
-				request.pathVariable(LAST_ID_VARIABLE).toLong()
-			} catch (error: NumberFormatException) {
-				Long.MAX_VALUE
-			}
-
-			val photos = galleryPhotosRepository.findPaged(lastId)
-			val galleryPhotos = photos.map { GalleryPhotoAnswer(it.photoName, it.lon, it.lat, it.uploadedOn) }
-
-			return@asyncCommon formatResponse(HttpStatus.OK, GetGalleryPhotosResponse.success(galleryPhotos))
 		}
 
 		return result
