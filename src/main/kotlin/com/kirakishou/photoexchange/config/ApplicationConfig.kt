@@ -8,8 +8,10 @@ import com.kirakishou.photoexchange.database.dao.GalleryPhotoDao
 import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
+import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.handlers.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetPhotoAnswerHandler
 import com.kirakishou.photoexchange.handlers.GetPhotoHandler
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
@@ -47,6 +49,7 @@ fun myBeans() = beans {
 	//repository
 	bean<PhotoInfoRepository>()
 	bean<PhotoInfoExchangeRepository>()
+	bean<GalleryPhotosRepository>()
 
 	//service
 	bean { GeneratorServiceImpl() }
@@ -55,6 +58,7 @@ fun myBeans() = beans {
 	bean<UploadPhotoHandler>()
 	bean<GetPhotoAnswerHandler>()
 	bean<GetPhotoHandler>()
+	bean<GetGalleryPhotosHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }

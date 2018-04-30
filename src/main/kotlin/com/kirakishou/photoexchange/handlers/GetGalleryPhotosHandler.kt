@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.GetGalleryPhotosResponse
@@ -14,6 +15,7 @@ import reactor.core.publisher.Mono
 
 class GetGalleryPhotosHandler(
 	jsonConverter: JsonConverterService,
+	private val galleryPhotosRepository: GalleryPhotosRepository,
 	private val concurrentService: ConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
 
@@ -29,6 +31,17 @@ class GetGalleryPhotosHandler(
 				return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
 					GetGalleryPhotosResponse.fail(ErrorCode.GetGalleryPhotosErrors.BadRequest()))
 			}
+
+			val lastId = try {
+				request.pathVariable(LAST_ID_VARIABLE).toLong()
+			} catch (error: NumberFormatException) {
+				Long.MAX_VALUE
+			}
+
+			logger.debug("LastId: $lastId")
+
+			val galleryPhotos = galleryPhotosRepository.findPaged(lastId)
+			galleryPhotos.forEach { logger.debug("id = ${it.photoId}, uploadedOn = ${it.uploadedOn}") }
 
 			return@asyncCommon formatResponse(HttpStatus.OK, GetGalleryPhotosResponse.success())
 		}
