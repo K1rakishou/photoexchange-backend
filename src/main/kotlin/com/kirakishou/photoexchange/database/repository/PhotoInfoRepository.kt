@@ -1,8 +1,10 @@
 package com.kirakishou.photoexchange.database.repository
 
+import com.kirakishou.photoexchange.database.dao.GalleryPhotoDao
 import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
+import com.kirakishou.photoexchange.model.repo.GalleryPhoto
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import kotlinx.coroutines.experimental.Deferred
@@ -13,6 +15,7 @@ class PhotoInfoRepository(
 	private val mongoSequenceDao: MongoSequenceDao,
 	private val photoInfoDao: PhotoInfoDao,
 	private val photoInfoExchangeDao: PhotoInfoExchangeDao,
+	private val galleryPhotoDao: GalleryPhotoDao,
 	private val concurrentService: ConcurrencyService
 ) {
 	private val mutex = Mutex()
@@ -20,7 +23,19 @@ class PhotoInfoRepository(
 	suspend fun save(photoInfo: PhotoInfo): PhotoInfo {
 		return concurrentService.asyncMongo {
 			photoInfo.photoId = mongoSequenceDao.getNextPhotoId()
-			return@asyncMongo photoInfoDao.save(photoInfo)
+
+			val savedPhotoInfo = photoInfoDao.save(photoInfo)
+			if (savedPhotoInfo.isEmpty()) {
+				return@asyncMongo savedPhotoInfo
+			}
+
+			val result = galleryPhotoDao.save(GalleryPhoto.create(photoInfo.photoId, savedPhotoInfo.uploadedOn))
+			if (!result) {
+				photoInfoDao.deleteById(photoInfo.photoId)
+				return@asyncMongo PhotoInfo.empty()
+			}
+
+			return@asyncMongo savedPhotoInfo
 		}.await()
 	}
 

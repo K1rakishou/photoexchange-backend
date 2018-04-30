@@ -71,6 +71,8 @@ class GetPhotoAnswerHandler(
 				}
 
 				val photoAnswerList = arrayListOf<PhotoAnswer>()
+
+				//TODO: remake DB requests in batches
 				for (uploadedPhotoName in photoNameList) {
 					logger.debug("PhotoName = $uploadedPhotoName")
 

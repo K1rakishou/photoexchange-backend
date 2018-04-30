@@ -4,6 +4,7 @@ import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.DB_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.HOST
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
+import com.kirakishou.photoexchange.database.dao.GalleryPhotoDao
 import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
@@ -42,6 +43,7 @@ fun myBeans() = beans {
 	bean { MongoSequenceDao(ref()).also { it.init() } }
 	bean { PhotoInfoDao(ref()).also { it.init() } }
 	bean { PhotoInfoExchangeDao(ref()).also { it.init() } }
+	bean { GalleryPhotoDao(ref()).also { it.init() } }
 
 	//repository
 	bean<PhotoInfoRepository>()

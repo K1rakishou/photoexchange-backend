@@ -146,7 +146,7 @@ open class PhotoInfoDao(
 		return result
 	}
 
-	fun updateSetExchangeId(photoId: Long, exchangeId: Long): Boolean {
+	suspend fun updateSetExchangeId(photoId: Long, exchangeId: Long): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
 
@@ -162,6 +162,17 @@ open class PhotoInfoDao(
 		}
 
 		return result
+	}
+
+	suspend fun deleteById(photoId: Long) {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		try {
+			template.remove(query, PhotoInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+		}
 	}
 
 	suspend fun deleteUserById(userId: String): Boolean {
