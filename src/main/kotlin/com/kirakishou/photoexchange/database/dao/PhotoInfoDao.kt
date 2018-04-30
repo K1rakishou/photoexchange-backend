@@ -228,6 +228,13 @@ open class PhotoInfoDao(
 		return result
 	}
 
+	suspend fun photoNameExists(generatedName: String): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(generatedName))
+
+		return template.exists(query, PhotoInfo::class.java)
+	}
+
 	companion object {
 		const val COLLECTION_NAME = "photo_info"
 	}

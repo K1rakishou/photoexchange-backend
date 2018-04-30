@@ -8,6 +8,7 @@ import com.kirakishou.photoexchange.model.repo.GalleryPhoto
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.ConcurrencyService
+import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import kotlinx.coroutines.experimental.Deferred
 import kotlinx.coroutines.experimental.sync.Mutex
 import kotlinx.coroutines.experimental.sync.withLock
@@ -17,9 +18,28 @@ class PhotoInfoRepository(
 	private val photoInfoDao: PhotoInfoDao,
 	private val photoInfoExchangeDao: PhotoInfoExchangeDao,
 	private val galleryPhotoDao: GalleryPhotoDao,
+	private val generator: GeneratorServiceImpl,
 	private val concurrentService: ConcurrencyService
 ) {
 	private val mutex = Mutex()
+
+	suspend fun generatePhotoInfoName(): String {
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				var photoName = ""
+
+				while (true) {
+					val generatedName = generator.generateNewPhotoName()
+					if (!photoInfoDao.photoNameExists(generatedName)) {
+						photoName = generatedName
+						break
+					}
+				}
+
+				return@withLock photoName
+			}
+		}.await()
+	}
 
 	suspend fun save(photoInfo: PhotoInfo): PhotoInfo {
 		return concurrentService.asyncMongo {

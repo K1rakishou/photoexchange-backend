@@ -13,7 +13,6 @@ import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.ConcurrencyService
-import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.ImageUtils
@@ -37,7 +36,6 @@ class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
 	private val photoInfoExchangeRepo: PhotoInfoExchangeRepository,
-	private val generator: GeneratorServiceImpl,
 	private val concurrentService: ConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
 
@@ -79,7 +77,9 @@ class UploadPhotoHandler(
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest()))
 				}
 
-				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(packet))
+				val photoInfoName = photoInfoRepo.generatePhotoInfoName()
+				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(photoInfoName, packet))
+				
 				if (newUploadingPhoto.isEmpty()) {
 					logger.debug("Could not save a photoInfo")
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -207,11 +207,10 @@ class UploadPhotoHandler(
 		return true
 	}
 
-	private fun createPhotoInfo(packet: SendPhotoPacket): PhotoInfo {
-		val newPhotoName = generator.generateNewPhotoName()
+	private fun createPhotoInfo(photoName: String, packet: SendPhotoPacket): PhotoInfo {
 		return PhotoInfo.create(
 			packet.userId,
-			newPhotoName,
+			photoName,
 			packet.isPublic,
 			packet.lon,
 			packet.lat,
