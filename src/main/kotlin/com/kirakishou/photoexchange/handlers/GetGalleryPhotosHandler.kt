@@ -4,7 +4,7 @@ import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.GalleryPhotoAnswer
-import com.kirakishou.photoexchange.model.net.response.GetGalleryPhotosResponse
+import com.kirakishou.photoexchange.model.net.response.GalleryPhotosResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import kotlinx.coroutines.experimental.reactor.asMono
@@ -31,7 +31,7 @@ class GetGalleryPhotosHandler(
 				if (!request.containsAllPathVars(LAST_ID_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						GetGalleryPhotosResponse.fail(ErrorCode.GetGalleryPhotosErrors.BadRequest()))
+						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest()))
 				}
 
 				val lastId = try {
@@ -45,11 +45,11 @@ class GetGalleryPhotosHandler(
 
 				logger.debug("Found ${galleryPhotos.size} photo from gallery")
 
-				return@asyncCommon formatResponse(HttpStatus.OK, GetGalleryPhotosResponse.success(galleryPhotos))
+				return@asyncCommon formatResponse(HttpStatus.OK, GalleryPhotosResponse.success(galleryPhotos))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GetGalleryPhotosResponse.fail(ErrorCode.GetGalleryPhotosErrors.UnknownError()))
+					GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.UnknownError()))
 			}
 		}
 

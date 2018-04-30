@@ -24,9 +24,9 @@ sealed class ErrorCode(val value: Int) {
 		class NotEnoughPhotosUploaded : GetPhotoAnswerErrors(6)
 	}
 
-	sealed class GetGalleryPhotosErrors(value: Int) : ErrorCode(value) {
-		class UnknownError : GetGalleryPhotosErrors(-1)
-		class Ok : GetGalleryPhotosErrors(0)
-		class BadRequest : GetGalleryPhotosErrors(1)
+	sealed class GalleryPhotosErrors(value: Int) : ErrorCode(value) {
+		class UnknownError : GalleryPhotosErrors(-1)
+		class Ok : GalleryPhotosErrors(0)
+		class BadRequest : GalleryPhotosErrors(1)
 	}
 }

@@ -79,7 +79,7 @@ class UploadPhotoHandler(
 
 				val photoInfoName = photoInfoRepo.generatePhotoInfoName()
 				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(photoInfoName, packet))
-				
+
 				if (newUploadingPhoto.isEmpty()) {
 					logger.debug("Could not save a photoInfo")
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
