@@ -12,7 +12,6 @@ import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeReposit
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handlers.GetPhotoAnswerHandler
 import com.kirakishou.photoexchange.handlers.GetPhotoHandler
-import com.kirakishou.photoexchange.handlers.MarkPhotoAsReceivedHandler
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.ConcurrencyService
@@ -56,7 +55,6 @@ fun myBeans() = beans {
 	bean<UploadPhotoHandler>()
 	bean<GetPhotoAnswerHandler>()
 	bean<GetPhotoHandler>()
-	bean<MarkPhotoAsReceivedHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }
