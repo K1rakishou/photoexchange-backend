@@ -132,6 +132,25 @@ open class PhotoInfoDao(
 		return photoInfo
 	}
 
+	suspend fun findMany(photoIdList: List<Long>): List<PhotoInfo> {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
+			.limit(photoIdList.size)
+
+		val photoInfoList = try {
+			template.find(query, PhotoInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			emptyList<PhotoInfo>()
+		}
+
+		if (photoInfoList == null) {
+			return emptyList()
+		}
+
+		return photoInfoList
+	}
+
 	suspend fun findOlderThan(time: Long): List<PhotoInfo> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(time))

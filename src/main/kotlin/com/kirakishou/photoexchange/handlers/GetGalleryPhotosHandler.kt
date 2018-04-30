@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.handlers
 import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
+import com.kirakishou.photoexchange.model.net.response.GalleryPhotoAnswer
 import com.kirakishou.photoexchange.model.net.response.GetGalleryPhotosResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -38,12 +39,10 @@ class GetGalleryPhotosHandler(
 				Long.MAX_VALUE
 			}
 
-			logger.debug("LastId: $lastId")
+			val photos = galleryPhotosRepository.findPaged(lastId)
+			val galleryPhotos = photos.map { GalleryPhotoAnswer(it.photoName, it.lon, it.lat) }
 
-			val galleryPhotos = galleryPhotosRepository.findPaged(lastId)
-			galleryPhotos.forEach { logger.debug("id = ${it.photoId}, uploadedOn = ${it.uploadedOn}") }
-
-			return@asyncCommon formatResponse(HttpStatus.OK, GetGalleryPhotosResponse.success())
+			return@asyncCommon formatResponse(HttpStatus.OK, GetGalleryPhotosResponse.success(galleryPhotos))
 		}
 
 		return result
