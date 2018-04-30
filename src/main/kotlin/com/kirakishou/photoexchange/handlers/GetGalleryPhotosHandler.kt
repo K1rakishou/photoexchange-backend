@@ -40,7 +40,7 @@ class GetGalleryPhotosHandler(
 			}
 
 			val photos = galleryPhotosRepository.findPaged(lastId)
-			val galleryPhotos = photos.map { GalleryPhotoAnswer(it.photoName, it.lon, it.lat) }
+			val galleryPhotos = photos.map { GalleryPhotoAnswer(it.photoName, it.lon, it.lat, it.uploadedOn) }
 
 			return@asyncCommon formatResponse(HttpStatus.OK, GetGalleryPhotosResponse.success(galleryPhotos))
 		}

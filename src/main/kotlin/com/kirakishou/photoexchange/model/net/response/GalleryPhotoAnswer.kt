@@ -10,5 +10,8 @@ class GalleryPhotoAnswer(
 	val lon: Double,
 
 	@SerializedName("lat")
-	val lat: Double
+	val lat: Double,
+
+	@SerializedName("uploaded_on")
+	val uploadedOn: Long
 )
