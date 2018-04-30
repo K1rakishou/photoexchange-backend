@@ -4,14 +4,16 @@ import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.DB_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.HOST
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
+import com.kirakishou.photoexchange.database.dao.GalleryPhotoDao
 import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
+import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.handlers.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetPhotoAnswerHandler
 import com.kirakishou.photoexchange.handlers.GetPhotoHandler
-import com.kirakishou.photoexchange.handlers.MarkPhotoAsReceivedHandler
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.ConcurrencyService
@@ -42,10 +44,12 @@ fun myBeans() = beans {
 	bean { MongoSequenceDao(ref()).also { it.init() } }
 	bean { PhotoInfoDao(ref()).also { it.init() } }
 	bean { PhotoInfoExchangeDao(ref()).also { it.init() } }
+	bean { GalleryPhotoDao(ref()).also { it.init() } }
 
 	//repository
 	bean<PhotoInfoRepository>()
 	bean<PhotoInfoExchangeRepository>()
+	bean<GalleryPhotosRepository>()
 
 	//service
 	bean { GeneratorServiceImpl() }
@@ -54,7 +58,7 @@ fun myBeans() = beans {
 	bean<UploadPhotoHandler>()
 	bean<GetPhotoAnswerHandler>()
 	bean<GetPhotoHandler>()
-	bean<MarkPhotoAsReceivedHandler>()
+	bean<GetGalleryPhotosHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }

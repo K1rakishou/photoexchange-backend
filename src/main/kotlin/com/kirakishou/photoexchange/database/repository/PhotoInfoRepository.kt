@@ -1,10 +1,14 @@
 package com.kirakishou.photoexchange.database.repository
 
+import com.kirakishou.photoexchange.database.dao.GalleryPhotoDao
 import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
+import com.kirakishou.photoexchange.model.repo.GalleryPhoto
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
+import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.ConcurrencyService
+import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import kotlinx.coroutines.experimental.Deferred
 import kotlinx.coroutines.experimental.sync.Mutex
 import kotlinx.coroutines.experimental.sync.withLock
@@ -13,14 +17,48 @@ class PhotoInfoRepository(
 	private val mongoSequenceDao: MongoSequenceDao,
 	private val photoInfoDao: PhotoInfoDao,
 	private val photoInfoExchangeDao: PhotoInfoExchangeDao,
+	private val galleryPhotoDao: GalleryPhotoDao,
+	private val generator: GeneratorServiceImpl,
 	private val concurrentService: ConcurrencyService
 ) {
 	private val mutex = Mutex()
 
+	suspend fun generatePhotoInfoName(): String {
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				var photoName = ""
+
+				while (true) {
+					val generatedName = generator.generateNewPhotoName()
+					if (!photoInfoDao.photoNameExists(generatedName)) {
+						photoName = generatedName
+						break
+					}
+				}
+
+				return@withLock photoName
+			}
+		}.await()
+	}
+
 	suspend fun save(photoInfo: PhotoInfo): PhotoInfo {
 		return concurrentService.asyncMongo {
-			photoInfo.photoId = mongoSequenceDao.getNextPhotoId()
-			return@asyncMongo photoInfoDao.save(photoInfo)
+			return@asyncMongo mutex.withLock {
+				photoInfo.photoId = mongoSequenceDao.getNextPhotoId()
+
+				val savedPhotoInfo = photoInfoDao.save(photoInfo)
+				if (savedPhotoInfo.isEmpty()) {
+					return@withLock savedPhotoInfo
+				}
+
+				val result = galleryPhotoDao.save(GalleryPhoto.create(photoInfo.photoId, savedPhotoInfo.uploadedOn))
+				if (!result) {
+					photoInfoDao.deleteById(photoInfo.photoId)
+					return@withLock PhotoInfo.empty()
+				}
+
+				return@withLock savedPhotoInfo
+			}
 		}.await()
 	}
 
@@ -28,12 +66,6 @@ class PhotoInfoRepository(
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoDao.find(userId, photoName)
 		}.await()
-	}
-
-	suspend fun findAsync(userId: String, photoName: String): Deferred<PhotoInfo> {
-		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.find(userId, photoName)
-		}
 	}
 
 	suspend fun findByExchangeIdAndUserIdAsync(userId: String, exchangeId: Long): Deferred<PhotoInfo> {
@@ -103,6 +135,22 @@ class PhotoInfoRepository(
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoDao.updateSetExchangeId(photoId, exchangeId)
 		}.await()
+	}
+
+	suspend fun tryDoExchange(newUploadingPhoto: PhotoInfo) {
+		concurrentService.asyncMongo {
+			mutex.withLock {
+				val photoInfoExchange = photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(newUploadingPhoto.userId)
+				if (photoInfoExchange.isEmpty()) {
+					//there is no photo to do exchange with, create a new exchange request
+					val newPhotoInfoExchange = photoInfoExchangeDao.save(PhotoInfoExchange.create(newUploadingPhoto.userId))
+					updateSetExchangeInfoId(newUploadingPhoto.photoId, newPhotoInfoExchange.id)
+				} else {
+					//there is a photo, update exchange request with info about our photo
+					updateSetExchangeInfoId(newUploadingPhoto.photoId, photoInfoExchange.id)
+				}
+			}
+		}
 	}
 
 	suspend fun deleteUserById(userId: String): Boolean {

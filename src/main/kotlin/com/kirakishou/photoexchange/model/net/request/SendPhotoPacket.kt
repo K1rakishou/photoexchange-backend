@@ -10,7 +10,10 @@ class SendPhotoPacket(
 	val lat: Double,
 
 	@SerializedName("user_id")
-	val userId: String
+	val userId: String,
+
+	@SerializedName("is_public")
+	val isPublic: Boolean
 ) {
 	fun isPacketOk(): Boolean {
 		if (lon < -180.0 || lon > 180.0 || lat < -90.0 || lat > 90.0 || userId.isEmpty()) {

@@ -71,7 +71,11 @@ class GetPhotoAnswerHandler(
 				}
 
 				val photoAnswerList = arrayListOf<PhotoAnswer>()
+
+				//TODO: remake DB requests in batches
 				for (uploadedPhotoName in photoNameList) {
+					logger.debug("PhotoName = $uploadedPhotoName")
+
 					val photoInfo = photoInfoRepo.find(userId, uploadedPhotoName)
 					if (photoInfo.isEmpty()) {
 						logger.debug("Could not find photoInfo = userId: $userId, uploadedPhotoName: $uploadedPhotoName")
@@ -110,7 +114,6 @@ class GetPhotoAnswerHandler(
 				cleanUp()
 
 				return@asyncCommon formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswerList))
-
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,

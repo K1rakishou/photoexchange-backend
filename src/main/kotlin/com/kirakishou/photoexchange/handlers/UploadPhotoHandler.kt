@@ -12,17 +12,13 @@ import com.kirakishou.photoexchange.model.exception.EmptyPacket
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
-import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.ConcurrencyService
-import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.ImageUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.reactive.awaitSingle
 import kotlinx.coroutines.experimental.reactor.asMono
-import kotlinx.coroutines.experimental.sync.Mutex
-import kotlinx.coroutines.experimental.sync.withLock
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
@@ -40,7 +36,6 @@ class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
 	private val photoInfoExchangeRepo: PhotoInfoExchangeRepository,
-	private val generator: GeneratorServiceImpl,
 	private val concurrentService: ConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
 
@@ -51,7 +46,6 @@ class UploadPhotoHandler(
 	private val SMALL_PHOTO_SIZE = 1024
 	private val BIG_PHOTO_SUFFIX = "_b"
 	private val SMALL_PHOTO_SUFFIX = "_s"
-	private val mutex = Mutex()
 	private var lastTimeCheck = 0L
 	private val photoSizes = arrayOf(BIG_PHOTO_SUFFIX, SMALL_PHOTO_SUFFIX)
 
@@ -83,7 +77,9 @@ class UploadPhotoHandler(
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest()))
 				}
 
-				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(packet))
+				val photoInfoName = photoInfoRepo.generatePhotoInfoName()
+				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(photoInfoName, packet))
+
 				if (newUploadingPhoto.isEmpty()) {
 					logger.debug("Could not save a photoInfo")
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -125,22 +121,17 @@ class UploadPhotoHandler(
 					logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
 				}
 
-				mutex.withLock {
-					val photoInfoExchange = photoInfoExchangeRepo.tryDoExchangeWithOldestPhoto(newUploadingPhoto.userId)
-					if (photoInfoExchange.isEmpty()) {
-						//there is no photo to do exchange with, create a new exchange request
-						val newPhotoInfoExchange = photoInfoExchangeRepo.save(PhotoInfoExchange.create(newUploadingPhoto.userId))
-						photoInfoRepo.updateSetExchangeInfoId(newUploadingPhoto.photoId, newPhotoInfoExchange.id)
-					} else {
-						//there is a photo, update exchange request with info about our photo
-						photoInfoRepo.updateSetExchangeInfoId(newUploadingPhoto.photoId, photoInfoExchange.id)
-					}
+				try {
+					photoInfoRepo.tryDoExchange(newUploadingPhoto)
+				} catch (error: Throwable) {
+					logger.error("Unknown error while trying to do photo exchange", error)
+					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError()))
 				}
 
 				logger.debug("Photo has been successfully uploaded")
 				return@asyncCommon formatResponse(HttpStatus.OK,
 					UploadPhotoResponse.success(newUploadingPhoto.photoName))
-
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -216,11 +207,11 @@ class UploadPhotoHandler(
 		return true
 	}
 
-	private fun createPhotoInfo(packet: SendPhotoPacket): PhotoInfo {
-		val newPhotoName = generator.generateNewPhotoName()
+	private fun createPhotoInfo(photoName: String, packet: SendPhotoPacket): PhotoInfo {
 		return PhotoInfo.create(
 			packet.userId,
-			newPhotoName,
+			photoName,
+			packet.isPublic,
 			packet.lon,
 			packet.lat,
 			TimeUtils.getTimeFast())

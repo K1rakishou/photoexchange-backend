@@ -132,6 +132,25 @@ open class PhotoInfoDao(
 		return photoInfo
 	}
 
+	suspend fun findMany(photoIdList: List<Long>): List<PhotoInfo> {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
+			.limit(photoIdList.size)
+
+		val photoInfoList = try {
+			template.find(query, PhotoInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			emptyList<PhotoInfo>()
+		}
+
+		if (photoInfoList == null) {
+			return emptyList()
+		}
+
+		return photoInfoList
+	}
+
 	suspend fun findOlderThan(time: Long): List<PhotoInfo> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(time))
@@ -146,7 +165,7 @@ open class PhotoInfoDao(
 		return result
 	}
 
-	fun updateSetExchangeId(photoId: Long, exchangeId: Long): Boolean {
+	suspend fun updateSetExchangeId(photoId: Long, exchangeId: Long): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
 
@@ -162,6 +181,17 @@ open class PhotoInfoDao(
 		}
 
 		return result
+	}
+
+	suspend fun deleteById(photoId: Long) {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		try {
+			template.remove(query, PhotoInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+		}
 	}
 
 	suspend fun deleteUserById(userId: String): Boolean {
@@ -196,6 +226,13 @@ open class PhotoInfoDao(
 		}
 
 		return result
+	}
+
+	suspend fun photoNameExists(generatedName: String): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(generatedName))
+
+		return template.exists(query, PhotoInfo::class.java)
 	}
 
 	companion object {

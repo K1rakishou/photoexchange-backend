@@ -22,16 +22,11 @@ sealed class ErrorCode(val value: Int) {
 		class TooManyPhotosRequested : GetPhotoAnswerErrors(4)
 		class NoPhotosToSendBack : GetPhotoAnswerErrors(5)
 		class NotEnoughPhotosUploaded : GetPhotoAnswerErrors(6)
-		class PhotoInfoNotFound : GetPhotoAnswerErrors(7)
 	}
 
-	sealed class MarkPhotoAsReceivedErrors(value: Int) : ErrorCode(value) {
-		class UnknownError : MarkPhotoAsReceivedErrors(-1)
-		class Ok : MarkPhotoAsReceivedErrors(0)
-		class BadRequest : MarkPhotoAsReceivedErrors(1)
-		class BadPhotoId : MarkPhotoAsReceivedErrors(2)
-		class PhotoInfoNotFound : MarkPhotoAsReceivedErrors(3)
-		class PhotoInfoExchangeNotFound : MarkPhotoAsReceivedErrors(4)
-		class UpdateError : MarkPhotoAsReceivedErrors(5)
+	sealed class GalleryPhotosErrors(value: Int) : ErrorCode(value) {
+		class UnknownError : GalleryPhotosErrors(-1)
+		class Ok : GalleryPhotosErrors(0)
+		class BadRequest : GalleryPhotosErrors(1)
 	}
 }

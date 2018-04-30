@@ -24,6 +24,9 @@ class PhotoInfo(
 	@Field(Mongo.Field.PHOTO_NAME)
 	val photoName: String,
 
+	@Field(Mongo.Field.IS_PUBLIC)
+	val isPublic: Boolean,
+
 	@Field(Mongo.Field.LONGITUDE)
 	val lon: Double,
 
@@ -40,11 +43,11 @@ class PhotoInfo(
 
 	companion object {
 		fun empty(): PhotoInfo {
-			return PhotoInfo(-1L, -1L, "", "", 0.0, 0.0, 0L)
+			return PhotoInfo(-1L, -1L, "", "", false, 0.0, 0.0, 0L)
 		}
 
-		fun create(userId: String, photoName: String, lon: Double, lat: Double, time: Long): PhotoInfo {
-			return PhotoInfo(-1L, -1L, userId, photoName, lon, lat, time)
+		fun create(userId: String, photoName: String, isPublic: Boolean, lon: Double, lat: Double, time: Long): PhotoInfo {
+			return PhotoInfo(-1L, -1L, userId, photoName, isPublic, lon, lat, time)
 		}
 	}
 
@@ -54,6 +57,7 @@ class PhotoInfo(
 			const val EXCHANGE_ID = "exchange_id"
 			const val USER_ID = "user_id"
 			const val PHOTO_NAME = "photo_name"
+			const val IS_PUBLIC = "is_public"
 			const val LONGITUDE = "longitude"
 			const val LATITUDE = "latitude"
 			const val UPLOADED_ON = "uploaded_on"
