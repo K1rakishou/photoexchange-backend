@@ -72,6 +72,8 @@ class GetPhotoAnswerHandler(
 
 				val photoAnswerList = arrayListOf<PhotoAnswer>()
 				for (uploadedPhotoName in photoNameList) {
+					logger.debug("PhotoName = $uploadedPhotoName")
+
 					val photoInfo = photoInfoRepo.find(userId, uploadedPhotoName)
 					if (photoInfo.isEmpty()) {
 						logger.debug("Could not find photoInfo = userId: $userId, uploadedPhotoName: $uploadedPhotoName")

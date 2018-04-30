@@ -221,6 +221,7 @@ class UploadPhotoHandler(
 		return PhotoInfo.create(
 			packet.userId,
 			newPhotoName,
+			packet.isPublic,
 			packet.lon,
 			packet.lat,
 			TimeUtils.getTimeFast())
