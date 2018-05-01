@@ -269,6 +269,25 @@ open class PhotoInfoDao(
 		return result
 	}
 
+	suspend fun incrementPhotoReportsCount(photoName: String): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
+			.limit(1)
+
+		val update = Update()
+			.inc(PhotoInfo.Mongo.Field.REPORTS_COUNT, 1)
+
+		val result = try {
+			val updateResult = template.updateFirst(query, update, PhotoInfo::class.java)
+			updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			false
+		}
+
+		return result
+	}
+
 	companion object {
 		const val COLLECTION_NAME = "photo_info"
 	}

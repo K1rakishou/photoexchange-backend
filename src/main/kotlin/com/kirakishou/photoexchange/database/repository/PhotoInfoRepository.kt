@@ -202,6 +202,10 @@ class PhotoInfoRepository(
 					return@withLock ReportPhotoResult.Error()
 				}
 
+				if (!photoInfoDao.incrementPhotoReportsCount(photoName)) {
+					return@withLock ReportPhotoResult.Error()
+				}
+
 				return@withLock ReportPhotoResult.Ok()
 			}
 		}.await()
