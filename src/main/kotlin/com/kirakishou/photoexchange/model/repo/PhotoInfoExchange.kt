@@ -47,8 +47,8 @@ class PhotoInfoExchange(
 			return PhotoInfoExchange(-1L, "", "", false, false, 0L)
 		}
 
-		fun create(uploaderUserId: String): PhotoInfoExchange {
-			return PhotoInfoExchange(-1L, uploaderUserId, "", false, false, TimeUtils.getTimeFast())
+		fun create(photoExchangeId: Long, uploaderUserId: String): PhotoInfoExchange {
+			return PhotoInfoExchange(photoExchangeId, uploaderUserId, "", false, false, TimeUtils.getTimeFast())
 		}
 	}
 

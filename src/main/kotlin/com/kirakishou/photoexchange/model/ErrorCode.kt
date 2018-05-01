@@ -29,4 +29,18 @@ sealed class ErrorCode(val value: Int) {
 		class Ok : GalleryPhotosErrors(0)
 		class BadRequest : GalleryPhotosErrors(1)
 	}
+
+	sealed class FavouritePhotoErrors(value: Int) : ErrorCode(value) {
+		class UnknownError : FavouritePhotoErrors(-1)
+		class Ok : FavouritePhotoErrors(0)
+		class AlreadyFavourited : FavouritePhotoErrors(1)
+		class BadRequest : FavouritePhotoErrors(2)
+	}
+
+	sealed class ReportPhotoErrors(value: Int) : ErrorCode(value) {
+		class UnknownError : ReportPhotoErrors(-1)
+		class Ok : ReportPhotoErrors(0)
+		class AlreadyReported : ReportPhotoErrors(1)
+		class BadRequest : ReportPhotoErrors(2)
+	}
 }

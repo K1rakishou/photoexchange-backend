@@ -12,6 +12,9 @@ open class MongoSequenceDao(
 ) {
 	private val PHOTO_INFO_SEQUENCE_NAME = "photo_info_sequence"
 	private val PHOTO_EXCHANGE_INFO_SEQUENCE_NAME = "photo_exchange_info_sequence"
+	private val GALLERY_PHOTO_SEQUENCE_NAME = "gallery_photo_sequence"
+	private val FAVOURITED_PHOTO_SEQUENCE_NAME = "favourited_photo_sequence"
+	private val REPORTED_PHOTO_SEQUENCE_NAME = "reported_photo_sequence"
 
 	fun init() {
 		if (!template.collectionExists(MongoSequence::class.java)) {
@@ -38,5 +41,17 @@ open class MongoSequenceDao(
 
 	suspend fun getNextPhotoExchangeId(): Long {
 		return getNextId(PHOTO_EXCHANGE_INFO_SEQUENCE_NAME)
+	}
+
+	suspend fun getNextGalleryPhotoId(): Long {
+		return getNextId(GALLERY_PHOTO_SEQUENCE_NAME)
+	}
+
+	suspend fun getNextFavouritedPhotoId(): Long {
+		return getNextId(FAVOURITED_PHOTO_SEQUENCE_NAME)
+	}
+
+	suspend fun getNextReportedPhotoId(): Long {
+		return getNextId(REPORTED_PHOTO_SEQUENCE_NAME)
 	}
 }

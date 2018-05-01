@@ -2,6 +2,8 @@ package com.kirakishou.photoexchange.database.dao
 
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Sort
+import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
@@ -133,7 +135,7 @@ open class PhotoInfoDao(
 	}
 
 	suspend fun findMany(photoIdList: List<Long>): List<PhotoInfo> {
-		val query = Query()
+		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
 			.limit(photoIdList.size)
 
@@ -194,38 +196,23 @@ open class PhotoInfoDao(
 		}
 	}
 
-	suspend fun deleteUserById(userId: String): Boolean {
+	suspend fun deleteUserById(userId: String, photoName: String) {
 		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).`is`(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.limit(1)
 
-		val result = try {
-			val deleteResult = template.remove(query, PhotoInfo::class.java)
-			deleteResult.wasAcknowledged() && deleteResult.deletedCount == 1L
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			false
-		}
-
-		return result
+		template.remove(query, PhotoInfo::class.java)
 	}
 
-	suspend fun deleteAll(ids: List<Long>): Boolean {
+	suspend fun deleteAll(ids: List<Long>) {
 		val count = ids.size
 
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(ids))
 			.limit(count)
 
-		val result = try {
-			val deleteResult = template.remove(query, PhotoInfo::class.java)
-			deleteResult.wasAcknowledged() && deleteResult.deletedCount == count.toLong()
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			return false
-		}
-
-		return result
+		template.remove(query, PhotoInfo::class.java)
 	}
 
 	suspend fun photoNameExists(generatedName: String): Boolean {
@@ -233,6 +220,65 @@ open class PhotoInfoDao(
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(generatedName))
 
 		return template.exists(query, PhotoInfo::class.java)
+	}
+
+	suspend fun getPhotoIdByName(photoName: String): Long {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
+
+		val result = try {
+			template.findOne(query, PhotoInfo::class.java)?.photoId ?: -1L
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			return -1L
+		}
+
+		return result
+	}
+
+	suspend fun changePhotoFavouritesCount(photoName: String, increment: Boolean): PhotoInfo {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
+			.limit(1)
+
+		val update = if (increment) {
+			Update().inc(PhotoInfo.Mongo.Field.FAVOURITES_COUNT, 1)
+		} else {
+			Update().inc(PhotoInfo.Mongo.Field.FAVOURITES_COUNT, -1)
+		}
+
+		val options = FindAndModifyOptions.options().returnNew(true)
+
+		val result = try {
+			template.findAndModify(query, update, options, PhotoInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			PhotoInfo.empty()
+		}
+
+		return result
+	}
+
+	suspend fun changePhotoReportsCount(photoName: String, increment: Boolean): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
+			.limit(1)
+
+		val update = if (increment) {
+			Update().inc(PhotoInfo.Mongo.Field.REPORTS_COUNT, 1)
+		} else {
+			Update().inc(PhotoInfo.Mongo.Field.REPORTS_COUNT, -1)
+		}
+
+		val result = try {
+			val updateResult = template.updateFirst(query, update, PhotoInfo::class.java)
+			updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			false
+		}
+
+		return result
 	}
 
 	companion object {

@@ -1,12 +1,7 @@
 package com.kirakishou.photoexchange.database.repository
 
-import com.kirakishou.photoexchange.database.dao.GalleryPhotoDao
-import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
-import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
-import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
-import com.kirakishou.photoexchange.model.repo.GalleryPhoto
-import com.kirakishou.photoexchange.model.repo.PhotoInfo
-import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
+import com.kirakishou.photoexchange.database.dao.*
+import com.kirakishou.photoexchange.model.repo.*
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import kotlinx.coroutines.experimental.Deferred
@@ -18,6 +13,8 @@ class PhotoInfoRepository(
 	private val photoInfoDao: PhotoInfoDao,
 	private val photoInfoExchangeDao: PhotoInfoExchangeDao,
 	private val galleryPhotoDao: GalleryPhotoDao,
+	private val favouritedPhotoDao: FavouritedPhotoDao,
+	private val reportedPhotoDao: ReportedPhotoDao,
 	private val generator: GeneratorServiceImpl,
 	private val concurrentService: ConcurrencyService
 ) {
@@ -51,7 +48,9 @@ class PhotoInfoRepository(
 					return@withLock savedPhotoInfo
 				}
 
-				val result = galleryPhotoDao.save(GalleryPhoto.create(photoInfo.photoId, savedPhotoInfo.uploadedOn))
+				val galleryPhotoId = mongoSequenceDao.getNextGalleryPhotoId()
+				val result = galleryPhotoDao.save(GalleryPhoto.create(galleryPhotoId, photoInfo.photoId, savedPhotoInfo.uploadedOn))
+
 				if (!result) {
 					photoInfoDao.deleteById(photoInfo.photoId)
 					return@withLock PhotoInfo.empty()
@@ -99,38 +98,6 @@ class PhotoInfoRepository(
 		}
 	}
 
-	suspend fun updateSetPhotoSuccessfullyDelivered(photoName: String, userId: String): UpdateSetPhotoDeliveredResult {
-		return concurrentService.asyncMongo {
-			return@asyncMongo mutex.withLock {
-				val photoInfo = photoInfoDao.find(userId, photoName)
-				if (photoInfo.isEmpty()) {
-					return@withLock UpdateSetPhotoDeliveredResult.PhotoInfoNotFound()
-				}
-
-				val photoExchangeInfo = photoInfoExchangeDao.findById(photoInfo.exchangeId)
-				if (photoExchangeInfo.isEmpty()) {
-					return@withLock UpdateSetPhotoDeliveredResult.PhotoInfoExchangeNotFound()
-				}
-
-				val isUploader = when {
-					photoInfo.userId == photoExchangeInfo.uploaderUserId -> true
-					photoInfo.userId == photoExchangeInfo.receiverUserId -> false
-					else -> throw IllegalStateException("Neither of uploaderUserId and " +
-						"receiverUserId equals to photoInfo.photoId " +
-						"(photoId: ${photoInfo.photoId}, " +
-						"uploaderUserId: ${photoExchangeInfo.uploaderUserId}, " +
-						"receiverUserId: ${photoExchangeInfo.receiverUserId})")
-				}
-
-				if (!photoInfoExchangeDao.updateSetPhotoSuccessfullyDelivered(photoInfo.exchangeId, isUploader)) {
-					return@withLock UpdateSetPhotoDeliveredResult.UpdateError()
-				}
-
-				return@withLock UpdateSetPhotoDeliveredResult.Ok()
-			}
-		}.await()
-	}
-
 	suspend fun updateSetExchangeInfoId(photoId: Long, exchangeId: Long): Boolean {
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoDao.updateSetExchangeId(photoId, exchangeId)
@@ -143,7 +110,8 @@ class PhotoInfoRepository(
 				val photoInfoExchange = photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(newUploadingPhoto.userId)
 				if (photoInfoExchange.isEmpty()) {
 					//there is no photo to do exchange with, create a new exchange request
-					val newPhotoInfoExchange = photoInfoExchangeDao.save(PhotoInfoExchange.create(newUploadingPhoto.userId))
+					val photoExchangeId = mongoSequenceDao.getNextPhotoExchangeId()
+					val newPhotoInfoExchange = photoInfoExchangeDao.save(PhotoInfoExchange.create(photoExchangeId, newUploadingPhoto.userId))
 					updateSetExchangeInfoId(newUploadingPhoto.photoId, newPhotoInfoExchange.id)
 				} else {
 					//there is a photo, update exchange request with info about our photo
@@ -153,16 +121,104 @@ class PhotoInfoRepository(
 		}
 	}
 
-	suspend fun deleteUserById(userId: String): Boolean {
+	suspend fun delete(userId: String, photoName: String) {
 		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.deleteUserById(userId)
+			photoInfoDao.deleteUserById(userId, photoName)
 		}.await()
 	}
 
-	suspend fun deleteAll(ids: List<Long>): Boolean {
+	suspend fun deleteAll(ids: List<Long>) {
 		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.deleteAll(ids)
+			photoInfoDao.deleteAll(ids)
 		}.await()
+	}
+
+	private suspend fun deletePhotoInternal(photoInfo: PhotoInfo): Boolean {
+		return mutex.withLock {
+			photoInfoDao.deleteById(photoInfo.photoId)
+			photoInfoExchangeDao.deleteById(photoInfo.exchangeId)
+			favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+			reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+
+			return@withLock true
+		}
+	}
+
+	suspend fun favouritePhoto(userId: String, photoName: String): FavouritePhotoResult {
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				val photoId = photoInfoDao.getPhotoIdByName(photoName)
+
+				return@withLock if (favouritedPhotoDao.isPhotoFavourited(userId, photoId)) {
+					if (!favouritedPhotoDao.unfavouritePhoto(userId, photoId)) {
+						return@withLock FavouritePhotoResult.Error()
+					}
+
+					val photoInfo = photoInfoDao.changePhotoFavouritesCount(photoName, false)
+					if (photoInfo.isEmpty()) {
+						return@withLock FavouritePhotoResult.Error()
+					}
+
+					FavouritePhotoResult.Unfavourited(photoInfo.favouritesCount)
+				} else {
+					val id = mongoSequenceDao.getNextFavouritedPhotoId()
+					if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, userId, photoId))) {
+						return@withLock FavouritePhotoResult.Error()
+					}
+
+					val photoInfo = photoInfoDao.changePhotoFavouritesCount(photoName, true)
+					if (photoInfo.isEmpty()) {
+						return@withLock FavouritePhotoResult.Error()
+					}
+
+					FavouritePhotoResult.Favourited(photoInfo.favouritesCount)
+				}
+			}
+		}.await()
+	}
+
+	suspend fun reportPhoto(userId: String, photoName: String): ReportPhotoResult {
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				val photoId = photoInfoDao.getPhotoIdByName(photoName)
+
+				return@withLock if (reportedPhotoDao.isPhotoReported(userId, photoId)) {
+					if (!reportedPhotoDao.unreportPhoto(userId, photoId)) {
+						return@withLock ReportPhotoResult.Error()
+					}
+
+					if (!photoInfoDao.changePhotoReportsCount(photoName, false)) {
+						return@withLock ReportPhotoResult.Error()
+					}
+
+					ReportPhotoResult.Unreported()
+				} else {
+
+					val id = mongoSequenceDao.getNextReportedPhotoId()
+					if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, userId, photoId))) {
+						return@withLock ReportPhotoResult.Error()
+					}
+
+					if (!photoInfoDao.changePhotoReportsCount(photoName, true)) {
+						return@withLock ReportPhotoResult.Error()
+					}
+
+					ReportPhotoResult.Reported()
+				}
+			}
+		}.await()
+	}
+
+	sealed class ReportPhotoResult {
+		class Reported : ReportPhotoResult()
+		class Unreported : ReportPhotoResult()
+		class Error : ReportPhotoResult()
+	}
+
+	sealed class FavouritePhotoResult {
+		class Favourited(val count: Long) : FavouritePhotoResult()
+		class Unfavourited(val count: Long) : FavouritePhotoResult()
+		class Error : FavouritePhotoResult()
 	}
 
 	sealed class UpdateSetPhotoDeliveredResult {
