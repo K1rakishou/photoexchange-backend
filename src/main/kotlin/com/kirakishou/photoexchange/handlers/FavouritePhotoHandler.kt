@@ -41,11 +41,11 @@ class FavouritePhotoHandler(
 					is PhotoInfoRepository.FavouritePhotoResult.Error -> {
 						formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, FavouritePhotoResponse.fail(ErrorCode.FavouritePhotoErrors.UnknownError()))
 					}
-					is PhotoInfoRepository.FavouritePhotoResult.AlreadyFavourited -> {
-						formatResponse(HttpStatus.OK, FavouritePhotoResponse.fail(ErrorCode.FavouritePhotoErrors.AlreadyFavourited()))
+					is PhotoInfoRepository.FavouritePhotoResult.Unfavourited -> {
+						formatResponse(HttpStatus.OK, FavouritePhotoResponse.success(false, result.count))
 					}
-					is PhotoInfoRepository.FavouritePhotoResult.Ok -> {
-						formatResponse(HttpStatus.OK, FavouritePhotoResponse.success())
+					is PhotoInfoRepository.FavouritePhotoResult.Favourited -> {
+						formatResponse(HttpStatus.OK, FavouritePhotoResponse.success(true, result.count))
 					}
 				}
 			} catch (error: Throwable) {

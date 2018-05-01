@@ -41,11 +41,11 @@ class ReportPhotoHandler(
 					is PhotoInfoRepository.ReportPhotoResult.Error -> {
 						formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.UnknownError()))
 					}
-					is PhotoInfoRepository.ReportPhotoResult.AlreadyReported -> {
-						formatResponse(HttpStatus.OK, ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.AlreadyReported()))
+					is PhotoInfoRepository.ReportPhotoResult.Unreported -> {
+						formatResponse(HttpStatus.OK, ReportPhotoResponse.success(false))
 					}
-					is PhotoInfoRepository.ReportPhotoResult.Ok -> {
-						formatResponse(HttpStatus.OK, ReportPhotoResponse.success())
+					is PhotoInfoRepository.ReportPhotoResult.Reported -> {
+						formatResponse(HttpStatus.OK, ReportPhotoResponse.success(true))
 					}
 				}
 			} catch (error: Throwable) {

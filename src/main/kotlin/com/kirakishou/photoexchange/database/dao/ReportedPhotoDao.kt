@@ -28,6 +28,22 @@ class ReportedPhotoDao(
 		return true
 	}
 
+	suspend fun unreportPhoto(userId: String, photoId: Long): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
+
+		val result = try {
+			val deletionResult = template.remove(query, ReportedPhoto::class.java)
+			deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged()
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			false
+		}
+
+		return result
+	}
+
 	suspend fun isPhotoReported(userId: String, photoId: Long): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))

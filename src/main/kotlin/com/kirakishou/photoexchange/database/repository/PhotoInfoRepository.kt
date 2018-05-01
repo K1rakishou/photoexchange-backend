@@ -170,20 +170,30 @@ class PhotoInfoRepository(
 			return@asyncMongo mutex.withLock {
 				val photoId = photoInfoDao.getPhotoIdByName(photoName)
 
-				if (favouritedPhotoDao.isPhotoFavourited(userId, photoId)) {
-					return@withLock FavouritePhotoResult.AlreadyFavourited()
-				}
+				return@withLock if (favouritedPhotoDao.isPhotoFavourited(userId, photoId)) {
+					if (!favouritedPhotoDao.unfavouritePhoto(userId, photoId)) {
+						return@withLock FavouritePhotoResult.Error()
+					}
 
-				val id = mongoSequenceDao.getNextFavouritedPhotoId()
-				if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, userId, photoId))) {
-					return@withLock FavouritePhotoResult.Error()
-				}
+					val photoInfo = photoInfoDao.changePhotoFavouritesCount(photoName, false)
+					if (photoInfo.isEmpty()) {
+						return@withLock FavouritePhotoResult.Error()
+					}
 
-				if (!photoInfoDao.incrementPhotoFavouritesCount(photoName)) {
-					return@withLock FavouritePhotoResult.Error()
-				}
+					FavouritePhotoResult.Unfavourited(photoInfo.favouritesCount)
+				} else {
+					val id = mongoSequenceDao.getNextFavouritedPhotoId()
+					if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, userId, photoId))) {
+						return@withLock FavouritePhotoResult.Error()
+					}
 
-				return@withLock FavouritePhotoResult.Ok()
+					val photoInfo = photoInfoDao.changePhotoFavouritesCount(photoName, true)
+					if (photoInfo.isEmpty()) {
+						return@withLock FavouritePhotoResult.Error()
+					}
+
+					FavouritePhotoResult.Favourited(photoInfo.favouritesCount)
+				}
 			}
 		}.await()
 	}
@@ -193,33 +203,42 @@ class PhotoInfoRepository(
 			return@asyncMongo mutex.withLock {
 				val photoId = photoInfoDao.getPhotoIdByName(photoName)
 
-				if (reportedPhotoDao.isPhotoReported(userId, photoId)) {
-					return@asyncMongo ReportPhotoResult.AlreadyReported()
-				}
+				return@withLock if (reportedPhotoDao.isPhotoReported(userId, photoId)) {
+					if (!reportedPhotoDao.unreportPhoto(userId, photoId)) {
+						return@withLock ReportPhotoResult.Error()
+					}
 
-				val id = mongoSequenceDao.getNextReportedPhotoId()
-				if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, userId, photoId))) {
-					return@withLock ReportPhotoResult.Error()
-				}
+					if (!photoInfoDao.changePhotoReportsCount(photoName, false)) {
+						return@withLock ReportPhotoResult.Error()
+					}
 
-				if (!photoInfoDao.incrementPhotoReportsCount(photoName)) {
-					return@withLock ReportPhotoResult.Error()
-				}
+					ReportPhotoResult.Unreported()
+				} else {
 
-				return@withLock ReportPhotoResult.Ok()
+					val id = mongoSequenceDao.getNextReportedPhotoId()
+					if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, userId, photoId))) {
+						return@withLock ReportPhotoResult.Error()
+					}
+
+					if (!photoInfoDao.changePhotoReportsCount(photoName, true)) {
+						return@withLock ReportPhotoResult.Error()
+					}
+
+					ReportPhotoResult.Reported()
+				}
 			}
 		}.await()
 	}
 
 	sealed class ReportPhotoResult {
-		class Ok : ReportPhotoResult()
-		class AlreadyReported : ReportPhotoResult()
+		class Reported : ReportPhotoResult()
+		class Unreported : ReportPhotoResult()
 		class Error : ReportPhotoResult()
 	}
 
 	sealed class FavouritePhotoResult {
-		class Ok : FavouritePhotoResult()
-		class AlreadyFavourited : FavouritePhotoResult()
+		class Favourited(val count: Long) : FavouritePhotoResult()
+		class Unfavourited(val count: Long) : FavouritePhotoResult()
 		class Error : FavouritePhotoResult()
 	}
 

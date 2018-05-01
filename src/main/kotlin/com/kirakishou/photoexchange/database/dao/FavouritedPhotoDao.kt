@@ -28,6 +28,22 @@ class FavouritedPhotoDao(
 		return true
 	}
 
+	suspend fun unfavouritePhoto(userId: String, photoId: Long): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
+
+		val result = try {
+			val deletionResult = template.remove(query, FavouritedPhoto::class.java)
+			deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged()
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			false
+		}
+
+		return result
+	}
+
 	suspend fun isPhotoFavourited(userId: String, photoId: Long): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))

@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.database.dao
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
+import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
@@ -250,32 +251,40 @@ open class PhotoInfoDao(
 		return result
 	}
 
-	suspend fun incrementPhotoFavouritesCount(photoName: String): Boolean {
+	suspend fun changePhotoFavouritesCount(photoName: String, increment: Boolean): PhotoInfo {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.limit(1)
 
-		val update = Update()
-			.inc(PhotoInfo.Mongo.Field.FAVOURITES_COUNT, 1)
-
-		val result = try {
-			val updateResult = template.updateFirst(query, update, PhotoInfo::class.java)
-			updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			false
+		val update = if (increment) {
+			Update().inc(PhotoInfo.Mongo.Field.FAVOURITES_COUNT, 1)
+		} else {
+			Update().inc(PhotoInfo.Mongo.Field.FAVOURITES_COUNT, -1)
 		}
 
+		val options = FindAndModifyOptions.options().returnNew(true)
+
+		val result = try {
+			template.findAndModify(query, update, options, PhotoInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			PhotoInfo.empty()
+		}
+
+		println("count = ${result.favouritesCount}")
 		return result
 	}
 
-	suspend fun incrementPhotoReportsCount(photoName: String): Boolean {
+	suspend fun changePhotoReportsCount(photoName: String, increment: Boolean): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.limit(1)
 
-		val update = Update()
-			.inc(PhotoInfo.Mongo.Field.REPORTS_COUNT, 1)
+		val update = if (increment) {
+			Update().inc(PhotoInfo.Mongo.Field.REPORTS_COUNT, 1)
+		} else {
+			Update().inc(PhotoInfo.Mongo.Field.REPORTS_COUNT, -1)
+		}
 
 		val result = try {
 			val updateResult = template.updateFirst(query, update, PhotoInfo::class.java)
