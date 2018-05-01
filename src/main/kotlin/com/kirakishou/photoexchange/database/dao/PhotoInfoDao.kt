@@ -2,6 +2,7 @@ package com.kirakishou.photoexchange.database.dao
 
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
@@ -133,7 +134,7 @@ open class PhotoInfoDao(
 	}
 
 	suspend fun findMany(photoIdList: List<Long>): List<PhotoInfo> {
-		val query = Query()
+		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
 			.limit(photoIdList.size)
 

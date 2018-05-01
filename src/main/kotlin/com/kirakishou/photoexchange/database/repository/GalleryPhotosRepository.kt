@@ -15,10 +15,10 @@ class GalleryPhotosRepository(
 ) {
 	private val mutex = Mutex()
 
-	suspend fun findPaged(lastId: Long, count: Int = 25): MutableMap<Long, Pair<PhotoInfo, GalleryPhoto>> {
+	suspend fun findPaged(lastId: Long, count: Int): LinkedHashMap<Long, Pair<PhotoInfo, GalleryPhoto>> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
-				val resultMap = mutableMapOf<Long, Pair<PhotoInfo, GalleryPhoto>>()
+				val resultMap = linkedMapOf<Long, Pair<PhotoInfo, GalleryPhoto>>()
 				val galleryPhotos = galleryPhotoDao.findPaged(lastId, count)
 				val galleryPhotoIds = galleryPhotos.map { it.photoId }
 				val photoInfos = photoInfoDao.findMany(galleryPhotoIds)

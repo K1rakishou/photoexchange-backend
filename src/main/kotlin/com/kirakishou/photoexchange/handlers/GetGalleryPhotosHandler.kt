@@ -21,14 +21,16 @@ class GetGalleryPhotosHandler(
 ) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(GetGalleryPhotosHandler::class.java)
+	private val MAX_PHOTOS_PER_REQUEST_COUNT = 100
 	private val LAST_ID_VARIABLE = "last_id"
+	private val COUNT_VARIABLE = "count"
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		val result = concurrentService.asyncCommon {
 			try {
 				logger.debug("New GetGalleryPhotos request")
 
-				if (!request.containsAllPathVars(LAST_ID_VARIABLE)) {
+				if (!request.containsAllPathVars(LAST_ID_VARIABLE, COUNT_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
 						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest()))
@@ -40,7 +42,13 @@ class GetGalleryPhotosHandler(
 					Long.MAX_VALUE
 				}
 
-				val photos = galleryPhotosRepository.findPaged(lastId)
+				val count = try {
+					request.pathVariable(COUNT_VARIABLE).toInt().coerceAtMost(MAX_PHOTOS_PER_REQUEST_COUNT)
+				} catch (error: NumberFormatException) {
+					MAX_PHOTOS_PER_REQUEST_COUNT
+				}
+
+				val photos = galleryPhotosRepository.findPaged(lastId, count)
 				val galleryPhotos = photos.values.map { (photoInfo, galleryPhoto) ->
 					GalleryPhotoAnswer(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat, photoInfo.uploadedOn, galleryPhoto.likesCount)
 				}

@@ -22,7 +22,7 @@ class Router(
 
 				accept(MediaType.APPLICATION_JSON).nest {
 					GET("/get_answer/{photo_names}/{user_id}", getPhotoAnswerHandler::handle)
-					GET("/get_gallery_photos/{last_id}", getGalleryPhotosHandler::handle)
+					GET("/get_gallery_photos/{last_id}/{count}", getGalleryPhotosHandler::handle)
 				}
 
 				accept(MediaType.parseMediaType("image/*")).nest {
