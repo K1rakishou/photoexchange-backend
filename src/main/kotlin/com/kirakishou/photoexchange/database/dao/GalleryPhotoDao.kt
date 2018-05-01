@@ -30,8 +30,8 @@ class GalleryPhotoDao(
 	}
 
 	suspend fun findPaged(lastId: Long, count: Int): List<GalleryPhoto> {
-		val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.PHOTO_ID))
-			.addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_ID).lte(lastId))
+		val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
+			.addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.ID).lte(lastId))
 			.limit(count)
 
 		val result = try {

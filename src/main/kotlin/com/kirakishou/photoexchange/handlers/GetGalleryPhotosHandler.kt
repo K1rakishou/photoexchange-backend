@@ -41,11 +41,14 @@ class GetGalleryPhotosHandler(
 				}
 
 				val photos = galleryPhotosRepository.findPaged(lastId)
-				val galleryPhotos = photos.map { GalleryPhotoAnswer(it.photoName, it.lon, it.lat, it.uploadedOn) }
+				val galleryPhotos = photos.values.map { (photoInfo, galleryPhoto) ->
+					GalleryPhotoAnswer(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat, photoInfo.uploadedOn, galleryPhoto.likesCount)
+				}
 
 				logger.debug("Found ${galleryPhotos.size} photos from gallery")
+				return@asyncCommon formatResponse(HttpStatus.OK,
+					GalleryPhotosResponse.success(galleryPhotos))
 
-				return@asyncCommon formatResponse(HttpStatus.OK, GalleryPhotosResponse.success(galleryPhotos))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,

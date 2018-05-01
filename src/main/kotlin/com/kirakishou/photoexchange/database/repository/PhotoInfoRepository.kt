@@ -51,7 +51,9 @@ class PhotoInfoRepository(
 					return@withLock savedPhotoInfo
 				}
 
-				val result = galleryPhotoDao.save(GalleryPhoto.create(photoInfo.photoId, savedPhotoInfo.uploadedOn))
+				val galleryPhotoId = mongoSequenceDao.getNextGalleryPhotoId()
+				val result = galleryPhotoDao.save(GalleryPhoto.create(galleryPhotoId, photoInfo.photoId, savedPhotoInfo.uploadedOn))
+
 				if (!result) {
 					photoInfoDao.deleteById(photoInfo.photoId)
 					return@withLock PhotoInfo.empty()

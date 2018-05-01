@@ -5,19 +5,30 @@ import com.kirakishou.photoexchange.config.ServerSettings.ThreadPool.Common.COMM
 import com.kirakishou.photoexchange.config.ServerSettings.ThreadPool.Mongo.MONGO_POOL_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.ThreadPool.Mongo.MONGO_THREADS_PERCENTAGE
 import kotlinx.coroutines.experimental.Deferred
+import kotlinx.coroutines.experimental.ThreadPoolDispatcher
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 
 class ConcurrencyService {
-	val mongoThreadPool = newFixedThreadPoolContext(getThreadsCount(MONGO_THREADS_PERCENTAGE,
-		Runtime.getRuntime().availableProcessors()), MONGO_POOL_NAME)
-	val commonThreadPool = newFixedThreadPoolContext(getThreadsCount(COMMON_THREADS_PERCENTAGE,
-		Runtime.getRuntime().availableProcessors()), COMMON_POOL_NAME)
+	val mongoThreadPool: ThreadPoolDispatcher
+	val commonThreadPool: ThreadPoolDispatcher
+
+	init {
+		val mongoThreadsCount = getThreadsCount(MONGO_THREADS_PERCENTAGE, Runtime.getRuntime().availableProcessors())
+		mongoThreadPool = newFixedThreadPoolContext(mongoThreadsCount, MONGO_POOL_NAME)
+
+		val commonThreadsCount = getThreadsCount(COMMON_THREADS_PERCENTAGE, Runtime.getRuntime().availableProcessors())
+		commonThreadPool = newFixedThreadPoolContext(commonThreadsCount, COMMON_POOL_NAME)
+
+		System.err.println("mongoThreadsCount = $mongoThreadsCount, commonThreadsCount = $commonThreadsCount")
+	}
 
 	fun getThreadsCount(percentage: Double, processorsCount: Int): Int {
 		var count = (processorsCount.toDouble() * percentage).toInt()
-		if (count < 1) {
-			count = 1
+
+		//have at least two threads per coroutine pool
+		if (count < 2) {
+			count = 2
 		}
 
 		return count
