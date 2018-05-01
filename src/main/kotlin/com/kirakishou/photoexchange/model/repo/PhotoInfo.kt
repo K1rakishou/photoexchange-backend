@@ -37,8 +37,8 @@ class PhotoInfo(
 	@Field(Mongo.Field.UPLOADED_ON)
 	val uploadedOn: Long,
 
-	@Field(Mongo.Field.LIKES_COUNT)
-	val likesCount: Long,
+	@Field(Mongo.Field.FAVOURITES_COUNT)
+	val favouritesCount: Long,
 
 	@Field(Mongo.Field.REPORTS_COUNT)
 	val reportsCount: Long
@@ -67,7 +67,7 @@ class PhotoInfo(
 			const val LONGITUDE = "longitude"
 			const val LATITUDE = "latitude"
 			const val UPLOADED_ON = "uploaded_on"
-			const val LIKES_COUNT = "likes_count"
+			const val FAVOURITES_COUNT = "favourites_count"
 			const val REPORTS_COUNT = "reports_count"
 		}
 

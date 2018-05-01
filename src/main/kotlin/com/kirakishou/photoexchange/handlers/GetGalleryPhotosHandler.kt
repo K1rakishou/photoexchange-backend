@@ -50,7 +50,7 @@ class GetGalleryPhotosHandler(
 
 				val photos = galleryPhotosRepository.findPaged(lastId, count)
 				val galleryPhotos = photos.values.map { (photoInfo, galleryPhoto) ->
-					GalleryPhotoAnswer(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat, photoInfo.uploadedOn, photoInfo.likesCount)
+					GalleryPhotoAnswer(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat, photoInfo.uploadedOn, photoInfo.favouritesCount)
 				}
 
 				logger.debug("Found ${galleryPhotos.size} photos from gallery")

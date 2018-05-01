@@ -18,6 +18,6 @@ class GalleryPhotoAnswer(
 	@SerializedName("uploaded_on")
 	val uploadedOn: Long,
 
-	@SerializedName("likes_count")
-	val likesCount: Long
+	@SerializedName("favourites_count")
+	val favouritesCount: Long
 )
