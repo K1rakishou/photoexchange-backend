@@ -52,6 +52,13 @@ class FavouritedPhotoDao(
 		return template.exists(query, FavouritedPhoto::class.java)
 	}
 
+	suspend fun deleteByPhotoId(photoId: Long) {
+		val query = Query()
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		template.remove(query, FavouritedPhoto::class.java)
+	}
+
 	companion object {
 		const val COLLECTION_NAME = "favourited_photo"
 	}

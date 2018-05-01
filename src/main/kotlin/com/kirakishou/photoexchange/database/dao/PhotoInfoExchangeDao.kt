@@ -136,6 +136,13 @@ open class PhotoInfoExchangeDao(
 		return result
 	}
 
+	suspend fun deleteById(exchangeId: Long) {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.ID).`is`(exchangeId))
+
+		template.remove(query, PhotoInfoExchange::class.java)
+	}
+
 	companion object {
 		const val COLLECTION_NAME = "photo_info_exchange"
 	}

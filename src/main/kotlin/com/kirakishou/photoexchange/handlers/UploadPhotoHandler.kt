@@ -104,7 +104,7 @@ class UploadPhotoHandler(
 
 				} catch (error: Throwable) {
 					logger.error("Unknown error", error)
-					photoInfoRepo.deleteUserById(newUploadingPhoto.userId)
+					photoInfoRepo.delete(newUploadingPhoto.userId, photoInfoName)
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError()))
 				} finally {
@@ -163,11 +163,7 @@ class UploadPhotoHandler(
 		}
 
 		val ids = photosToDelete.map { it.photoId }
-		val isOk = photoInfoRepo.deleteAll(ids)
-
-		if (!isOk) {
-			return
-		}
+		photoInfoRepo.deleteAll(ids)
 
 		for (photo in photosToDelete) {
 			for (size in photoSizes) {

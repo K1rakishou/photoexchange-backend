@@ -52,6 +52,13 @@ class ReportedPhotoDao(
 		return template.exists(query, ReportedPhoto::class.java)
 	}
 
+	suspend fun deleteByPhotoId(photoId: Long) {
+		val query = Query()
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		template.remove(query, ReportedPhoto::class.java)
+	}
+
 	companion object {
 		const val COLLECTION_NAME = "reported_photo"
 	}

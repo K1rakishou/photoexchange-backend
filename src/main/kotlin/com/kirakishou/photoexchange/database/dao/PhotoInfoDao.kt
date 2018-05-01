@@ -196,38 +196,23 @@ open class PhotoInfoDao(
 		}
 	}
 
-	suspend fun deleteUserById(userId: String): Boolean {
+	suspend fun deleteUserById(userId: String, photoName: String) {
 		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).`is`(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.limit(1)
 
-		val result = try {
-			val deleteResult = template.remove(query, PhotoInfo::class.java)
-			deleteResult.wasAcknowledged() && deleteResult.deletedCount == 1L
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			false
-		}
-
-		return result
+		template.remove(query, PhotoInfo::class.java)
 	}
 
-	suspend fun deleteAll(ids: List<Long>): Boolean {
+	suspend fun deleteAll(ids: List<Long>) {
 		val count = ids.size
 
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(ids))
 			.limit(count)
 
-		val result = try {
-			val deleteResult = template.remove(query, PhotoInfo::class.java)
-			deleteResult.wasAcknowledged() && deleteResult.deletedCount == count.toLong()
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			return false
-		}
-
-		return result
+		template.remove(query, PhotoInfo::class.java)
 	}
 
 	suspend fun photoNameExists(generatedName: String): Boolean {
@@ -271,7 +256,6 @@ open class PhotoInfoDao(
 			PhotoInfo.empty()
 		}
 
-		println("count = ${result.favouritesCount}")
 		return result
 	}
 
