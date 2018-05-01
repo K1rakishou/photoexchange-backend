@@ -19,13 +19,8 @@ class GalleryPhoto(
 
 	@Indexed(name = Mongo.Index.UPLOADED_ON, direction = IndexDirection.DESCENDING)
 	@Field(Mongo.Field.UPLOADED_ON)
-	val uploadedOn: Long,
+	val uploadedOn: Long
 
-	@Field(Mongo.Field.LIKES_COUNT)
-	val likesCount: Long,
-
-	@Field(Mongo.Field.REPORTS_COUNT)
-	val reportsCount: Long
 ) {
 
 	fun isEmpty(): Boolean {
@@ -34,11 +29,11 @@ class GalleryPhoto(
 
 	companion object {
 		fun empty(): GalleryPhoto {
-			return GalleryPhoto(-1L, -1L, 0L, 0L, 0L)
+			return GalleryPhoto(-1L, -1L, 0L)
 		}
 
 		fun create(id: Long, photoId: Long, uploadedOn: Long): GalleryPhoto {
-			return GalleryPhoto(id, photoId, uploadedOn, 0L, 0L)
+			return GalleryPhoto(id, photoId, uploadedOn)
 		}
 	}
 
@@ -47,8 +42,7 @@ class GalleryPhoto(
 			const val ID = "_id"
 			const val PHOTO_ID = "photo_id"
 			const val UPLOADED_ON = "uploaded_on"
-			const val LIKES_COUNT = "likes_count"
-			const val REPORTS_COUNT = "reports_count"
+
 		}
 
 		object Index {

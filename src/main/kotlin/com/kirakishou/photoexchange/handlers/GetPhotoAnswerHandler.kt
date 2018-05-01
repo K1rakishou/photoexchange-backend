@@ -92,7 +92,7 @@ class GetPhotoAnswerHandler(
 					}
 
 					if (otherUserId.isEmpty()) {
-						logger.debug("Other user has not not received photo yet (???)")
+						logger.debug("Other user has not not received photo yet")
 						continue
 					}
 

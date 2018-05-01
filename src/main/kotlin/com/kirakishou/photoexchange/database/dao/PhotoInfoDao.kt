@@ -236,6 +236,20 @@ open class PhotoInfoDao(
 		return template.exists(query, PhotoInfo::class.java)
 	}
 
+	suspend fun getPhotoIdByName(photoName: String): Long {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
+
+		val result = try {
+			template.findOne(query, PhotoInfo::class.java)?.photoId ?: -1L
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			return -1L
+		}
+
+		return result
+	}
+
 	companion object {
 		const val COLLECTION_NAME = "photo_info"
 	}

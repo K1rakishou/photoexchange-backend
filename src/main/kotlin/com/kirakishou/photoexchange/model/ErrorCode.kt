@@ -29,4 +29,10 @@ sealed class ErrorCode(val value: Int) {
 		class Ok : GalleryPhotosErrors(0)
 		class BadRequest : GalleryPhotosErrors(1)
 	}
+
+	sealed class FavouritePhotoErrors(value: Int) : ErrorCode(value) {
+		class UnknownError : FavouritePhotoErrors(-1)
+		class Ok : FavouritePhotoErrors(0)
+		class AlreadyFavourited : FavouritePhotoErrors(1)
+	}
 }

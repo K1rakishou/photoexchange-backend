@@ -1,9 +1,7 @@
 package com.kirakishou.photoexchange.database.repository
 
-import com.kirakishou.photoexchange.database.dao.GalleryPhotoDao
-import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
-import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
-import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
+import com.kirakishou.photoexchange.database.dao.*
+import com.kirakishou.photoexchange.model.repo.FavouritedPhoto
 import com.kirakishou.photoexchange.model.repo.GalleryPhoto
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
@@ -18,6 +16,7 @@ class PhotoInfoRepository(
 	private val photoInfoDao: PhotoInfoDao,
 	private val photoInfoExchangeDao: PhotoInfoExchangeDao,
 	private val galleryPhotoDao: GalleryPhotoDao,
+	private val favouritedPhotoDao: FavouritedPhotoDao,
 	private val generator: GeneratorServiceImpl,
 	private val concurrentService: ConcurrencyService
 ) {
@@ -145,7 +144,8 @@ class PhotoInfoRepository(
 				val photoInfoExchange = photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(newUploadingPhoto.userId)
 				if (photoInfoExchange.isEmpty()) {
 					//there is no photo to do exchange with, create a new exchange request
-					val newPhotoInfoExchange = photoInfoExchangeDao.save(PhotoInfoExchange.create(newUploadingPhoto.userId))
+					val photoExchangeId = mongoSequenceDao.getNextPhotoExchangeId()
+					val newPhotoInfoExchange = photoInfoExchangeDao.save(PhotoInfoExchange.create(photoExchangeId, newUploadingPhoto.userId))
 					updateSetExchangeInfoId(newUploadingPhoto.photoId, newPhotoInfoExchange.id)
 				} else {
 					//there is a photo, update exchange request with info about our photo
@@ -165,6 +165,31 @@ class PhotoInfoRepository(
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoDao.deleteAll(ids)
 		}.await()
+	}
+
+	suspend fun favouritePhoto(userId: String, photoName: String): FavouritePhotoResult {
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				val photoId = photoInfoDao.getPhotoIdByName(photoName)
+
+				if (favouritedPhotoDao.isPhotoFavourited(userId, photoId)) {
+					return@withLock FavouritePhotoResult.AlreadyFavourited()
+				}
+
+				val id = mongoSequenceDao.getNextFavouritedPhotoId()
+				if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, userId, photoId))) {
+					return@withLock FavouritePhotoResult.Error()
+				}
+
+				return@withLock FavouritePhotoResult.Ok()
+			}
+		}.await()
+	}
+
+	sealed class FavouritePhotoResult {
+		class Ok : FavouritePhotoResult()
+		class AlreadyFavourited : FavouritePhotoResult()
+		class Error : FavouritePhotoResult()
 	}
 
 	sealed class UpdateSetPhotoDeliveredResult {

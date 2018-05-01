@@ -1,9 +1,6 @@
 package com.kirakishou.photoexchange.routers
 
-import com.kirakishou.photoexchange.handlers.GetGalleryPhotosHandler
-import com.kirakishou.photoexchange.handlers.GetPhotoAnswerHandler
-import com.kirakishou.photoexchange.handlers.GetPhotoHandler
-import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
+import com.kirakishou.photoexchange.handlers.*
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.server.router
 
@@ -11,13 +8,15 @@ class Router(
 	private val uploadPhotoHandler: UploadPhotoHandler,
 	private val getPhotoAnswerHandler: GetPhotoAnswerHandler,
 	private val getPhotoHandler: GetPhotoHandler,
-	private val getGalleryPhotosHandler: GetGalleryPhotosHandler
+	private val getGalleryPhotosHandler: GetGalleryPhotosHandler,
+	private val favouritePhotoHandler: FavouritePhotoHandler
 ) {
 	fun setUpRouter() = router {
 		"/v1".nest {
 			"/api".nest {
 				accept(MediaType.MULTIPART_FORM_DATA).nest {
 					POST("/upload", uploadPhotoHandler::handle)
+					POST("/favourite", favouritePhotoHandler::handle)
 				}
 
 				accept(MediaType.APPLICATION_JSON).nest {
