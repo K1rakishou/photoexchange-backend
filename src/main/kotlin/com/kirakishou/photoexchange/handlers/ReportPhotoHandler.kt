@@ -10,6 +10,7 @@ import kotlinx.coroutines.experimental.reactive.awaitSingle
 import kotlinx.coroutines.experimental.reactor.asMono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
+import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
@@ -24,7 +25,11 @@ class ReportPhotoHandler(
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		val result = concurrentService.asyncCommon {
 			try {
-				val packet = request.bodyToMono(ReportPhotoPacket::class.java).awaitSingle()
+				val packetBuffers = request.body(BodyExtractors.toDataBuffers())
+					.buffer()
+					.awaitSingle()
+
+				val packet = jsonConverter.fromJson<ReportPhotoPacket>(packetBuffers)
 				if (!packet.isPacketOk()) {
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
 						ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.BadRequest()))

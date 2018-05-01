@@ -4,17 +4,11 @@ import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.DB_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.HOST
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
-import com.kirakishou.photoexchange.database.dao.GalleryPhotoDao
-import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
-import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
-import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
+import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.handlers.GetGalleryPhotosHandler
-import com.kirakishou.photoexchange.handlers.GetPhotoAnswerHandler
-import com.kirakishou.photoexchange.handlers.GetPhotoHandler
-import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
+import com.kirakishou.photoexchange.handlers.*
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
@@ -45,6 +39,8 @@ fun myBeans() = beans {
 	bean { PhotoInfoDao(ref()).also { it.init() } }
 	bean { PhotoInfoExchangeDao(ref()).also { it.init() } }
 	bean { GalleryPhotoDao(ref()).also { it.init() } }
+	bean { FavouritedPhotoDao(ref()).also { it.init() } }
+	bean { ReportedPhotoDao(ref()).also { it.init() } }
 
 	//repository
 	bean<PhotoInfoRepository>()
@@ -59,6 +55,8 @@ fun myBeans() = beans {
 	bean<GetPhotoAnswerHandler>()
 	bean<GetPhotoHandler>()
 	bean<GetGalleryPhotosHandler>()
+	bean<FavouritePhotoHandler>()
+	bean<ReportPhotoHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }
