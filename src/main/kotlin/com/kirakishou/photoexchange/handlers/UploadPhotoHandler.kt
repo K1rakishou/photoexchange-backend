@@ -4,7 +4,6 @@ import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.config.ServerSettings.DELETE_PHOTOS_OLDER_THAN
 import com.kirakishou.photoexchange.config.ServerSettings.MAX_PHOTO_SIZE
 import com.kirakishou.photoexchange.config.ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL
-import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
 import com.kirakishou.photoexchange.model.ErrorCode
@@ -35,7 +34,6 @@ import java.io.IOException
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
-	private val photoInfoExchangeRepo: PhotoInfoExchangeRepository,
 	private val concurrentService: ConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
 

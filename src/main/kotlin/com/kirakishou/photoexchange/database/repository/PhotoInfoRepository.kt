@@ -179,6 +179,10 @@ class PhotoInfoRepository(
 					return@withLock FavouritePhotoResult.Error()
 				}
 
+				if (!photoInfoDao.incrementPhotoFavouritesCount(photoName)) {
+					return@withLock FavouritePhotoResult.Error()
+				}
+
 				return@withLock FavouritePhotoResult.Ok()
 			}
 		}.await()
