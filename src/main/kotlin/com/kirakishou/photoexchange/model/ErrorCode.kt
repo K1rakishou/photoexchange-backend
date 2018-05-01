@@ -34,5 +34,13 @@ sealed class ErrorCode(val value: Int) {
 		class UnknownError : FavouritePhotoErrors(-1)
 		class Ok : FavouritePhotoErrors(0)
 		class AlreadyFavourited : FavouritePhotoErrors(1)
+		class BadRequest : FavouritePhotoErrors(2)
+	}
+
+	sealed class ReportPhotoErrors(value: Int) : ErrorCode(value) {
+		class UnknownError : ReportPhotoErrors(-1)
+		class Ok : ReportPhotoErrors(0)
+		class AlreadyReported : ReportPhotoErrors(1)
+		class BadRequest : ReportPhotoErrors(2)
 	}
 }

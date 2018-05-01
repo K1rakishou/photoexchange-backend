@@ -9,7 +9,6 @@ import org.springframework.data.mongodb.core.query.Query
 class FavouritedPhotoDao(
 	private val template: MongoTemplate
 ) {
-
 	private val logger = LoggerFactory.getLogger(FavouritedPhotoDao::class.java)
 
 	fun init() {
@@ -29,7 +28,7 @@ class FavouritedPhotoDao(
 		return true
 	}
 
-	fun isPhotoFavourited(userId: String, photoId: Long): Boolean {
+	suspend fun isPhotoFavourited(userId: String, photoId: Long): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))

@@ -1,10 +1,7 @@
 package com.kirakishou.photoexchange.database.repository
 
 import com.kirakishou.photoexchange.database.dao.*
-import com.kirakishou.photoexchange.model.repo.FavouritedPhoto
-import com.kirakishou.photoexchange.model.repo.GalleryPhoto
-import com.kirakishou.photoexchange.model.repo.PhotoInfo
-import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
+import com.kirakishou.photoexchange.model.repo.*
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.GeneratorServiceImpl
 import kotlinx.coroutines.experimental.Deferred
@@ -17,6 +14,7 @@ class PhotoInfoRepository(
 	private val photoInfoExchangeDao: PhotoInfoExchangeDao,
 	private val galleryPhotoDao: GalleryPhotoDao,
 	private val favouritedPhotoDao: FavouritedPhotoDao,
+	private val reportedPhotoDao: ReportedPhotoDao,
 	private val generator: GeneratorServiceImpl,
 	private val concurrentService: ConcurrencyService
 ) {
@@ -184,6 +182,31 @@ class PhotoInfoRepository(
 				return@withLock FavouritePhotoResult.Ok()
 			}
 		}.await()
+	}
+
+	suspend fun reportPhoto(userId: String, photoName: String): ReportPhotoResult {
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				val photoId = photoInfoDao.getPhotoIdByName(photoName)
+
+				if (reportedPhotoDao.isPhotoReported(userId, photoId)) {
+					return@asyncMongo ReportPhotoResult.AlreadyReported()
+				}
+
+				val id = mongoSequenceDao.getNextReportedPhotoId()
+				if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, userId, photoId))) {
+					return@withLock ReportPhotoResult.Error()
+				}
+
+				return@withLock ReportPhotoResult.Ok()
+			}
+		}.await()
+	}
+
+	sealed class ReportPhotoResult {
+		class Ok : ReportPhotoResult()
+		class AlreadyReported : ReportPhotoResult()
+		class Error : ReportPhotoResult()
 	}
 
 	sealed class FavouritePhotoResult {
