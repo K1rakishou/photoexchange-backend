@@ -22,6 +22,7 @@ class GetGalleryPhotosHandler(
 
 	private val logger = LoggerFactory.getLogger(GetGalleryPhotosHandler::class.java)
 	private val MAX_PHOTOS_PER_REQUEST_COUNT = 100
+	private val USER_ID_VARIABLE = "user_id"
 	private val LAST_ID_VARIABLE = "last_id"
 	private val COUNT_VARIABLE = "count"
 
@@ -30,11 +31,13 @@ class GetGalleryPhotosHandler(
 			try {
 				logger.debug("New GetGalleryPhotos request")
 
-				if (!request.containsAllPathVars(LAST_ID_VARIABLE, COUNT_VARIABLE)) {
+				if (!request.containsAllPathVars(USER_ID_VARIABLE, LAST_ID_VARIABLE, COUNT_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
 						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest()))
 				}
+
+				val userId = request.pathVariable(USER_ID_VARIABLE)
 
 				val lastId = try {
 					request.pathVariable(LAST_ID_VARIABLE).toLong()
@@ -48,9 +51,11 @@ class GetGalleryPhotosHandler(
 					MAX_PHOTOS_PER_REQUEST_COUNT
 				}
 
-				val photos = galleryPhotosRepository.findPaged(lastId, count)
-				val galleryPhotos = photos.values.map { (photoInfo, galleryPhoto) ->
-					GalleryPhotoAnswer(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat, photoInfo.uploadedOn, photoInfo.favouritesCount)
+				val photos = galleryPhotosRepository.findPaged(userId, lastId, count)
+
+				val galleryPhotos = photos.values.map { (photoInfo, galleryPhotoInfo, isFavourited, isReported) ->
+					GalleryPhotoAnswer(galleryPhotoInfo.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat,
+						photoInfo.uploadedOn, photoInfo.favouritesCount, isFavourited, isReported)
 				}
 
 				logger.debug("Found ${galleryPhotos.size} photos from gallery")

@@ -21,7 +21,7 @@ class Router(
 
 				accept(MediaType.APPLICATION_JSON).nest {
 					GET("/get_answer/{photo_names}/{user_id}", getPhotoAnswerHandler::handle)
-					GET("/get_gallery_photos/{last_id}/{count}", getGalleryPhotosHandler::handle)
+					GET("/get_gallery_photos/{user_id}/{last_id}/{count}", getGalleryPhotosHandler::handle)
 
 					PUT("/favourite", favouritePhotoHandler::handle)
 					PUT("/report", reportPhotoHandler::handle)

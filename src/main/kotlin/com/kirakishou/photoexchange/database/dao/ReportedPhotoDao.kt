@@ -44,6 +44,22 @@ class ReportedPhotoDao(
 		return result
 	}
 
+	suspend fun findMany(userId: String, photoIdList: List<Long>): List<ReportedPhoto> {
+		val query = Query()
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`in`(photoIdList))
+			.limit(photoIdList.size)
+
+		val result = try {
+			template.find(query, ReportedPhoto::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			emptyList<ReportedPhoto>()
+		}
+
+		return result
+	}
+
 	suspend fun isPhotoReported(userId: String, photoId: Long): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))

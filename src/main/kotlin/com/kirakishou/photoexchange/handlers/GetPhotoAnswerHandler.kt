@@ -108,7 +108,7 @@ class GetPhotoAnswerHandler(
 			.asMono(concurrentService.commonThreadPool)
 			.flatMap { it }
 	}
-	
+
 	@Synchronized
 	private suspend fun cleanUp() {
 		val now = TimeUtils.getTimeFast()
