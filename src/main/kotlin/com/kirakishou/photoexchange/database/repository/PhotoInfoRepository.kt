@@ -88,12 +88,12 @@ class PhotoInfoRepository(
 	suspend fun countUserReceivedPhotos(userId: String): Deferred<Long> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
-				val idList = photoInfoDao.findAllPhotoIdsByUserId(userId)
-				if (idList.isEmpty()) {
-					return@withLock 0L
-				}
+				var result = 0L
 
-				return@withLock photoInfoExchangeDao.countAllReceivedByIdList(idList)
+				result += photoInfoExchangeDao.countAllExchanges(userId, true)
+				result += photoInfoExchangeDao.countAllExchanges(userId, false)
+
+				return@withLock result
 			}
 		}
 	}

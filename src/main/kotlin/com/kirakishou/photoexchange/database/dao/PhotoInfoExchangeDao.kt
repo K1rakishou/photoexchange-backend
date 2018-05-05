@@ -78,9 +78,18 @@ open class PhotoInfoExchangeDao(
 		return result
 	}
 
-	suspend fun countAllReceivedByIdList(ids: List<Long>): Long {
-		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_USER_ID).`in`(ids))
+	suspend fun countAllExchanges(userId: String, asUploader: Boolean): Long {
+		val query = if (asUploader) {
+			Query().addCriteria(
+				Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_USER_ID).`is`(userId)
+					.andOperator(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_USER_ID).ne(""))
+			)
+		} else {
+			Query().addCriteria(
+				Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_USER_ID).`is`(userId)
+					.andOperator(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_USER_ID).ne(""))
+			)
+		}
 
 		val result = try {
 			template.count(query, PhotoInfoExchange::class.java)
