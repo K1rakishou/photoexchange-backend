@@ -5,9 +5,7 @@ import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.DB_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.HOST
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
 import com.kirakishou.photoexchange.database.dao.*
-import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
-import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.repository.*
 import com.kirakishou.photoexchange.handlers.*
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.ConcurrencyService
@@ -46,6 +44,8 @@ fun myBeans() = beans {
 	bean<PhotoInfoRepository>()
 	bean<PhotoInfoExchangeRepository>()
 	bean<GalleryPhotosRepository>()
+	bean<FavouritedPhotoRepository>()
+	bean<ReportedPhotoRepository>()
 
 	//service
 	bean { GeneratorServiceImpl() }
@@ -54,6 +54,7 @@ fun myBeans() = beans {
 	bean<UploadPhotoHandler>()
 	bean<GetPhotoAnswerHandler>()
 	bean<GetPhotoHandler>()
+	bean<GetGalleryPhotoIdsHandler>()
 	bean<GetGalleryPhotosHandler>()
 	bean<FavouritePhotoHandler>()
 	bean<ReportPhotoHandler>()

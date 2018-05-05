@@ -8,6 +8,7 @@ class Router(
 	private val uploadPhotoHandler: UploadPhotoHandler,
 	private val getPhotoAnswerHandler: GetPhotoAnswerHandler,
 	private val getPhotoHandler: GetPhotoHandler,
+	private val getGalleryPhotoIdsHandler: GetGalleryPhotoIdsHandler,
 	private val getGalleryPhotosHandler: GetGalleryPhotosHandler,
 	private val favouritePhotoHandler: FavouritePhotoHandler,
 	private val reportPhotoHandler: ReportPhotoHandler
@@ -21,7 +22,8 @@ class Router(
 
 				accept(MediaType.APPLICATION_JSON).nest {
 					GET("/get_answer/{photo_names}/{user_id}", getPhotoAnswerHandler::handle)
-					GET("/get_gallery_photos/{last_id}/{count}", getGalleryPhotosHandler::handle)
+					GET("/get_gallery_photo_ids/{last_id}/{count}", getGalleryPhotoIdsHandler::handle)
+					GET("/get_gallery_photos/{user_id}/{photo_ids}", getGalleryPhotosHandler::handle)
 
 					PUT("/favourite", favouritePhotoHandler::handle)
 					PUT("/report", reportPhotoHandler::handle)

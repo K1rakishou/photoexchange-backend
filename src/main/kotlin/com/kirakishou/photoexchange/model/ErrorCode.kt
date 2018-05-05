@@ -24,10 +24,17 @@ sealed class ErrorCode(val value: Int) {
 		class NotEnoughPhotosUploaded : GetPhotoAnswerErrors(6)
 	}
 
+	sealed class GalleryPhotoIdsErrors(value: Int) : ErrorCode(value) {
+		class UnknownError : GalleryPhotoIdsErrors(-1)
+		class Ok : GalleryPhotoIdsErrors(0)
+		class BadRequest : GalleryPhotoIdsErrors(1)
+	}
+
 	sealed class GalleryPhotosErrors(value: Int) : ErrorCode(value) {
 		class UnknownError : GalleryPhotosErrors(-1)
 		class Ok : GalleryPhotosErrors(0)
 		class BadRequest : GalleryPhotosErrors(1)
+		class NoPhotosInRequest : GalleryPhotosErrors(2)
 	}
 
 	sealed class FavouritePhotoErrors(value: Int) : ErrorCode(value) {

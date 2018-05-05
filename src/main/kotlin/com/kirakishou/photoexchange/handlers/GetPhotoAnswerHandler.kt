@@ -45,18 +45,6 @@ class GetPhotoAnswerHandler(
 				val photoNames = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
 				logger.debug("UserId: $userId, photoNames: $photoNames")
 
-				val userUploadedPhotosCountDeferred = photoInfoRepo.countUserUploadedPhotos(userId)
-				val userReceivedPhotosCountDeferred = photoInfoRepo.countUserReceivedPhotos(userId)
-
-				val userUploadedPhotosCount = userUploadedPhotosCountDeferred.await()
-				val userReceivedPhotosCount = userReceivedPhotosCountDeferred.await()
-				val userCanReceivePhotosCount = userUploadedPhotosCount - userReceivedPhotosCount
-
-				val checkUserPhotosCountResult = checkUserPhotosCount(userUploadedPhotosCount, userReceivedPhotosCount)
-				if (checkUserPhotosCountResult != null) {
-					return@asyncCommon checkUserPhotosCountResult
-				}
-
 				val photoNameList = photoNames.split(DELIMITER)
 				if (photoNameList.isEmpty()) {
 					logger.debug("photoNameList is empty")
@@ -64,19 +52,14 @@ class GetPhotoAnswerHandler(
 						PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.NoPhotosInRequest()))
 				}
 
-				if (photoNameList.size > userCanReceivePhotosCount) {
-					logger.debug("photoNameList size is bigger than userCanReceivePhotosCount (${photoNameList.size}, $userCanReceivePhotosCount)")
-					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.TooManyPhotosRequested()))
-				}
-
 				val photoAnswerList = arrayListOf<PhotoAnswer>()
+				val photoInfoList = photoInfoRepo.findMany(userId, photoNameList)
 
 				//TODO: remake DB requests in batches
-				for (uploadedPhotoName in photoNameList) {
+				for (photoInfo in photoInfoList) {
+					val uploadedPhotoName = photoInfo.photoName
 					logger.debug("PhotoName = $uploadedPhotoName")
 
-					val photoInfo = photoInfoRepo.find(userId, uploadedPhotoName)
 					if (photoInfo.isEmpty()) {
 						logger.debug("Could not find photoInfo = userId: $userId, uploadedPhotoName: $uploadedPhotoName")
 						continue
@@ -124,37 +107,6 @@ class GetPhotoAnswerHandler(
 		return result
 			.asMono(concurrentService.commonThreadPool)
 			.flatMap { it }
-	}
-
-	private fun checkUserPhotosCount(userUploadedPhotosCount: Long,
-									 userReceivedPhotosCount: Long): Mono<ServerResponse>? {
-		logger.debug("userUploadedPhotosCount: $userUploadedPhotosCount, userReceivedPhotosCount: $userReceivedPhotosCount")
-
-		if (userUploadedPhotosCount == -1L) {
-			logger.debug("Could not get user's uploaded photos count from the DB")
-			return formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-				PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.DatabaseError()))
-		}
-
-		if (userReceivedPhotosCount == -1L) {
-			logger.debug("Could not get user's received photos count from the DB")
-			return formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-				PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.DatabaseError()))
-		}
-
-		if (userUploadedPhotosCount <= userReceivedPhotosCount) {
-			logger.debug("User has less (or equal) amount of uploaded photos than received")
-			return formatResponse(HttpStatus.OK,
-				PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.NotEnoughPhotosUploaded()))
-		}
-
-		if (userUploadedPhotosCount == 0L) {
-			logger.debug("User has not uploaded any photos yet")
-			return formatResponse(HttpStatus.OK,
-				PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.NotEnoughPhotosUploaded()))
-		}
-
-		return null
 	}
 
 	@Synchronized

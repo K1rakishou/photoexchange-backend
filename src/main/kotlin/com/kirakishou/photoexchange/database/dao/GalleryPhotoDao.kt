@@ -44,6 +44,21 @@ class GalleryPhotoDao(
 		return result
 	}
 
+	fun findManyByIdList(photoIds: List<Long>): List<GalleryPhoto> {
+		val query = Query()
+			.addCriteria((Criteria.where(GalleryPhoto.Mongo.Field.ID).`in`(photoIds)))
+			.limit(photoIds.size)
+
+		val result = try {
+			template.find(query, GalleryPhoto::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			emptyList<GalleryPhoto>()
+		}
+
+		return result
+	}
+
 	companion object {
 		const val COLLECTION_NAME = "gallery_photo"
 	}

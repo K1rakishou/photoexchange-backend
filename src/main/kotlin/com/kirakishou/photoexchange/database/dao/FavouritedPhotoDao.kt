@@ -44,6 +44,22 @@ class FavouritedPhotoDao(
 		return result
 	}
 
+	suspend fun findMany(userId: String, photoIdList: List<Long>): List<FavouritedPhoto> {
+		val query = Query()
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`in`(photoIdList))
+			.limit(photoIdList.size)
+
+		val result = try {
+			template.find(query, FavouritedPhoto::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			emptyList<FavouritedPhoto>()
+		}
+
+		return result
+	}
+
 	suspend fun isPhotoFavourited(userId: String, photoId: Long): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
