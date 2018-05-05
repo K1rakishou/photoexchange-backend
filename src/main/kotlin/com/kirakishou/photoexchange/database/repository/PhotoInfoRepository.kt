@@ -67,6 +67,12 @@ class PhotoInfoRepository(
 		}.await()
 	}
 
+	suspend fun findMany(userId: String, photoNames: List<String>): List<PhotoInfo> {
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.findMany(userId, photoNames)
+		}.await()
+	}
+
 	suspend fun findByExchangeIdAndUserIdAsync(userId: String, exchangeId: Long): Deferred<PhotoInfo> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoDao.findByExchangeIdAndUserId(userId, exchangeId)
@@ -77,25 +83,6 @@ class PhotoInfoRepository(
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoDao.findOlderThan(time)
 		}.await()
-	}
-
-	suspend fun countUserUploadedPhotos(userId: String): Deferred<Long> {
-		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.countAllUserUploadedPhotos(userId)
-		}
-	}
-
-	suspend fun countUserReceivedPhotos(userId: String): Deferred<Long> {
-		return concurrentService.asyncMongo {
-			return@asyncMongo mutex.withLock {
-				var result = 0L
-
-				result += photoInfoExchangeDao.countAllExchanges(userId, true)
-				result += photoInfoExchangeDao.countAllExchanges(userId, false)
-
-				return@withLock result
-			}
-		}
 	}
 
 	suspend fun updateSetExchangeInfoId(photoId: Long, exchangeId: Long): Boolean {

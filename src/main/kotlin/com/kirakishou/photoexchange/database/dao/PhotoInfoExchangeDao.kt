@@ -64,65 +64,6 @@ open class PhotoInfoExchangeDao(
 		return result
 	}
 
-	suspend fun countAllUploadedByIdList(ids: List<Long>): Long {
-		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_USER_ID).`in`(ids))
-
-		val result = try {
-			template.count(query, PhotoInfoExchange::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			0L
-		}
-
-		return result
-	}
-
-	suspend fun countAllExchanges(userId: String, asUploader: Boolean): Long {
-		val query = if (asUploader) {
-			Query().addCriteria(
-				Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_USER_ID).`is`(userId)
-					.andOperator(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_USER_ID).ne(""))
-			)
-		} else {
-			Query().addCriteria(
-				Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_USER_ID).`is`(userId)
-					.andOperator(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_USER_ID).ne(""))
-			)
-		}
-
-		val result = try {
-			template.count(query, PhotoInfoExchange::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			0L
-		}
-
-		return result
-	}
-
-	fun updateSetPhotoSuccessfullyDelivered(exchangeId: Long, isUploader: Boolean): Boolean {
-		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.ID).`is`(exchangeId))
-			.limit(1)
-
-		val update = if (isUploader) {
-			Update().set(PhotoInfoExchange.Mongo.Field.UPLOADER_SENT_OK, true)
-		} else {
-			Update().set(PhotoInfoExchange.Mongo.Field.RECEIVER_SENT_OK, true)
-		}
-
-		val result = try {
-			val updateResult = template.updateFirst(query, update, PhotoInfoExchange::class.java)
-			updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			false
-		}
-
-		return result
-	}
-
 	suspend fun tryDoExchangeWithOldestPhoto(receiverUserId: String): PhotoInfoExchange {
 		val query = Query().with(Sort(Sort.Direction.ASC, PhotoInfoExchange.Mongo.Field.CREATED_ON))
 			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_USER_ID).ne("")
