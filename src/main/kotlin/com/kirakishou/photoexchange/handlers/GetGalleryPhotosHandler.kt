@@ -1,14 +1,9 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.repository.FavouritedPhotoRepository
-import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.database.repository.ReportedPhotoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.GalleryPhotosResponse
-import com.kirakishou.photoexchange.model.repo.GalleryPhoto
-import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import kotlinx.coroutines.experimental.reactor.asMono
@@ -20,10 +15,7 @@ import reactor.core.publisher.Mono
 
 class GetGalleryPhotosHandler(
 	jsonConverter: JsonConverterService,
-	private val galleryPhotosRepository: GalleryPhotosRepository,
 	private val photoInfoRepository: PhotoInfoRepository,
-	private val favouritedPhotoRepository: FavouritedPhotoRepository,
-	private val reportedPhotoRepository: ReportedPhotoRepository,
 	private val concurrentService: ConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
 
@@ -44,16 +36,7 @@ class GetGalleryPhotosHandler(
 
 			val userId = request.pathVariable(USER_ID_VARIABLE)
 			val photoIdsString = request.pathVariable(PHOTO_IDS_VARIABLE)
-			val galleryPhotoIds = photoIdsString
-				.split(DELIMITER)
-				.map { photoId ->
-					return@map try {
-						photoId.toLong()
-					} catch (error: NumberFormatException) {
-						-1L
-					}
-				}
-				.filter { it != -1L }
+			val galleryPhotoIds = parseGalleryPhotoIds(photoIdsString)
 
 			if (galleryPhotoIds.isEmpty()) {
 				logger.debug("galleryPhotoIds is empty")
@@ -61,32 +44,7 @@ class GetGalleryPhotosHandler(
 					GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.NoPhotosInRequest()))
 			}
 
-			//TODO: move this shit to photoInfoRepository
-			val resultMap = linkedMapOf<Long, GalleryPhotoInfo>()
-
-			val galleryPhotos = galleryPhotosRepository.findManyByIdList(galleryPhotoIds)
-			val photoInfos = photoInfoRepository.findMany(galleryPhotos.map { it.photoId })
-			val favouritedPhotos = favouritedPhotoRepository.findMany(userId, photoInfos.map { it.photoId })
-			val reportedPhotos = reportedPhotoRepository.findMany(userId, photoInfos.map { it.photoId })
-
-			for (photo in photoInfos) {
-				val galleryPhoto = galleryPhotos.first { it.photoId == photo.photoId }
-				resultMap[photo.photoId] = GalleryPhotoInfo(photo, galleryPhoto)
-			}
-
-			val favouritedPhotoIdsSet = favouritedPhotos
-				.map { it.photoId }
-				.toSet()
-
-			val reportedPhotosIdsSet = reportedPhotos
-				.map { it.photoId }
-				.toSet()
-
-			for ((photoId, galleryPhotoInfo) in resultMap) {
-				galleryPhotoInfo.isFavourited = favouritedPhotoIdsSet.contains(photoId)
-				galleryPhotoInfo.isReported = reportedPhotosIdsSet.contains(photoId)
-			}
-
+			val resultMap = photoInfoRepository.findPhotoInfoListByGalleryPhotoIdList(userId, galleryPhotoIds)
 			val galleryPhotosResponse = resultMap.values.map { (photoInfo, galleryPhoto, isFavourited, isReported) ->
 				GalleryPhotosResponse.GalleryPhotoResponseData(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat,
 					photoInfo.uploadedOn, photoInfo.favouritesCount, isFavourited, isReported)
@@ -100,11 +58,16 @@ class GetGalleryPhotosHandler(
 			.flatMap { it }
 	}
 
-
-	data class GalleryPhotoInfo(
-		val photoInfo: PhotoInfo,
-		val galleryPhoto: GalleryPhoto,
-		var isFavourited: Boolean = false,
-		var isReported: Boolean = false
-	)
+	private fun parseGalleryPhotoIds(photoIdsString: String): List<Long> {
+		return photoIdsString
+			.split(DELIMITER)
+			.map { photoId ->
+				return@map try {
+					photoId.toLong()
+				} catch (error: NumberFormatException) {
+					-1L
+				}
+			}
+			.filter { it != -1L }
+	}
 }
