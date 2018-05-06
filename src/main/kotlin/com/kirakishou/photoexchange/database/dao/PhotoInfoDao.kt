@@ -11,10 +11,10 @@ import org.springframework.data.mongodb.core.query.Update
 
 open class PhotoInfoDao(
 	private val template: MongoTemplate
-) {
+) : BaseDao {
 	private val logger = LoggerFactory.getLogger(PhotoInfoDao::class.java)
 
-	fun init() {
+	override fun init() {
 		if (!template.collectionExists(PhotoInfo::class.java)) {
 			template.createCollection(PhotoInfo::class.java)
 		}

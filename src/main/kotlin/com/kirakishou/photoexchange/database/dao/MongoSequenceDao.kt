@@ -9,14 +9,15 @@ import org.springframework.data.mongodb.core.query.Update
 
 open class MongoSequenceDao(
 	private val template: MongoTemplate
-) {
+) : BaseDao {
 	private val PHOTO_INFO_SEQUENCE_NAME = "photo_info_sequence"
 	private val PHOTO_EXCHANGE_INFO_SEQUENCE_NAME = "photo_exchange_info_sequence"
 	private val GALLERY_PHOTO_SEQUENCE_NAME = "gallery_photo_sequence"
 	private val FAVOURITED_PHOTO_SEQUENCE_NAME = "favourited_photo_sequence"
 	private val REPORTED_PHOTO_SEQUENCE_NAME = "reported_photo_sequence"
+	private val USER_INFO_SEQUENCE_NAME = "user_info_sequence"
 
-	fun init() {
+	override fun init() {
 		if (!template.collectionExists(MongoSequence::class.java)) {
 			template.createCollection(MongoSequence::class.java)
 		}
@@ -53,5 +54,9 @@ open class MongoSequenceDao(
 
 	suspend fun getNextReportedPhotoId(): Long {
 		return getNextId(REPORTED_PHOTO_SEQUENCE_NAME)
+	}
+
+	suspend fun getNextUserId(): Long {
+		return getNextId(USER_INFO_SEQUENCE_NAME)
 	}
 }

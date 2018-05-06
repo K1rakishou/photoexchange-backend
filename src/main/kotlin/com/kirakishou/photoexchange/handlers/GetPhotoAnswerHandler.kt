@@ -4,7 +4,6 @@ import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeReposit
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.PhotoAnswer
 import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -52,7 +51,7 @@ class GetPhotoAnswerHandler(
 						PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.NoPhotosInRequest()))
 				}
 
-				val photoAnswerList = arrayListOf<PhotoAnswer>()
+				val photoAnswerList = arrayListOf<PhotoAnswerResponse.PhotoAnswer>()
 				val photoInfoList = photoInfoRepo.findMany(userId, photoNameList)
 
 				//TODO: remake DB requests in batches
@@ -85,7 +84,8 @@ class GetPhotoAnswerHandler(
 						continue
 					}
 
-					photoAnswerList += PhotoAnswer(uploadedPhotoName, otherUserPhotoInfo.photoName, otherUserPhotoInfo.lon, otherUserPhotoInfo.lat)
+					photoAnswerList += PhotoAnswerResponse.PhotoAnswer(uploadedPhotoName, otherUserPhotoInfo.photoName,
+						otherUserPhotoInfo.lon, otherUserPhotoInfo.lat)
 				}
 
 				if (photoAnswerList.isEmpty()) {

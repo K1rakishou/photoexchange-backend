@@ -3,7 +3,7 @@ package com.kirakishou.photoexchange.database.repository
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.model.repo.*
 import com.kirakishou.photoexchange.service.ConcurrencyService
-import com.kirakishou.photoexchange.service.GeneratorServiceImpl
+import com.kirakishou.photoexchange.service.GeneratorService
 import kotlinx.coroutines.experimental.Deferred
 import kotlinx.coroutines.experimental.sync.Mutex
 import kotlinx.coroutines.experimental.sync.withLock
@@ -15,7 +15,7 @@ class PhotoInfoRepository(
 	private val galleryPhotoDao: GalleryPhotoDao,
 	private val favouritedPhotoDao: FavouritedPhotoDao,
 	private val reportedPhotoDao: ReportedPhotoDao,
-	private val generator: GeneratorServiceImpl,
+	private val generator: GeneratorService,
 	private val concurrentService: ConcurrencyService
 ) {
 	private val mutex = Mutex()

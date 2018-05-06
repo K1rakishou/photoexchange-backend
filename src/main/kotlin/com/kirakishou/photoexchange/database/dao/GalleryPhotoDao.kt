@@ -9,10 +9,10 @@ import org.springframework.data.mongodb.core.query.Query
 
 class GalleryPhotoDao(
 	private val template: MongoTemplate
-) {
+) : BaseDao {
 	private val logger = LoggerFactory.getLogger(GalleryPhotoDao::class.java)
 
-	fun init() {
+	override fun init() {
 		if (!template.collectionExists(GalleryPhoto::class.java)) {
 			template.createCollection(GalleryPhoto::class.java)
 		}

@@ -26,31 +26,39 @@ class GetGalleryPhotosHandler(
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		val result = concurrentService.asyncCommon {
-			logger.debug("New GetGalleryPhotos request")
+			try {
+				logger.debug("New GetGalleryPhotos request")
 
-			if (!request.containsAllPathVars(PHOTO_IDS_VARIABLE, USER_ID_VARIABLE)) {
-				logger.debug("Request does not contain one of the required path variables")
-				return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-					GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest()))
+				if (!request.containsAllPathVars(PHOTO_IDS_VARIABLE, USER_ID_VARIABLE)) {
+					logger.debug("Request does not contain one of the required path variables")
+					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest()))
+				}
+
+				val userId = request.pathVariable(USER_ID_VARIABLE)
+				val photoIdsString = request.pathVariable(PHOTO_IDS_VARIABLE)
+				val galleryPhotoIds = parseGalleryPhotoIds(photoIdsString)
+
+				if (galleryPhotoIds.isEmpty()) {
+					logger.debug("galleryPhotoIds is empty")
+					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.NoPhotosInRequest()))
+				}
+
+				val resultMap = photoInfoRepository.findPhotoInfoListByGalleryPhotoIdList(userId, galleryPhotoIds)
+				val galleryPhotosResponse = resultMap.values.map { (photoInfo, galleryPhoto, isFavourited, isReported) ->
+					GalleryPhotosResponse.GalleryPhotoResponseData(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat,
+						photoInfo.uploadedOn, photoInfo.favouritesCount, isFavourited, isReported)
+				}
+
+				logger.debug("Found ${galleryPhotosResponse.size} photos from gallery")
+				return@asyncCommon formatResponse(HttpStatus.OK, GalleryPhotosResponse.success(galleryPhotosResponse))
+
+			} catch (error: Throwable) {
+				logger.error("Unknown error", error)
+				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+					GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.UnknownError()))
 			}
-
-			val userId = request.pathVariable(USER_ID_VARIABLE)
-			val photoIdsString = request.pathVariable(PHOTO_IDS_VARIABLE)
-			val galleryPhotoIds = parseGalleryPhotoIds(photoIdsString)
-
-			if (galleryPhotoIds.isEmpty()) {
-				logger.debug("galleryPhotoIds is empty")
-				return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-					GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.NoPhotosInRequest()))
-			}
-
-			val resultMap = photoInfoRepository.findPhotoInfoListByGalleryPhotoIdList(userId, galleryPhotoIds)
-			val galleryPhotosResponse = resultMap.values.map { (photoInfo, galleryPhoto, isFavourited, isReported) ->
-				GalleryPhotosResponse.GalleryPhotoResponseData(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat,
-					photoInfo.uploadedOn, photoInfo.favouritesCount, isFavourited, isReported)
-			}
-
-			return@asyncCommon formatResponse(HttpStatus.OK, GalleryPhotosResponse.success(galleryPhotosResponse))
 		}
 
 		return result
