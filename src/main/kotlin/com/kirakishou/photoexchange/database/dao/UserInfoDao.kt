@@ -35,6 +35,22 @@ class UserInfoDao(
 		return userInfo
 	}
 
+	fun findManyNotRegistered(userIdList: List<String>): List<UserInfo> {
+		val query = Query()
+			.addCriteria(Criteria.where(UserInfo.Mongo.Field.USER_ID).`in`(userIdList)
+				.andOperator(Criteria.where(UserInfo.Mongo.Field.PASSWORD).ne(""))
+			)
+
+		val result = try {
+			template.find(query, UserInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			return emptyList()
+		}
+
+		return result
+	}
+
 	companion object {
 		const val COLLECTION_NAME = "user_info"
 	}

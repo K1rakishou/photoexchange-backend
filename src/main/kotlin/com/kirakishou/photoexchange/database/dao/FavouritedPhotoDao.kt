@@ -75,6 +75,20 @@ class FavouritedPhotoDao(
 		template.remove(query, FavouritedPhoto::class.java)
 	}
 
+	fun deleteAll(photoIds: List<Long>): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.ID).`in`(photoIds))
+			.limit(photoIds.size)
+
+		return try {
+			val deletionResult = template.remove(query, FavouritedPhoto::class.java)
+			deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == photoIds.size
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			false
+		}
+	}
+
 	companion object {
 		const val COLLECTION_NAME = "favourited_photo"
 	}

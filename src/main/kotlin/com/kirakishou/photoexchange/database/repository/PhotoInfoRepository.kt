@@ -15,6 +15,7 @@ class PhotoInfoRepository(
 	private val galleryPhotoDao: GalleryPhotoDao,
 	private val favouritedPhotoDao: FavouritedPhotoDao,
 	private val reportedPhotoDao: ReportedPhotoDao,
+	private val userInfoRepository: UserInfoRepository,
 	private val generator: GeneratorService,
 	private val concurrentService: ConcurrencyService
 ) {
@@ -85,9 +86,23 @@ class PhotoInfoRepository(
 		}
 	}
 
-	suspend fun findOlderThan(time: Long): List<PhotoInfo> {
+	suspend fun findOlderThan(time: Long, maxCount: Int): List<PhotoInfo> {
 		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.findOlderThan(time)
+			val photos = photoInfoDao.findOlderThan(time, maxCount)
+			val userInfos = userInfoRepository.findManyNotRegistered(photos.map { it.userId })
+
+			val userIdsSet = userInfos.map { it.userId }.toSet()
+			val resultList = mutableListOf<PhotoInfo>()
+
+			for (photoInfo in photos) {
+				if (!userIdsSet.contains(photoInfo.userId)) {
+					continue
+				}
+
+				resultList += photoInfo
+			}
+
+			return@asyncMongo resultList
 		}.await()
 	}
 
@@ -114,15 +129,17 @@ class PhotoInfoRepository(
 		}
 	}
 
-	suspend fun delete(userId: String, photoName: String) {
+	suspend fun delete(userId: String, photoName: String): Boolean {
 		return concurrentService.asyncMongo {
-			photoInfoDao.deleteUserById(userId, photoName)
+			val photoInfo = photoInfoDao.find(userId, photoName)
+			return@asyncMongo deletePhotoInternal(photoInfo)
 		}.await()
 	}
 
-	suspend fun deleteAll(ids: List<Long>) {
+	suspend fun deleteAll(ids: List<Long>): Boolean {
 		return concurrentService.asyncMongo {
-			photoInfoDao.deleteAll(ids)
+			val photoInfoList = photoInfoDao.findMany(ids)
+			return@asyncMongo deletePhotosInternal(photoInfoList)
 		}.await()
 	}
 
@@ -132,6 +149,20 @@ class PhotoInfoRepository(
 			photoInfoExchangeDao.deleteById(photoInfo.exchangeId)
 			favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
 			reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+
+			return@withLock true
+		}
+	}
+
+	private suspend fun deletePhotosInternal(photoInfoList: List<PhotoInfo>): Boolean {
+		return mutex.withLock {
+			val photoIds = photoInfoList.map { it.photoId }
+			val exchangeIds = photoInfoList.map { it.exchangeId }
+
+			photoInfoDao.deleteAll(photoIds)
+			photoInfoExchangeDao.deleteAll(exchangeIds)
+			favouritedPhotoDao.deleteAll(photoIds)
+			reportedPhotoDao.deleteAll(photoIds)
 
 			return@withLock true
 		}

@@ -93,6 +93,20 @@ open class PhotoInfoExchangeDao(
 		template.remove(query, PhotoInfoExchange::class.java)
 	}
 
+	fun deleteAll(exchangeIds: List<Long>): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.ID).`in`(exchangeIds))
+			.limit(exchangeIds.size)
+
+		return try {
+			val deletionResult = template.remove(query, PhotoInfoExchange::class.java)
+			deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == exchangeIds.size
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			false
+		}
+	}
+
 	companion object {
 		const val COLLECTION_NAME = "photo_info_exchange"
 	}
