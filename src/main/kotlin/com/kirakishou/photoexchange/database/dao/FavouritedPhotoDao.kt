@@ -8,10 +8,10 @@ import org.springframework.data.mongodb.core.query.Query
 
 class FavouritedPhotoDao(
 	private val template: MongoTemplate
-) {
+) : BaseDao {
 	private val logger = LoggerFactory.getLogger(FavouritedPhotoDao::class.java)
 
-	fun init() {
+	override fun init() {
 		if (!template.collectionExists(FavouritedPhoto::class.java)) {
 			template.createCollection(FavouritedPhoto::class.java)
 		}
@@ -73,6 +73,20 @@ class FavouritedPhotoDao(
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
 
 		template.remove(query, FavouritedPhoto::class.java)
+	}
+
+	fun deleteAll(photoIds: List<Long>): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.ID).`in`(photoIds))
+			.limit(photoIds.size)
+
+		return try {
+			val deletionResult = template.remove(query, FavouritedPhoto::class.java)
+			deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == photoIds.size
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			false
+		}
 	}
 
 	companion object {

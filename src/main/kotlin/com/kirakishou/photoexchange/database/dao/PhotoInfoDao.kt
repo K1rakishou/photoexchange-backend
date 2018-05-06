@@ -11,10 +11,10 @@ import org.springframework.data.mongodb.core.query.Update
 
 open class PhotoInfoDao(
 	private val template: MongoTemplate
-) {
+) : BaseDao {
 	private val logger = LoggerFactory.getLogger(PhotoInfoDao::class.java)
 
-	fun init() {
+	override fun init() {
 		if (!template.collectionExists(PhotoInfo::class.java)) {
 			template.createCollection(PhotoInfo::class.java)
 		}
@@ -153,9 +153,10 @@ open class PhotoInfoDao(
 		return photoInfoList
 	}
 
-	suspend fun findOlderThan(time: Long): List<PhotoInfo> {
+	suspend fun findOlderThan(time: Long, maxCount: Int): List<PhotoInfo> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(time))
+			.limit(maxCount)
 
 		val result = try {
 			template.find(query, PhotoInfo::class.java)
@@ -202,17 +203,25 @@ open class PhotoInfoDao(
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.limit(1)
 
-		template.remove(query, PhotoInfo::class.java)
+		try {
+			template.remove(query, PhotoInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+		}
 	}
 
-	suspend fun deleteAll(ids: List<Long>) {
-		val count = ids.size
-
+	suspend fun deleteAll(ids: List<Long>): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(ids))
-			.limit(count)
+			.limit(ids.size)
 
-		template.remove(query, PhotoInfo::class.java)
+		return try {
+			val deletionResult = template.remove(query, PhotoInfo::class.java)
+			deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == ids.size
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			false
+		}
 	}
 
 	suspend fun photoNameExists(generatedName: String): Boolean {

@@ -50,4 +50,10 @@ sealed class ErrorCode(val value: Int) {
 		class AlreadyReported : ReportPhotoErrors(1)
 		class BadRequest : ReportPhotoErrors(2)
 	}
+
+	sealed class GetUserIdError(value: Int) : ErrorCode(value) {
+		class UnknownError : GetUserIdError(-1)
+		class Ok : GetUserIdError(0)
+		class DatabaseError : GetUserIdError(1)
+	}
 }

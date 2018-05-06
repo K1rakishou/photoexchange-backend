@@ -5,7 +5,7 @@ object ServerSettings {
 
 	const val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
 	const val OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL = 1000L * 60L * 60L // 1 hour
-	const val DELETE_PHOTOS_OLDER_THAN = 1000L * 60L * 60L * 24L * 7L //7 days
+	const val DELETE_PHOTOS_OLDER_THAN = 1000L * 60L * 60L * 24L * 30L //30 days
 
 	object ThreadPool {
 		object Mongo {

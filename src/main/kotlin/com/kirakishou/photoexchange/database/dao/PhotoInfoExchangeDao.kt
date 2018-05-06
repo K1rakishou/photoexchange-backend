@@ -11,10 +11,10 @@ import org.springframework.data.mongodb.core.query.Update
 
 open class PhotoInfoExchangeDao(
 	private val template: MongoTemplate
-) {
+) : BaseDao {
 	private val logger = LoggerFactory.getLogger(PhotoInfoExchangeDao::class.java)
 
-	fun init() {
+	override fun init() {
 		if (!template.collectionExists(PhotoInfoExchange::class.java)) {
 			template.createCollection(PhotoInfoExchange::class.java)
 		}
@@ -91,6 +91,20 @@ open class PhotoInfoExchangeDao(
 			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.ID).`is`(exchangeId))
 
 		template.remove(query, PhotoInfoExchange::class.java)
+	}
+
+	fun deleteAll(exchangeIds: List<Long>): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.ID).`in`(exchangeIds))
+			.limit(exchangeIds.size)
+
+		return try {
+			val deletionResult = template.remove(query, PhotoInfoExchange::class.java)
+			deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == exchangeIds.size
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			false
+		}
 	}
 
 	companion object {

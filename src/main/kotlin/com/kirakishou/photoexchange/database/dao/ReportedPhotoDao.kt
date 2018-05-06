@@ -8,10 +8,10 @@ import org.springframework.data.mongodb.core.query.Query
 
 class ReportedPhotoDao(
 	private val template: MongoTemplate
-) {
+) : BaseDao {
 	private val logger = LoggerFactory.getLogger(ReportedPhotoDao::class.java)
 
-	fun init() {
+	override fun init() {
 		if (!template.collectionExists(ReportedPhoto::class.java)) {
 			template.createCollection(ReportedPhoto::class.java)
 		}
@@ -73,6 +73,20 @@ class ReportedPhotoDao(
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
 
 		template.remove(query, ReportedPhoto::class.java)
+	}
+
+	fun deleteAll(photoIds: List<Long>): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.ID).`in`(photoIds))
+			.limit(photoIds.size)
+
+		return try {
+			val deletionResult = template.remove(query, ReportedPhoto::class.java)
+			deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == photoIds.size
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			false
+		}
 	}
 
 	companion object {

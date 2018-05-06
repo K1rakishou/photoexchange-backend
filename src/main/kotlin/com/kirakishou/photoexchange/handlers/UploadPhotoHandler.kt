@@ -45,6 +45,7 @@ class UploadPhotoHandler(
 	private val BIG_PHOTO_SUFFIX = "_b"
 	private val SMALL_PHOTO_SUFFIX = "_s"
 	private var lastTimeCheck = 0L
+	private val MAX_PHOTOS_TO_DELETE_PER_RUN = 1000
 	private val photoSizes = arrayOf(BIG_PHOTO_SUFFIX, SMALL_PHOTO_SUFFIX)
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
@@ -157,13 +158,15 @@ class UploadPhotoHandler(
 	}
 
 	private suspend fun cleanDatabaseAndPhotos(time: Long) {
-		val photosToDelete = photoInfoRepo.findOlderThan(time)
+		val photosToDelete = photoInfoRepo.findOlderThan(time, MAX_PHOTOS_TO_DELETE_PER_RUN)
 		if (photosToDelete.isEmpty()) {
 			return
 		}
 
 		val ids = photosToDelete.map { it.photoId }
-		photoInfoRepo.deleteAll(ids)
+		if (!photoInfoRepo.deleteAll(ids)) {
+			return
+		}
 
 		for (photo in photosToDelete) {
 			for (size in photoSizes) {

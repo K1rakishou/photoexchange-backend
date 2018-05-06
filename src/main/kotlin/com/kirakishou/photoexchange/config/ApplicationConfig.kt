@@ -9,7 +9,7 @@ import com.kirakishou.photoexchange.database.repository.*
 import com.kirakishou.photoexchange.handlers.*
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.ConcurrencyService
-import com.kirakishou.photoexchange.service.GeneratorServiceImpl
+import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.mongodb.MongoClient
 import com.samskivert.mustache.Mustache
@@ -39,6 +39,7 @@ fun myBeans() = beans {
 	bean { GalleryPhotoDao(ref()).also { it.init() } }
 	bean { FavouritedPhotoDao(ref()).also { it.init() } }
 	bean { ReportedPhotoDao(ref()).also { it.init() } }
+	bean { UserInfoDao(ref()).also { it.init() } }
 
 	//repository
 	bean<PhotoInfoRepository>()
@@ -46,9 +47,10 @@ fun myBeans() = beans {
 	bean<GalleryPhotosRepository>()
 	bean<FavouritedPhotoRepository>()
 	bean<ReportedPhotoRepository>()
+	bean<UserInfoRepository>()
 
 	//service
-	bean { GeneratorServiceImpl() }
+	bean { GeneratorService() }
 
 	//handler
 	bean<UploadPhotoHandler>()
@@ -58,6 +60,7 @@ fun myBeans() = beans {
 	bean<GetGalleryPhotosHandler>()
 	bean<FavouritePhotoHandler>()
 	bean<ReportPhotoHandler>()
+	bean<GetUserIdHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }
