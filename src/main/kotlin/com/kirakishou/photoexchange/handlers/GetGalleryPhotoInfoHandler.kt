@@ -4,7 +4,6 @@ import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.GalleryPhotoInfoResponse
-import com.kirakishou.photoexchange.model.net.response.GalleryPhotosResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.Utils
@@ -34,11 +33,17 @@ class GetGalleryPhotoInfoHandler(
 				if (!request.containsAllPathVars(USER_ID_VARIABLE, PHOTO_IDS_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest()))
+						GalleryPhotoInfoResponse.fail(ErrorCode.GalleryPhotosInfoError.BadRequest()))
 				}
 
 				val photoIdsString = request.pathVariable(PHOTO_IDS_VARIABLE)
 				val userId = request.pathVariable(USER_ID_VARIABLE)
+
+				if (photoIdsString.isEmpty()) {
+					logger.debug("galleryPhotoIds is empty")
+					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+						GalleryPhotoInfoResponse.fail(ErrorCode.GalleryPhotosInfoError.NoPhotosInRequest()))
+				}
 
 				val galleryPhotoIds = Utils.parseGalleryPhotoIds(photoIdsString, DELIMITER)
 				val galleryPhotoInfoList = photoInfoRepository.findGalleryPhotosInfo(userId, galleryPhotoIds)
@@ -53,7 +58,7 @@ class GetGalleryPhotoInfoHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.UnknownError()))
+					GalleryPhotoInfoResponse.fail(ErrorCode.GalleryPhotosInfoError.UnknownError()))
 			}
 		}
 
