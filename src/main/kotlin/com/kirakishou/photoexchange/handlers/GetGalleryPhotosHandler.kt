@@ -45,9 +45,9 @@ class GetGalleryPhotosHandler(
 				}
 
 				val resultMap = photoInfoRepository.findGalleryPhotosByIds(galleryPhotoIds)
-				val galleryPhotosResponse = resultMap.values.map { (photoInfo, galleryPhoto) ->
+				val galleryPhotosResponse = resultMap.values.map { (photoInfo, galleryPhoto, favouritesCount) ->
 					GalleryPhotosResponse.GalleryPhotoResponseData(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat,
-						photoInfo.uploadedOn, photoInfo.favouritesCount)
+						photoInfo.uploadedOn, favouritesCount)
 				}
 
 				logger.debug("Found ${galleryPhotosResponse.size} photos from gallery")

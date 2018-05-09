@@ -178,24 +178,16 @@ class PhotoInfoRepository(
 						return@withLock FavouritePhotoResult.Error()
 					}
 
-					val photoInfo = photoInfoDao.changePhotoFavouritesCount(photoName, false)
-					if (photoInfo.isEmpty()) {
-						return@withLock FavouritePhotoResult.Error()
-					}
-
-					FavouritePhotoResult.Unfavourited(photoInfo.favouritesCount)
+					val favouritesCount = favouritedPhotoDao.countByPhotoId(photoId)
+					FavouritePhotoResult.Unfavourited(favouritesCount)
 				} else {
 					val id = mongoSequenceDao.getNextFavouritedPhotoId()
 					if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, userId, photoId))) {
 						return@withLock FavouritePhotoResult.Error()
 					}
 
-					val photoInfo = photoInfoDao.changePhotoFavouritesCount(photoName, true)
-					if (photoInfo.isEmpty()) {
-						return@withLock FavouritePhotoResult.Error()
-					}
-
-					FavouritePhotoResult.Favourited(photoInfo.favouritesCount)
+					val favouritesCount = favouritedPhotoDao.countByPhotoId(photoId)
+					FavouritePhotoResult.Favourited(favouritesCount)
 				}
 			}
 		}.await()
@@ -211,19 +203,11 @@ class PhotoInfoRepository(
 						return@withLock ReportPhotoResult.Error()
 					}
 
-					if (!photoInfoDao.changePhotoReportsCount(photoName, false)) {
-						return@withLock ReportPhotoResult.Error()
-					}
-
 					ReportPhotoResult.Unreported()
 				} else {
 
 					val id = mongoSequenceDao.getNextReportedPhotoId()
 					if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, userId, photoId))) {
-						return@withLock ReportPhotoResult.Error()
-					}
-
-					if (!photoInfoDao.changePhotoReportsCount(photoName, true)) {
 						return@withLock ReportPhotoResult.Error()
 					}
 
@@ -239,11 +223,16 @@ class PhotoInfoRepository(
 				val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
 
 				val galleryPhotos = galleryPhotoDao.findManyByIdList(galleryPhotoIdList)
-				val photoInfos = photoInfoDao.findMany(galleryPhotos.map { it.photoId })
+				val photoIds = galleryPhotos.map { it.photoId }
+
+				val photoInfos = photoInfoDao.findMany(photoIds)
+				val favouritedPhotosMap = favouritedPhotoDao.findMany(photoIds).groupBy { it.photoId }
 
 				for (photo in photoInfos) {
 					val galleryPhoto = galleryPhotos.first { it.photoId == photo.photoId }
-					resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto)
+					val favouritesCount = favouritedPhotosMap[photo.photoId]
+
+					resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto, favouritesCount!!.size.toLong())
 				}
 
 				return@withLock resultMap
@@ -282,7 +271,8 @@ class PhotoInfoRepository(
 
 	data class GalleryPhotoDto(
 		val photoInfo: PhotoInfo,
-		val galleryPhoto: GalleryPhoto
+		val galleryPhoto: GalleryPhoto,
+		val favouritesCount: Long
 	)
 
 	sealed class ReportPhotoResult {
@@ -295,13 +285,6 @@ class PhotoInfoRepository(
 		class Favourited(val count: Long) : FavouritePhotoResult()
 		class Unfavourited(val count: Long) : FavouritePhotoResult()
 		class Error : FavouritePhotoResult()
-	}
-
-	sealed class UpdateSetPhotoDeliveredResult {
-		class Ok : UpdateSetPhotoDeliveredResult()
-		class PhotoInfoNotFound : UpdateSetPhotoDeliveredResult()
-		class PhotoInfoExchangeNotFound : UpdateSetPhotoDeliveredResult()
-		class UpdateError : UpdateSetPhotoDeliveredResult()
 	}
 }
 

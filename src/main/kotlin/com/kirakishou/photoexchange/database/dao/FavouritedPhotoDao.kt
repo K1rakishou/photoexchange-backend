@@ -44,6 +44,21 @@ class FavouritedPhotoDao(
 		return result
 	}
 
+	suspend fun findMany(photoIdList: List<Long>): List<FavouritedPhoto> {
+		val query = Query()
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`in`(photoIdList))
+			.limit(photoIdList.size)
+
+		val result = try {
+			template.find(query, FavouritedPhoto::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			emptyList<FavouritedPhoto>()
+		}
+
+		return result
+	}
+
 	suspend fun findMany(userId: String, photoIdList: List<Long>): List<FavouritedPhoto> {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
@@ -75,7 +90,7 @@ class FavouritedPhotoDao(
 		template.remove(query, FavouritedPhoto::class.java)
 	}
 
-	fun deleteAll(photoIds: List<Long>): Boolean {
+	suspend fun deleteAll(photoIds: List<Long>): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.ID).`in`(photoIds))
 			.limit(photoIds.size)
@@ -86,6 +101,30 @@ class FavouritedPhotoDao(
 		} catch (error: Throwable) {
 			logger.error("DB error", error)
 			false
+		}
+	}
+
+	suspend fun countByPhotoId(photoId: Long): Long {
+		val query = Query()
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		return try {
+			template.count(query, FavouritedPhoto::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			-1L
+		}
+	}
+
+	suspend fun countByUserId(userId: Long): Long {
+		val query = Query()
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
+
+		return try {
+			template.count(query, FavouritedPhoto::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			-1L
 		}
 	}
 
