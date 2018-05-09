@@ -35,13 +35,7 @@ class PhotoInfo(
 
 	@Indexed(name = Mongo.Index.UPLOADED_ON, direction = IndexDirection.DESCENDING)
 	@Field(Mongo.Field.UPLOADED_ON)
-	val uploadedOn: Long,
-
-	@Field(Mongo.Field.FAVOURITES_COUNT)
-	val favouritesCount: Long,
-
-	@Field(Mongo.Field.REPORTS_COUNT)
-	val reportsCount: Long
+	val uploadedOn: Long
 ) {
 	fun isEmpty(): Boolean {
 		return photoId == -1L
@@ -49,11 +43,11 @@ class PhotoInfo(
 
 	companion object {
 		fun empty(): PhotoInfo {
-			return PhotoInfo(-1L, -1L, "", "", false, 0.0, 0.0, 0L, 0L, 0L)
+			return PhotoInfo(-1L, -1L, "", "", false, 0.0, 0.0, 0L)
 		}
 
 		fun create(userId: String, photoName: String, isPublic: Boolean, lon: Double, lat: Double, time: Long): PhotoInfo {
-			return PhotoInfo(-1L, -1L, userId, photoName, isPublic, lon, lat, time, 0L, 0L)
+			return PhotoInfo(-1L, -1L, userId, photoName, isPublic, lon, lat, time)
 		}
 	}
 
@@ -67,8 +61,6 @@ class PhotoInfo(
 			const val LONGITUDE = "longitude"
 			const val LATITUDE = "latitude"
 			const val UPLOADED_ON = "uploaded_on"
-			const val FAVOURITES_COUNT = "favourites_count"
-			const val REPORTS_COUNT = "reports_count"
 		}
 
 		object Index {

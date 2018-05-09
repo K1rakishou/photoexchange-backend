@@ -37,6 +37,13 @@ sealed class ErrorCode(val value: Int) {
 		class NoPhotosInRequest : GalleryPhotosErrors(2)
 	}
 
+	sealed class GalleryPhotosInfoError(value: Int) : ErrorCode(value) {
+		class UnknownError : GalleryPhotosInfoError(-1)
+		class Ok : GalleryPhotosInfoError(0)
+		class BadRequest : GalleryPhotosInfoError(1)
+		class NoPhotosInRequest : GalleryPhotosInfoError(2)
+	}
+
 	sealed class FavouritePhotoErrors(value: Int) : ErrorCode(value) {
 		class UnknownError : FavouritePhotoErrors(-1)
 		class Ok : FavouritePhotoErrors(0)

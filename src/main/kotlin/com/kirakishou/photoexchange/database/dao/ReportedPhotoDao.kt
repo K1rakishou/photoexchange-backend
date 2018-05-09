@@ -75,7 +75,7 @@ class ReportedPhotoDao(
 		template.remove(query, ReportedPhoto::class.java)
 	}
 
-	fun deleteAll(photoIds: List<Long>): Boolean {
+	suspend fun deleteAll(photoIds: List<Long>): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.ID).`in`(photoIds))
 			.limit(photoIds.size)
@@ -86,6 +86,30 @@ class ReportedPhotoDao(
 		} catch (error: Throwable) {
 			logger.error("DB error", error)
 			false
+		}
+	}
+
+	suspend fun countByPhotoId(photoId: Long): Long {
+		val query = Query()
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		return try {
+			template.count(query, ReportedPhoto::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			-1L
+		}
+	}
+
+	suspend fun countByUserId(userId: Long): Long {
+		val query = Query()
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
+
+		return try {
+			template.count(query, ReportedPhoto::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			-1L
 		}
 	}
 
