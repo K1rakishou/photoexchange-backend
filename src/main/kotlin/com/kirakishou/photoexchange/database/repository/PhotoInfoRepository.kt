@@ -230,9 +230,9 @@ class PhotoInfoRepository(
 
 				for (photo in photoInfos) {
 					val galleryPhoto = galleryPhotos.first { it.photoId == photo.photoId }
-					val favouritesCount = favouritedPhotosMap[photo.photoId]
+					val favouritedPhotos = favouritedPhotosMap[photo.photoId] ?: emptyList()
 
-					resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto, favouritesCount!!.size.toLong())
+					resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto, favouritedPhotos.size.toLong())
 				}
 
 				return@withLock resultMap
