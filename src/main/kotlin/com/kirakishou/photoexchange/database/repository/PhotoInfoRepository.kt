@@ -233,32 +233,17 @@ class PhotoInfoRepository(
 		}.await()
 	}
 
-	suspend fun findPhotoInfoListByGalleryPhotoIdList(userId: String, galleryPhotoIdList: List<Long>): LinkedHashMap<Long, GalleryPhotoInfo> {
+	suspend fun findGalleryPhotosByIds(galleryPhotoIdList: List<Long>): LinkedHashMap<Long, GalleryPhotoDto> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
-				val resultMap = linkedMapOf<Long, GalleryPhotoInfo>()
+				val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
 
 				val galleryPhotos = galleryPhotoDao.findManyByIdList(galleryPhotoIdList)
 				val photoInfos = photoInfoDao.findMany(galleryPhotos.map { it.photoId })
-				val favouritedPhotos = favouritedPhotoDao.findMany(userId, photoInfos.map { it.photoId })
-				val reportedPhotos = reportedPhotoDao.findMany(userId, photoInfos.map { it.photoId })
 
 				for (photo in photoInfos) {
 					val galleryPhoto = galleryPhotos.first { it.photoId == photo.photoId }
-					resultMap[photo.photoId] = GalleryPhotoInfo(photo, galleryPhoto)
-				}
-
-				val favouritedPhotoIdsSet = favouritedPhotos
-					.map { it.photoId }
-					.toSet()
-
-				val reportedPhotosIdsSet = reportedPhotos
-					.map { it.photoId }
-					.toSet()
-
-				for ((photoId, galleryPhotoInfo) in resultMap) {
-					galleryPhotoInfo.isFavourited = favouritedPhotoIdsSet.contains(photoId)
-					galleryPhotoInfo.isReported = reportedPhotosIdsSet.contains(photoId)
+					resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto)
 				}
 
 				return@withLock resultMap
@@ -266,12 +251,38 @@ class PhotoInfoRepository(
 		}.await()
 	}
 
+	suspend fun findGalleryPhotosInfo(userId: String, galleryPhotoIdList: List<Long>): LinkedHashMap<Long, GalleryPhotoInfoDto> {
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				val resultMap = linkedMapOf<Long, GalleryPhotoInfoDto>()
 
-	data class GalleryPhotoInfo(
-		val photoInfo: PhotoInfo,
-		val galleryPhoto: GalleryPhoto,
+				val userFavouritedPhotos = favouritedPhotoDao.findMany(userId, galleryPhotoIdList)
+				val userReportedPhotos = reportedPhotoDao.findMany(userId, galleryPhotoIdList)
+
+				for (favouritedPhoto in userFavouritedPhotos) {
+					resultMap.putIfAbsent(favouritedPhoto.id, GalleryPhotoInfoDto(favouritedPhoto.photoId))
+					resultMap[favouritedPhoto.id]!!.isFavourited = true
+				}
+
+				for (reportedPhoto in userReportedPhotos) {
+					resultMap.putIfAbsent(reportedPhoto.id, GalleryPhotoInfoDto(reportedPhoto.photoId))
+					resultMap[reportedPhoto.id]!!.isReported = true
+				}
+
+				return@withLock resultMap
+			}
+		}.await()
+	}
+
+	data class GalleryPhotoInfoDto(
+		var galleryPhotoId: Long,
 		var isFavourited: Boolean = false,
 		var isReported: Boolean = false
+	)
+
+	data class GalleryPhotoDto(
+		val photoInfo: PhotoInfo,
+		val galleryPhoto: GalleryPhoto
 	)
 
 	sealed class ReportPhotoResult {

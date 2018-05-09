@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.handlers
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
+import com.kirakishou.photoexchange.model.net.response.GalleryPhotoInfoResponse
 import com.kirakishou.photoexchange.model.net.response.GalleryPhotosResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -14,44 +15,40 @@ import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
 
-class GetGalleryPhotosHandler(
+class GetGalleryPhotoInfoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepository: PhotoInfoRepository,
 	private val concurrentService: ConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
 
-	private val logger = LoggerFactory.getLogger(GetGalleryPhotosHandler::class.java)
+	private val logger = LoggerFactory.getLogger(GetGalleryPhotoInfoHandler::class.java)
+	private val USER_ID_VARIABLE = "user_id"
 	private val PHOTO_IDS_VARIABLE = "photo_ids"
 	private val DELIMITER = ','
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		val result = concurrentService.asyncCommon {
 			try {
-				logger.debug("New GetGalleryPhotos request")
+				logger.debug("New GetGalleryPhotoInfo request")
 
-				if (!request.containsAllPathVars(PHOTO_IDS_VARIABLE)) {
+				if (!request.containsAllPathVars(USER_ID_VARIABLE, PHOTO_IDS_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
 						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest()))
 				}
 
 				val photoIdsString = request.pathVariable(PHOTO_IDS_VARIABLE)
+				val userId = request.pathVariable(USER_ID_VARIABLE)
+
 				val galleryPhotoIds = Utils.parseGalleryPhotoIds(photoIdsString, DELIMITER)
+				val galleryPhotoInfoList = photoInfoRepository.findGalleryPhotosInfo(userId, galleryPhotoIds)
 
-				if (galleryPhotoIds.isEmpty()) {
-					logger.debug("galleryPhotoIds is empty")
-					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.NoPhotosInRequest()))
+				val galleryPhotoInfoResponse = galleryPhotoInfoList.values.map { (galleryPhotoId, isFavourited, isReported) ->
+					GalleryPhotoInfoResponse.GalleryPhotosInfoData(galleryPhotoId, isFavourited, isReported)
 				}
 
-				val resultMap = photoInfoRepository.findGalleryPhotosByIds(galleryPhotoIds)
-				val galleryPhotosResponse = resultMap.values.map { (photoInfo, galleryPhoto) ->
-					GalleryPhotosResponse.GalleryPhotoResponseData(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat,
-						photoInfo.uploadedOn, photoInfo.favouritesCount)
-				}
-
-				logger.debug("Found ${galleryPhotosResponse.size} photos from gallery")
-				return@asyncCommon formatResponse(HttpStatus.OK, GalleryPhotosResponse.success(galleryPhotosResponse))
+				logger.debug("Found ${galleryPhotoInfoResponse.size} photo infos from gallery")
+				return@asyncCommon formatResponse(HttpStatus.OK, GalleryPhotoInfoResponse.success(galleryPhotoInfoResponse))
 
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)

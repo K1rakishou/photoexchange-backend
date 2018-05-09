@@ -40,12 +40,6 @@ private constructor(
         val uploadedOn: Long,
 
         @SerializedName("favourites_count")
-        val favouritesCount: Long,
-
-        @SerializedName("is_favourited")
-        val isFavourited: Boolean,
-
-        @SerializedName("is_reported")
-        val isReported: Boolean
+        val favouritesCount: Long
     )
 }
