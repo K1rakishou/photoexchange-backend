@@ -6,7 +6,7 @@ import com.kirakishou.photoexchange.model.ErrorCode
 class GetUploadedPhotosResponse
 private constructor(
 
-	@SerializedName("uploaded_photoss")
+	@SerializedName("uploaded_photos")
 	val uploadedPhotoss: List<UploadedPhoto>,
 
 	errorCode: ErrorCode.GetUploadedPhotosError
