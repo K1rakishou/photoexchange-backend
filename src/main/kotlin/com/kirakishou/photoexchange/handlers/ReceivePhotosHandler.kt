@@ -4,7 +4,7 @@ import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeReposit
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.PhotoAnswerResponse
+import com.kirakishou.photoexchange.model.net.response.ReceivedPhotoResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.TimeUtils
@@ -37,7 +37,7 @@ class ReceivePhotosHandler(
 				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_NAME_PATH_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.BadRequest()))
+						ReceivedPhotoResponse.fail(ErrorCode.GetPhotoAnswerErrors.BadRequest()))
 				}
 
 				val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
@@ -48,10 +48,10 @@ class ReceivePhotosHandler(
 				if (photoNameList.isEmpty()) {
 					logger.debug("photoNameList is empty")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.NoPhotosInRequest()))
+						ReceivedPhotoResponse.fail(ErrorCode.GetPhotoAnswerErrors.NoPhotosInRequest()))
 				}
 
-				val photoAnswerList = arrayListOf<PhotoAnswerResponse.PhotoAnswer>()
+				val photoAnswerList = arrayListOf<ReceivedPhotoResponse.ReceivedPhoto>()
 				val photoInfoList = photoInfoRepo.findMany(userId, photoNameList)
 
 				//TODO: remake DB requests in batches
@@ -84,23 +84,23 @@ class ReceivePhotosHandler(
 						continue
 					}
 
-					photoAnswerList += PhotoAnswerResponse.PhotoAnswer(uploadedPhotoName, otherUserPhotoInfo.photoName,
+					photoAnswerList += ReceivedPhotoResponse.ReceivedPhoto(uploadedPhotoName, otherUserPhotoInfo.photoName,
 						otherUserPhotoInfo.lon, otherUserPhotoInfo.lat)
 				}
 
 				if (photoAnswerList.isEmpty()) {
 					logger.debug("photoAnswerList is empty")
 					return@asyncCommon formatResponse(HttpStatus.OK,
-						PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.NoPhotosToSendBack()))
+						ReceivedPhotoResponse.fail(ErrorCode.GetPhotoAnswerErrors.NoPhotosToSendBack()))
 				}
 
 				cleanUp()
 
-				return@asyncCommon formatResponse(HttpStatus.OK, PhotoAnswerResponse.success(photoAnswerList))
+				return@asyncCommon formatResponse(HttpStatus.OK, ReceivedPhotoResponse.success(photoAnswerList))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					PhotoAnswerResponse.fail(ErrorCode.GetPhotoAnswerErrors.UnknownError()))
+					ReceivedPhotoResponse.fail(ErrorCode.GetPhotoAnswerErrors.UnknownError()))
 			}
 		}
 

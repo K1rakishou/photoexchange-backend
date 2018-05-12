@@ -13,7 +13,8 @@ class Router(
 	private val favouritePhotoHandler: FavouritePhotoHandler,
 	private val reportPhotoHandler: ReportPhotoHandler,
 	private val getUserIdHandler: GetUserIdHandler,
-	private val getGalleryPhotoInfoHandler: GetGalleryPhotoInfoHandler
+	private val getGalleryPhotoInfoHandler: GetGalleryPhotoInfoHandler,
+	private val getUploadedPhotosHandler: GetUploadedPhotosHandler
 ) {
 	fun setUpRouter() = router {
 		"/v1".nest {
@@ -28,6 +29,7 @@ class Router(
 					GET("/get_gallery_photos/{photo_ids}", getGalleryPhotosHandler::handle)
 					GET("/get_gallery_photo_info/{user_id}/{photo_ids}", getGalleryPhotoInfoHandler::handle)
 					GET("/get_user_id", getUserIdHandler::handle)
+					GET("/get_uploaded_photos/{user_id}/{last_id}/{count}", getUploadedPhotosHandler::handle)
 
 					PUT("/favourite", favouritePhotoHandler::handle)
 					PUT("/report", reportPhotoHandler::handle)
