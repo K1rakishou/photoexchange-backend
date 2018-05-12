@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
@@ -22,7 +23,6 @@ class GetGalleryPhotosHandler(
 
 	private val logger = LoggerFactory.getLogger(GetGalleryPhotosHandler::class.java)
 	private val PHOTO_IDS_VARIABLE = "photo_ids"
-	private val DELIMITER = ','
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		val result = concurrentService.asyncCommon {
@@ -36,7 +36,9 @@ class GetGalleryPhotosHandler(
 				}
 
 				val photoIdsString = request.pathVariable(PHOTO_IDS_VARIABLE)
-				val galleryPhotoIds = Utils.parseGalleryPhotoIds(photoIdsString, DELIMITER)
+				val galleryPhotoIds = Utils.parsePhotoIds(photoIdsString,
+					ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT,
+					ServerSettings.PHOTOS_DELIMITER)
 
 				if (galleryPhotoIds.isEmpty()) {
 					logger.debug("galleryPhotoIds is empty")

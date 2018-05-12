@@ -14,6 +14,7 @@ class Router(
 	private val reportPhotoHandler: ReportPhotoHandler,
 	private val getUserIdHandler: GetUserIdHandler,
 	private val getGalleryPhotoInfoHandler: GetGalleryPhotoInfoHandler,
+	private val getUploadedPhotoIdsHandler: GetUploadedPhotoIdsHandler,
 	private val getUploadedPhotosHandler: GetUploadedPhotosHandler
 ) {
 	fun setUpRouter() = router {
@@ -24,12 +25,15 @@ class Router(
 				}
 
 				accept(MediaType.APPLICATION_JSON).nest {
+					GET("/get_user_id", getUserIdHandler::handle)
 					GET("/receive_photos/{photo_names}/{user_id}", receivePhotosHandler::handle)
+
 					GET("/get_gallery_photo_ids/{last_id}/{count}", getGalleryPhotoIdsHandler::handle)
 					GET("/get_gallery_photos/{photo_ids}", getGalleryPhotosHandler::handle)
 					GET("/get_gallery_photo_info/{user_id}/{photo_ids}", getGalleryPhotoInfoHandler::handle)
-					GET("/get_user_id", getUserIdHandler::handle)
-					GET("/get_uploaded_photos/{user_id}/{last_id}/{count}", getUploadedPhotosHandler::handle)
+
+					GET("/get_uploaded_photo_ids/{user_id}/{last_id}/{count}", getUploadedPhotoIdsHandler::handle)
+					GET("/get_uploaded_photos/{user_id}/{photo_ids}", getUploadedPhotosHandler::handle)
 
 					PUT("/favourite", favouritePhotoHandler::handle)
 					PUT("/report", reportPhotoHandler::handle)

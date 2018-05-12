@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
@@ -20,7 +21,6 @@ class GetGalleryPhotoIdsHandler(
 ) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(GetGalleryPhotoIdsHandler::class.java)
-	private val MAX_PHOTOS_PER_REQUEST_COUNT = 100
 	private val LAST_ID_VARIABLE = "last_id"
 	private val COUNT_VARIABLE = "count"
 
@@ -42,9 +42,9 @@ class GetGalleryPhotoIdsHandler(
 				}
 
 				val count = try {
-					request.pathVariable(COUNT_VARIABLE).toInt().coerceAtMost(MAX_PHOTOS_PER_REQUEST_COUNT)
+					request.pathVariable(COUNT_VARIABLE).toInt().coerceAtMost(ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT)
 				} catch (error: NumberFormatException) {
-					MAX_PHOTOS_PER_REQUEST_COUNT
+					ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT
 				}
 
 				val galleryPhotoIds = galleryPhotosRepository.findPaged(lastId, count)

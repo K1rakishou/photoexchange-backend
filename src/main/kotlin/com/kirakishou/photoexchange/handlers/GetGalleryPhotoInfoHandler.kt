@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
@@ -45,7 +46,7 @@ class GetGalleryPhotoInfoHandler(
 						GalleryPhotoInfoResponse.fail(ErrorCode.GalleryPhotosInfoError.NoPhotosInRequest()))
 				}
 
-				val galleryPhotoIds = Utils.parseGalleryPhotoIds(photoIdsString, DELIMITER)
+				val galleryPhotoIds = Utils.parsePhotoIds(photoIdsString, ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT, DELIMITER)
 				val galleryPhotoInfoList = photoInfoRepository.findGalleryPhotosInfo(userId, galleryPhotoIds)
 
 				val galleryPhotoInfoResponse = galleryPhotoInfoList.values.map { (galleryPhotoId, isFavourited, isReported) ->

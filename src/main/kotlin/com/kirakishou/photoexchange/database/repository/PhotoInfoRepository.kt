@@ -67,6 +67,12 @@ class PhotoInfoRepository(
 		}.await()
 	}
 
+	suspend fun findManyByIds(userId: String, photoIds: List<Long>): List<PhotoInfo> {
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.findManyByIds(userId, photoIds)
+		}.await()
+	}
+
 	suspend fun findByExchangeIdAndUserId(userId: String, exchangeId: Long): PhotoInfo {
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoDao.findByExchangeIdAndUserId(userId, exchangeId)

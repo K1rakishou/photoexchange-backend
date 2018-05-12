@@ -7,6 +7,11 @@ object ServerSettings {
 	const val OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL = 1000L * 60L * 60L // 1 hour
 	const val DELETE_PHOTOS_OLDER_THAN = 1000L * 60L * 60L * 24L * 30L //30 days
 
+	const val PHOTOS_DELIMITER = ','
+
+	const val MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT = 100
+	const val MAX_UPLOADED_PHOTOS_PER_REQUEST_COUNT = 50
+
 	object ThreadPool {
 		object Mongo {
 			const val MONGO_POOL_NAME = "mongoPool"

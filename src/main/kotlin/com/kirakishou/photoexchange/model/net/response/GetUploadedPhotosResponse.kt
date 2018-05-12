@@ -6,15 +6,15 @@ import com.kirakishou.photoexchange.model.ErrorCode
 class GetUploadedPhotosResponse
 private constructor(
 
-	@SerializedName("uploaded_photos")
-	val uploadedPhotos: List<UploadedPhoto>,
+	@SerializedName("uploaded_photoss")
+	val uploadedPhotoss: List<UploadedPhoto>,
 
 	errorCode: ErrorCode.GetUploadedPhotosError
 ) : StatusResponse(errorCode.value) {
 
 	companion object {
-		fun success(receivedPhotoList: List<UploadedPhoto>): GetUploadedPhotosResponse {
-			return GetUploadedPhotosResponse(receivedPhotoList, ErrorCode.GetUploadedPhotosError.Ok())
+		fun success(uploadedPhotos: List<UploadedPhoto>): GetUploadedPhotosResponse {
+			return GetUploadedPhotosResponse(uploadedPhotos, ErrorCode.GetUploadedPhotosError.Ok())
 		}
 
 		fun fail(errorCode: ErrorCode.GetUploadedPhotosError): GetUploadedPhotosResponse {
