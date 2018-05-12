@@ -55,7 +55,7 @@ fun myBeans() = beans {
 
 	//handler
 	bean<UploadPhotoHandler>()
-	bean<GetPhotoAnswerHandler>()
+	bean<ReceivePhotosHandler>()
 	bean<GetPhotoHandler>()
 	bean<GetGalleryPhotoIdsHandler>()
 	bean<GetGalleryPhotosHandler>()
@@ -63,6 +63,8 @@ fun myBeans() = beans {
 	bean<FavouritePhotoHandler>()
 	bean<ReportPhotoHandler>()
 	bean<GetUserIdHandler>()
+	bean<GetUploadedPhotoIdsHandler>()
+	bean<GetUploadedPhotosHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }

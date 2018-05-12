@@ -4,7 +4,6 @@ import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.model.repo.*
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.GeneratorService
-import kotlinx.coroutines.experimental.Deferred
 import kotlinx.coroutines.experimental.sync.Mutex
 import kotlinx.coroutines.experimental.sync.withLock
 
@@ -62,28 +61,22 @@ class PhotoInfoRepository(
 		}.await()
 	}
 
-	suspend fun find(userId: String, photoName: String): PhotoInfo {
-		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.find(userId, photoName)
-		}.await()
-	}
-
 	suspend fun findMany(userId: String, photoNames: List<String>): List<PhotoInfo> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoDao.findMany(userId, photoNames)
 		}.await()
 	}
 
-	suspend fun findMany(photoIdList: List<Long>): List<PhotoInfo> {
+	suspend fun findManyByIds(userId: String, photoIds: List<Long>): List<PhotoInfo> {
 		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.findMany(photoIdList)
+			return@asyncMongo photoInfoDao.findManyByIds(userId, photoIds)
 		}.await()
 	}
 
-	suspend fun findByExchangeIdAndUserIdAsync(userId: String, exchangeId: Long): Deferred<PhotoInfo> {
+	suspend fun findByExchangeIdAndUserId(userId: String, exchangeId: Long): PhotoInfo {
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoDao.findByExchangeIdAndUserId(userId, exchangeId)
-		}
+		}.await()
 	}
 
 	suspend fun findOlderThan(time: Long, maxCount: Int): List<PhotoInfo> {
@@ -103,6 +96,12 @@ class PhotoInfoRepository(
 			}
 
 			return@asyncMongo resultList
+		}.await()
+	}
+
+	suspend fun findPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.findPaged(userId, lastId, count)
 		}.await()
 	}
 

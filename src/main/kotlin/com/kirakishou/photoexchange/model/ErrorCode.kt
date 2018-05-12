@@ -63,4 +63,19 @@ sealed class ErrorCode(val value: Int) {
 		class Ok : GetUserIdError(0)
 		class DatabaseError : GetUserIdError(1)
 	}
+
+	sealed class GetUploadedPhotoIdsError(value: Int) : ErrorCode(value) {
+		class UnknownError : GetUploadedPhotoIdsError(-1)
+		class Ok : GetUploadedPhotoIdsError(0)
+		class DatabaseError : GetUploadedPhotoIdsError(1)
+		class BadRequest : GetUploadedPhotoIdsError(2)
+	}
+
+	sealed class GetUploadedPhotosError(value: Int) : ErrorCode(value) {
+		class UnknownError : GetUploadedPhotosError(-1)
+		class Ok : GetUploadedPhotosError(0)
+		class DatabaseError : GetUploadedPhotosError(1)
+		class BadRequest : GetUploadedPhotosError(2)
+		class NoPhotosInRequest : GetUploadedPhotosError(3)
+	}
 }

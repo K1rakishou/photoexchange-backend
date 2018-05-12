@@ -30,10 +30,6 @@ open class PhotoInfoDao(
 		return photoInfo
 	}
 
-	suspend fun findAllPhotoIdsByUserId(userId: String): List<Long> {
-		return findAllPhotosByUserId(userId).map { it.photoId }
-	}
-
 	suspend fun findAllPhotosByUserId(userId: String): List<PhotoInfo> {
 		val getUploadedPhotosQuery = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
@@ -46,34 +42,6 @@ open class PhotoInfoDao(
 		}
 
 		return uploadedPhotos
-	}
-
-	suspend fun countAllUserUploadedPhotos(userId: String): Long {
-		val getUploadedPhotosQuery = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
-
-		val result = try {
-			template.count(getUploadedPhotosQuery, PhotoInfo::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			0L
-		}
-
-		return result
-	}
-
-	suspend fun find(photoId: Long): PhotoInfo {
-		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
-
-		val photoInfo = try {
-			template.findOne(query, PhotoInfo::class.java) ?: PhotoInfo.empty()
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			PhotoInfo.empty()
-		}
-
-		return photoInfo
 	}
 
 	suspend fun find(userId: String, photoName: String): PhotoInfo {
@@ -152,10 +120,46 @@ open class PhotoInfoDao(
 		return photoInfoList
 	}
 
+	suspend fun findManyByIds(userId: String, photoIdList: List<Long>): List<PhotoInfo> {
+		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+			.limit(photoIdList.size)
+
+		val photoInfoList = try {
+			template.find(query, PhotoInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			emptyList<PhotoInfo>()
+		}
+
+		if (photoInfoList == null) {
+			return emptyList()
+		}
+
+		return photoInfoList
+	}
+
 	suspend fun findOlderThan(time: Long, maxCount: Int): List<PhotoInfo> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(time))
 			.limit(maxCount)
+
+		val result = try {
+			template.find(query, PhotoInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			emptyList<PhotoInfo>()
+		}
+
+		return result
+	}
+
+	suspend fun findPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
+		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).lt(lastId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+			.limit(count)
 
 		val result = try {
 			template.find(query, PhotoInfo::class.java)

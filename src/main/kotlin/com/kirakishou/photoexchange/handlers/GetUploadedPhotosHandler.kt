@@ -4,7 +4,7 @@ import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.GalleryPhotosResponse
+import com.kirakishou.photoexchange.model.net.response.GetUploadedPhotosResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.Utils
@@ -15,50 +15,51 @@ import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
 
-class GetGalleryPhotosHandler(
+class GetUploadedPhotosHandler(
 	jsonConverter: JsonConverterService,
-	private val photoInfoRepository: PhotoInfoRepository,
+	private val photoInfoRepo: PhotoInfoRepository,
 	private val concurrentService: ConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
 
-	private val logger = LoggerFactory.getLogger(GetGalleryPhotosHandler::class.java)
-	private val PHOTO_IDS_VARIABLE = "photo_ids"
+	private val logger = LoggerFactory.getLogger(GetUploadedPhotosHandler::class.java)
+	private val USER_ID_PATH_VARIABLE = "user_id"
+	private val PHOTO_IDS_PATH_VARIABLE = "photo_ids"
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		val result = concurrentService.asyncCommon {
-			try {
-				logger.debug("New GetGalleryPhotos request")
+			logger.debug("New GetUploadedPhotoIds request")
 
-				if (!request.containsAllPathVars(PHOTO_IDS_VARIABLE)) {
+			try {
+				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_IDS_PATH_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest()))
+						GetUploadedPhotosResponse.fail(ErrorCode.GetUploadedPhotosError.BadRequest()))
 				}
 
-				val photoIdsString = request.pathVariable(PHOTO_IDS_VARIABLE)
-				val galleryPhotoIds = Utils.parsePhotoIds(photoIdsString,
-					ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT,
+				val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
+				val photoIdsString = request.pathVariable(PHOTO_IDS_PATH_VARIABLE)
+
+				val uploadedPhotoIds = Utils.parsePhotoIds(photoIdsString,
+					ServerSettings.MAX_UPLOADED_PHOTOS_PER_REQUEST_COUNT,
 					ServerSettings.PHOTOS_DELIMITER)
 
-				if (galleryPhotoIds.isEmpty()) {
-					logger.debug("galleryPhotoIds is empty")
+				if (uploadedPhotoIds.isEmpty()) {
+					logger.debug("uploadedPhotoIds is empty")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.NoPhotosInRequest()))
+						GetUploadedPhotosResponse.fail(ErrorCode.GetUploadedPhotosError.NoPhotosInRequest()))
 				}
 
-				val resultMap = photoInfoRepository.findGalleryPhotosByIds(galleryPhotoIds)
-				val galleryPhotosResponse = resultMap.values.map { (photoInfo, galleryPhoto, favouritesCount) ->
-					GalleryPhotosResponse.GalleryPhotoResponseData(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat,
-						photoInfo.uploadedOn, favouritesCount)
+				val uploadedPhotos = photoInfoRepo.findManyByIds(userId, uploadedPhotoIds)
+				val uploadedPhotosDataList = uploadedPhotos.map { uploadedPhoto ->
+					GetUploadedPhotosResponse.UploadedPhoto(uploadedPhoto.photoId, uploadedPhoto.photoName)
 				}
 
-				logger.debug("Found ${galleryPhotosResponse.size} photos from gallery")
-				return@asyncCommon formatResponse(HttpStatus.OK, GalleryPhotosResponse.success(galleryPhotosResponse))
+				return@asyncCommon formatResponse(HttpStatus.OK, GetUploadedPhotosResponse.success(uploadedPhotosDataList))
 
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.UnknownError()))
+					GetUploadedPhotosResponse.fail(ErrorCode.GetUploadedPhotosError.UnknownError()))
 			}
 		}
 
