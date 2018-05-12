@@ -6,7 +6,7 @@ import org.springframework.web.reactive.function.server.router
 
 class Router(
 	private val uploadPhotoHandler: UploadPhotoHandler,
-	private val getPhotoAnswerHandler: GetPhotoAnswerHandler,
+	private val receivePhotosHandler: ReceivePhotosHandler,
 	private val getPhotoHandler: GetPhotoHandler,
 	private val getGalleryPhotoIdsHandler: GetGalleryPhotoIdsHandler,
 	private val getGalleryPhotosHandler: GetGalleryPhotosHandler,
@@ -23,7 +23,7 @@ class Router(
 				}
 
 				accept(MediaType.APPLICATION_JSON).nest {
-					GET("/get_answer/{photo_names}/{user_id}", getPhotoAnswerHandler::handle)
+					GET("/receive_photos/{photo_names}/{user_id}", receivePhotosHandler::handle)
 					GET("/get_gallery_photo_ids/{last_id}/{count}", getGalleryPhotoIdsHandler::handle)
 					GET("/get_gallery_photos/{photo_ids}", getGalleryPhotosHandler::handle)
 					GET("/get_gallery_photo_info/{user_id}/{photo_ids}", getGalleryPhotoInfoHandler::handle)

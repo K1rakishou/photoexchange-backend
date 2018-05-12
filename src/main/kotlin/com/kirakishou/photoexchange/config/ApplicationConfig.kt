@@ -55,7 +55,7 @@ fun myBeans() = beans {
 
 	//handler
 	bean<UploadPhotoHandler>()
-	bean<GetPhotoAnswerHandler>()
+	bean<ReceivePhotosHandler>()
 	bean<GetPhotoHandler>()
 	bean<GetGalleryPhotoIdsHandler>()
 	bean<GetGalleryPhotosHandler>()

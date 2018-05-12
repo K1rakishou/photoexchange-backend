@@ -16,13 +16,13 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
 import java.util.concurrent.TimeUnit
 
-class GetPhotoAnswerHandler(
+class ReceivePhotosHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
 	private val photoInfoExchangeRepository: PhotoInfoExchangeRepository,
 	private val concurrentService: ConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
-	private val logger = LoggerFactory.getLogger(GetPhotoAnswerHandler::class.java)
+	private val logger = LoggerFactory.getLogger(ReceivePhotosHandler::class.java)
 	private val USER_ID_PATH_VARIABLE = "user_id"
 	private val PHOTO_NAME_PATH_VARIABLE = "photo_names"
 	private val DELIMITER = ','
@@ -30,7 +30,7 @@ class GetPhotoAnswerHandler(
 	private val FIVE_MINUTES = TimeUnit.MINUTES.toMillis(5)
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		logger.debug("New GetPhotoAnswer request")
+		logger.debug("New ReceivePhotosH request")
 
 		val result = concurrentService.asyncCommon {
 			try {
@@ -78,7 +78,7 @@ class GetPhotoAnswerHandler(
 						continue
 					}
 
-					val otherUserPhotoInfo = photoInfoRepo.findByExchangeIdAndUserIdAsync(otherUserId, exchangeId).await()
+					val otherUserPhotoInfo = photoInfoRepo.findByExchangeIdAndUserId(otherUserId, exchangeId)
 					if (otherUserPhotoInfo.isEmpty()) {
 						logger.debug("Could not find other user's photoInfo = otherUserId: $otherUserId, exchangeId: $exchangeId")
 						continue

@@ -80,10 +80,10 @@ class PhotoInfoRepository(
 		}.await()
 	}
 
-	suspend fun findByExchangeIdAndUserIdAsync(userId: String, exchangeId: Long): Deferred<PhotoInfo> {
+	suspend fun findByExchangeIdAndUserId(userId: String, exchangeId: Long): PhotoInfo {
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoDao.findByExchangeIdAndUserId(userId, exchangeId)
-		}
+		}.await()
 	}
 
 	suspend fun findOlderThan(time: Long, maxCount: Int): List<PhotoInfo> {
