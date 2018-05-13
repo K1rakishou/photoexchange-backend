@@ -32,7 +32,7 @@ class GetGalleryPhotoIdsHandler(
 				if (!request.containsAllPathVars(LAST_ID_VARIABLE, COUNT_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						GalleryPhotoIdsResponse.fail(ErrorCode.GalleryPhotoIdsErrors.BadRequest()))
+						GalleryPhotoIdsResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest))
 				}
 
 				val lastId = try {
@@ -55,7 +55,7 @@ class GetGalleryPhotoIdsHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GalleryPhotoIdsResponse.fail(ErrorCode.GalleryPhotoIdsErrors.UnknownError()))
+					GalleryPhotoIdsResponse.fail(ErrorCode.GalleryPhotosErrors.UnknownError))
 			}
 		}
 

@@ -1,81 +1,93 @@
 package com.kirakishou.photoexchange.model
 
-sealed class ErrorCode(val value: Int) {
+class ErrorCode {
 
-	fun toInt(): Int {
-		return this.value
+	enum class TakePhotoErrors(val value: Int) {
+		UnknownError(0),
+		Ok(1),
+		CameraIsNotAvailable(2),
+		CameraIsNotStartedException(3),
+		TimeoutException(4),
+		DatabaseError(5),
+		CouldNotTakePhoto(6);
 	}
 
-	sealed class UploadPhotoErrors(value: Int) : ErrorCode(value) {
-		class UnknownError : UploadPhotoErrors(-1)
-		class Ok : UploadPhotoErrors(0)
-		class BadRequest : UploadPhotoErrors(1)
-		class DatabaseError : UploadPhotoErrors(2)
+	enum class UploadPhotoErrors(val value: Int) {
+		UnknownError(100),
+		Ok(101),
+		BadRequest(102),
+		DatabaseError(103),
+
+		LocalBadServerResponse(125),
+		LocalNoPhotoFileOnDisk(126),
+		LocalTimeout(127),
+		LocalInterrupted(128),
+		LocalDatabaseError(129),
+		LocalCouldNotGetUserId(130);
 	}
 
-	sealed class GetPhotoAnswerErrors(value: Int) : ErrorCode(value) {
-		class UnknownError : GetPhotoAnswerErrors(-1)
-		class Ok : GetPhotoAnswerErrors(0)
-		class BadRequest : GetPhotoAnswerErrors(1)
-		class DatabaseError : GetPhotoAnswerErrors(2)
-		class NoPhotosInRequest : GetPhotoAnswerErrors(3)
-		class TooManyPhotosRequested : GetPhotoAnswerErrors(4)
-		class NoPhotosToSendBack : GetPhotoAnswerErrors(5)
-		class NotEnoughPhotosUploaded : GetPhotoAnswerErrors(6)
+	enum class ReceivePhotosErrors(val value: Int) {
+		UnknownError(200),
+		Ok(201),
+		BadRequest(202),
+		NoPhotosInRequest(203),
+		NoPhotosToSendBack(204),
+
+		LocalDatabaseError(225),
+		LocalTooManyPhotosRequested(226),
+		LocalNotEnoughPhotosUploaded(227),
+		LocalBadServerResponse(228),
+		LocalTimeout(229);
 	}
 
-	sealed class GalleryPhotoIdsErrors(value: Int) : ErrorCode(value) {
-		class UnknownError : GalleryPhotoIdsErrors(-1)
-		class Ok : GalleryPhotoIdsErrors(0)
-		class BadRequest : GalleryPhotoIdsErrors(1)
+	enum class GalleryPhotosErrors(val value: Int) {
+		UnknownError(300),
+		Ok(301),
+		BadRequest(302),
+		NoPhotosInRequest(303),
+
+		LocalBadServerResponse(325),
+		LocalTimeout(326),
+		LocalDatabaseError(327);
 	}
 
-	sealed class GalleryPhotosErrors(value: Int) : ErrorCode(value) {
-		class UnknownError : GalleryPhotosErrors(-1)
-		class Ok : GalleryPhotosErrors(0)
-		class BadRequest : GalleryPhotosErrors(1)
-		class NoPhotosInRequest : GalleryPhotosErrors(2)
+	enum class FavouritePhotoErrors(val value: Int) {
+		UnknownError(400),
+		Ok(401),
+		BadRequest(402),
+
+		LocalBadServerResponse(425),
+		LocalTimeout(426);
 	}
 
-	sealed class GalleryPhotosInfoError(value: Int) : ErrorCode(value) {
-		class UnknownError : GalleryPhotosInfoError(-1)
-		class Ok : GalleryPhotosInfoError(0)
-		class BadRequest : GalleryPhotosInfoError(1)
-		class NoPhotosInRequest : GalleryPhotosInfoError(2)
+	enum class ReportPhotoErrors(val value: Int) {
+		UnknownError(0),
+		Ok(1),
+		BadRequest(2),
+
+		LocalBadServerResponse(25),
+		LocalTimeout(26),
 	}
 
-	sealed class FavouritePhotoErrors(value: Int) : ErrorCode(value) {
-		class UnknownError : FavouritePhotoErrors(-1)
-		class Ok : FavouritePhotoErrors(0)
-		class AlreadyFavourited : FavouritePhotoErrors(1)
-		class BadRequest : FavouritePhotoErrors(2)
+	enum class GetUserIdError(val value: Int) {
+		UnknownError(500),
+		Ok(501),
+		DatabaseError(502),
+
+		LocalBadServerResponse(525),
+		LocalTimeout(526),
+		LocalDatabaseError(527);
 	}
 
-	sealed class ReportPhotoErrors(value: Int) : ErrorCode(value) {
-		class UnknownError : ReportPhotoErrors(-1)
-		class Ok : ReportPhotoErrors(0)
-		class AlreadyReported : ReportPhotoErrors(1)
-		class BadRequest : ReportPhotoErrors(2)
-	}
+	enum class GetUploadedPhotosError(val value: Int) {
+		UnknownError(600),
+		Ok(601),
+		DatabaseError(602),
+		BadRequest(603),
+		NoPhotosInRequest(604),
 
-	sealed class GetUserIdError(value: Int) : ErrorCode(value) {
-		class UnknownError : GetUserIdError(-1)
-		class Ok : GetUserIdError(0)
-		class DatabaseError : GetUserIdError(1)
-	}
-
-	sealed class GetUploadedPhotoIdsError(value: Int) : ErrorCode(value) {
-		class UnknownError : GetUploadedPhotoIdsError(-1)
-		class Ok : GetUploadedPhotoIdsError(0)
-		class DatabaseError : GetUploadedPhotoIdsError(1)
-		class BadRequest : GetUploadedPhotoIdsError(2)
-	}
-
-	sealed class GetUploadedPhotosError(value: Int) : ErrorCode(value) {
-		class UnknownError : GetUploadedPhotosError(-1)
-		class Ok : GetUploadedPhotosError(0)
-		class DatabaseError : GetUploadedPhotosError(1)
-		class BadRequest : GetUploadedPhotosError(2)
-		class NoPhotosInRequest : GetUploadedPhotosError(3)
+		LocalBadServerResponse(625),
+		LocalTimeout(626),
+		LocalUserIdIsEmpty(627);
 	}
 }

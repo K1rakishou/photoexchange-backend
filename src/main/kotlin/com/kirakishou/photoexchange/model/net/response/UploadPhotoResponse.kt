@@ -13,7 +13,7 @@ class UploadPhotoResponse(
 
 	companion object {
 		fun success(photoName: String): UploadPhotoResponse {
-			return UploadPhotoResponse(photoName, ErrorCode.UploadPhotoErrors.Ok())
+			return UploadPhotoResponse(photoName, ErrorCode.UploadPhotoErrors.Ok)
 		}
 
 		fun fail(errorCode: ErrorCode.UploadPhotoErrors): UploadPhotoResponse {

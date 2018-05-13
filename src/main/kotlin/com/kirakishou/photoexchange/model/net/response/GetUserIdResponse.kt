@@ -14,7 +14,7 @@ private constructor(
 
 	companion object {
 		fun success(userId: String): GetUserIdResponse {
-			return GetUserIdResponse(userId, ErrorCode.GetUserIdError.Ok())
+			return GetUserIdResponse(userId, ErrorCode.GetUserIdError.Ok)
 		}
 
 		fun fail(errorCode: ErrorCode.GetUserIdError): GetUserIdResponse {

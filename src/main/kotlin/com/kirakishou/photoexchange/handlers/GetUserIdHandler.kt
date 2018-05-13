@@ -28,7 +28,7 @@ class GetUserIdHandler(
 				val userInfo = userInfoRepository.createNew()
 				if (userInfo.isEmpty()) {
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						GetUserIdResponse.fail(ErrorCode.GetUserIdError.DatabaseError()))
+						GetUserIdResponse.fail(ErrorCode.GetUserIdError.DatabaseError))
 				}
 
 				return@asyncCommon formatResponse(HttpStatus.OK,
@@ -36,7 +36,7 @@ class GetUserIdHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GetUserIdResponse.fail(ErrorCode.GetUserIdError.UnknownError()))
+					GetUserIdResponse.fail(ErrorCode.GetUserIdError.UnknownError))
 			}
 		}
 

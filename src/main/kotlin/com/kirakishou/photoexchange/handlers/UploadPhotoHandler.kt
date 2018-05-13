@@ -57,7 +57,7 @@ class UploadPhotoHandler(
 				if (!multiValueMap.containsAllParts(PACKET_PART_KEY, PHOTO_PART_KEY)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest()))
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest))
 				}
 
 				val packetParts = collectPart(multiValueMap, PACKET_PART_KEY).awaitSingle()
@@ -67,13 +67,13 @@ class UploadPhotoHandler(
 				if (!packet.isPacketOk()) {
 					logger.debug("One or more of the packet's fields are incorrect")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest()))
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest))
 				}
 
 				if (!checkPhotoTotalSize(photoParts)) {
 					logger.debug("Bad photo size")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest()))
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest))
 				}
 
 				val photoInfoName = photoInfoRepo.generatePhotoInfoName()
@@ -82,14 +82,14 @@ class UploadPhotoHandler(
 				if (newUploadingPhoto.isEmpty()) {
 					logger.debug("Could not save a photoInfo")
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError()))
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				}
 
 				val tempFile = saveTempFile(photoParts, newUploadingPhoto)
 				if (tempFile == null) {
 					logger.debug("Could not save file to disk")
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError()))
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				}
 
 				try {
@@ -107,7 +107,7 @@ class UploadPhotoHandler(
 					logger.error("Unknown error", error)
 					photoInfoRepo.delete(newUploadingPhoto.userId, photoInfoName)
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError()))
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				} finally {
 					if (tempFile.exists()) {
 						tempFile.delete()
@@ -125,7 +125,7 @@ class UploadPhotoHandler(
 				} catch (error: Throwable) {
 					logger.error("Unknown error while trying to do photo exchange", error)
 					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError()))
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				}
 
 				logger.debug("Photo has been successfully uploaded")
@@ -134,7 +134,7 @@ class UploadPhotoHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.UnknownError()))
+					UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.UnknownError))
 			}
 		}
 

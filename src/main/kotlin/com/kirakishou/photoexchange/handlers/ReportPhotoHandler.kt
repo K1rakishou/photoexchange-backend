@@ -32,14 +32,14 @@ class ReportPhotoHandler(
 				val packet = jsonConverter.fromJson<ReportPhotoPacket>(packetBuffers)
 				if (!packet.isPacketOk()) {
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.BadRequest()))
+						ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.BadRequest))
 				}
 
 				val result = photoInfoRepository.reportPhoto(packet.userId, packet.photoName)
 
 				return@asyncCommon when (result) {
 					is PhotoInfoRepository.ReportPhotoResult.Error -> {
-						formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.UnknownError()))
+						formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.UnknownError))
 					}
 					is PhotoInfoRepository.ReportPhotoResult.Unreported -> {
 						formatResponse(HttpStatus.OK, ReportPhotoResponse.success(false))
@@ -51,7 +51,7 @@ class ReportPhotoHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.UnknownError()))
+					ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.UnknownError))
 			}
 		}
 

@@ -37,7 +37,7 @@ class ReceivePhotosHandler(
 				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_NAME_PATH_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						ReceivedPhotoResponse.fail(ErrorCode.GetPhotoAnswerErrors.BadRequest()))
+						ReceivedPhotoResponse.fail(ErrorCode.ReceivePhotosErrors.BadRequest))
 				}
 
 				val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
@@ -48,7 +48,7 @@ class ReceivePhotosHandler(
 				if (photoNameList.isEmpty()) {
 					logger.debug("photoNameList is empty")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						ReceivedPhotoResponse.fail(ErrorCode.GetPhotoAnswerErrors.NoPhotosInRequest()))
+						ReceivedPhotoResponse.fail(ErrorCode.ReceivePhotosErrors.NoPhotosInRequest))
 				}
 
 				val photoAnswerList = arrayListOf<ReceivedPhotoResponse.ReceivedPhoto>()
@@ -91,7 +91,7 @@ class ReceivePhotosHandler(
 				if (photoAnswerList.isEmpty()) {
 					logger.debug("photoAnswerList is empty")
 					return@asyncCommon formatResponse(HttpStatus.OK,
-						ReceivedPhotoResponse.fail(ErrorCode.GetPhotoAnswerErrors.NoPhotosToSendBack()))
+						ReceivedPhotoResponse.fail(ErrorCode.ReceivePhotosErrors.NoPhotosToSendBack))
 				}
 
 				cleanUp()
@@ -100,7 +100,7 @@ class ReceivePhotosHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					ReceivedPhotoResponse.fail(ErrorCode.GetPhotoAnswerErrors.UnknownError()))
+					ReceivedPhotoResponse.fail(ErrorCode.ReceivePhotosErrors.UnknownError))
 			}
 		}
 

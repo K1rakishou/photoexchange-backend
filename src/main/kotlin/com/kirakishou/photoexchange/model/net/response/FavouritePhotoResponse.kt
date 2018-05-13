@@ -17,7 +17,7 @@ private constructor(
 
 	companion object {
 		fun success(isFavourited: Boolean, count: Long): FavouritePhotoResponse {
-			return FavouritePhotoResponse(isFavourited, count, ErrorCode.FavouritePhotoErrors.Ok())
+			return FavouritePhotoResponse(isFavourited, count, ErrorCode.FavouritePhotoErrors.Ok)
 		}
 
 		fun fail(errorCode: ErrorCode.FavouritePhotoErrors): FavouritePhotoResponse {

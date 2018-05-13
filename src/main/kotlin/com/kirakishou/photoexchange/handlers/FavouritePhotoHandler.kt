@@ -32,14 +32,14 @@ class FavouritePhotoHandler(
 				val packet = jsonConverter.fromJson<FavouritePhotoPacket>(packetBuffers)
 				if (!packet.isPacketOk()) {
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						FavouritePhotoResponse.fail(ErrorCode.FavouritePhotoErrors.BadRequest()))
+						FavouritePhotoResponse.fail(ErrorCode.FavouritePhotoErrors.BadRequest))
 				}
 
 				val result = photoInfoRepository.favouritePhoto(packet.userId, packet.photoName)
 
 				return@asyncCommon when (result) {
 					is PhotoInfoRepository.FavouritePhotoResult.Error -> {
-						formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, FavouritePhotoResponse.fail(ErrorCode.FavouritePhotoErrors.UnknownError()))
+						formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, FavouritePhotoResponse.fail(ErrorCode.FavouritePhotoErrors.UnknownError))
 					}
 					is PhotoInfoRepository.FavouritePhotoResult.Unfavourited -> {
 						formatResponse(HttpStatus.OK, FavouritePhotoResponse.success(false, result.count))
@@ -51,7 +51,7 @@ class FavouritePhotoHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					FavouritePhotoResponse.fail(ErrorCode.FavouritePhotoErrors.UnknownError()))
+					FavouritePhotoResponse.fail(ErrorCode.FavouritePhotoErrors.UnknownError))
 			}
 		}
 

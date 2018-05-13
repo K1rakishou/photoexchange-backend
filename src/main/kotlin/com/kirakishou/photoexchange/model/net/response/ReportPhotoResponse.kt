@@ -14,7 +14,7 @@ private constructor(
 
 	companion object {
 		fun success(isReported: Boolean): ReportPhotoResponse {
-			return ReportPhotoResponse(isReported, ErrorCode.ReportPhotoErrors.Ok())
+			return ReportPhotoResponse(isReported, ErrorCode.ReportPhotoErrors.Ok)
 		}
 
 		fun fail(errorCode: ErrorCode.ReportPhotoErrors): ReportPhotoResponse {

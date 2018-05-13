@@ -14,7 +14,7 @@ private constructor(
 
 	companion object {
 		fun success(uploadedPhotos: List<UploadedPhoto>): GetUploadedPhotosResponse {
-			return GetUploadedPhotosResponse(uploadedPhotos, ErrorCode.GetUploadedPhotosError.Ok())
+			return GetUploadedPhotosResponse(uploadedPhotos, ErrorCode.GetUploadedPhotosError.Ok)
 		}
 
 		fun fail(errorCode: ErrorCode.GetUploadedPhotosError): GetUploadedPhotosResponse {

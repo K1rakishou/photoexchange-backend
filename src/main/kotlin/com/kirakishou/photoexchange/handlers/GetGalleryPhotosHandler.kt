@@ -32,7 +32,7 @@ class GetGalleryPhotosHandler(
 				if (!request.containsAllPathVars(PHOTO_IDS_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest()))
+						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest))
 				}
 
 				val photoIdsString = request.pathVariable(PHOTO_IDS_VARIABLE)
@@ -43,7 +43,7 @@ class GetGalleryPhotosHandler(
 				if (galleryPhotoIds.isEmpty()) {
 					logger.debug("galleryPhotoIds is empty")
 					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
-						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.NoPhotosInRequest()))
+						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.NoPhotosInRequest))
 				}
 
 				val resultMap = photoInfoRepository.findGalleryPhotosByIds(galleryPhotoIds)
@@ -58,7 +58,7 @@ class GetGalleryPhotosHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.UnknownError()))
+					GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.UnknownError))
 			}
 		}
 
