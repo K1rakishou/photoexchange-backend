@@ -31,7 +31,7 @@ open class PhotoInfoExchangeDao(
 		return photoInfoExchange
 	}
 
-	suspend fun findAllByIdList(ids: List<Long>, sortByDesc: Boolean = true): List<PhotoInfoExchange> {
+	suspend fun findManyByIdList(ids: List<Long>, sortByDesc: Boolean = true): List<PhotoInfoExchange> {
 		val query = if (sortByDesc) {
 			Query().with(Sort(Sort.Direction.DESC, PhotoInfoExchange.Mongo.Field.CREATED_ON))
 				.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.ID).`in`(ids))

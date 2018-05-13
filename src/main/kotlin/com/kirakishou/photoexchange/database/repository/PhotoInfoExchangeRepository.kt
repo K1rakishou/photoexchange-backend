@@ -22,7 +22,7 @@ class PhotoInfoExchangeRepository(
 
 	suspend fun findAllByIdList(ids: List<Long>): List<PhotoInfoExchange> {
 		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoExchangeDao.findAllByIdList(ids)
+			return@asyncMongo photoInfoExchangeDao.findManyByIdList(ids)
 		}.await()
 	}
 

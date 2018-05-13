@@ -57,8 +57,8 @@ class GetUploadedPhotoIdsHandler(
 				val photosPage = photoInfoRepo.findPaged(userId, lastId, count)
 				val uploadedPhotoIds = photosPage.map { photoInfo -> photoInfo.photoId }
 
+				logger.debug("Found ${uploadedPhotoIds.size} photo ids")
 				return@asyncCommon formatResponse(HttpStatus.OK, GetUploadedPhotoIdsResponse.success(uploadedPhotoIds))
-
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,

@@ -55,7 +55,6 @@ class GetGalleryPhotoInfoHandler(
 
 				logger.debug("Found ${galleryPhotoInfoResponse.size} photo infos from gallery")
 				return@asyncCommon formatResponse(HttpStatus.OK, GalleryPhotoInfoResponse.success(galleryPhotoInfoResponse))
-
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,

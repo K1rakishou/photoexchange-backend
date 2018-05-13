@@ -171,6 +171,21 @@ open class PhotoInfoDao(
 		return result
 	}
 
+	suspend fun findManyPhotosByUserIdAndExchangeId(userId: String, exhangeIds: List<Long>): List<PhotoInfo> {
+		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).ne(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`in`(exhangeIds))
+
+		val result = try {
+			template.find(query, PhotoInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			emptyList<PhotoInfo>()
+		}
+
+		return result
+	}
+
 	suspend fun updateSetExchangeId(photoId: Long, exchangeId: Long): Boolean {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))

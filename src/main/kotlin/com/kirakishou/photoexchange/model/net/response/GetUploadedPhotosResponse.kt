@@ -28,6 +28,12 @@ private constructor(
 		val photoId: Long,
 
 		@SerializedName("photo_name")
-		val photoName: String
+		val photoName: String,
+
+		@SerializedName("receiver_lon")
+		val receiverLon: Double,
+
+		@SerializedName("receiver_lat")
+		val receiverLat: Double
 	)
 }

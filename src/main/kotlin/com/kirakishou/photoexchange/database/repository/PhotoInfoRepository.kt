@@ -67,9 +67,20 @@ class PhotoInfoRepository(
 		}.await()
 	}
 
-	suspend fun findManyByIds(userId: String, photoIds: List<Long>): List<PhotoInfo> {
+	suspend fun findManyUploadedPhotos(userId: String, photoIds: List<Long>): List<PhotoInfoWithLocation> {
 		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.findManyByIds(userId, photoIds)
+			val photoInfos = photoInfoDao.findManyByIds(userId, photoIds)
+			val exhangeIds = photoInfos.map { it.exchangeId }
+
+			val otherPhotos = photoInfoDao.findManyPhotosByUserIdAndExchangeId(userId, exhangeIds)
+			val otherPhotosMap = mutableMapOf<Long, PhotoInfo>()
+
+			for (otherPhoto in otherPhotos) {
+				otherPhotosMap[otherPhoto.exchangeId] = otherPhoto
+			}
+
+			return@asyncMongo photoInfos
+				.map { PhotoInfoWithLocation(it, otherPhotosMap[it.exchangeId]!!.lon, otherPhotosMap[it.exchangeId]!!.lat) }
 		}.await()
 	}
 
@@ -261,6 +272,12 @@ class PhotoInfoRepository(
 			}
 		}.await()
 	}
+
+	data class PhotoInfoWithLocation(
+		var photoInfo: PhotoInfo,
+		var lon: Double,
+		var lat: Double
+	)
 
 	data class GalleryPhotoInfoDto(
 		var galleryPhotoId: Long,

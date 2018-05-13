@@ -52,7 +52,6 @@ class GetGalleryPhotoIdsHandler(
 				logger.debug("Found ${galleryPhotoIds.size} photo ids from gallery")
 				return@asyncCommon formatResponse(HttpStatus.OK,
 					GalleryPhotoIdsResponse.success(galleryPhotoIds))
-
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,

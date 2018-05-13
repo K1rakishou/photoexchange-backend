@@ -27,7 +27,7 @@ class GetUploadedPhotosHandler(
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		val result = concurrentService.asyncCommon {
-			logger.debug("New GetUploadedPhotoIds request")
+			logger.debug("New GetUploadedPhotos request")
 
 			try {
 				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_IDS_PATH_VARIABLE)) {
@@ -49,13 +49,18 @@ class GetUploadedPhotosHandler(
 						GetUploadedPhotosResponse.fail(ErrorCode.GetUploadedPhotosError.NoPhotosInRequest()))
 				}
 
-				val uploadedPhotos = photoInfoRepo.findManyByIds(userId, uploadedPhotoIds)
+				val uploadedPhotos = photoInfoRepo.findManyUploadedPhotos(userId, uploadedPhotoIds)
 				val uploadedPhotosDataList = uploadedPhotos.map { uploadedPhoto ->
-					GetUploadedPhotosResponse.UploadedPhoto(uploadedPhoto.photoId, uploadedPhoto.photoName)
+					GetUploadedPhotosResponse.UploadedPhoto(
+						uploadedPhoto.photoInfo.photoId,
+						uploadedPhoto.photoInfo.photoName,
+						uploadedPhoto.lon,
+						uploadedPhoto.lat)
 				}
 
-				return@asyncCommon formatResponse(HttpStatus.OK, GetUploadedPhotosResponse.success(uploadedPhotosDataList))
-
+				logger.debug("Found ${uploadedPhotos.size} photos")
+				return@asyncCommon formatResponse(HttpStatus.OK,
+					GetUploadedPhotosResponse.success(uploadedPhotosDataList))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
