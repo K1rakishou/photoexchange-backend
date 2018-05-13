@@ -80,7 +80,7 @@ class PhotoInfoRepository(
 			}
 
 			return@asyncMongo photoInfos
-				.map { PhotoInfoWithLocation(it, otherPhotosMap[it.exchangeId]!!.lon, otherPhotosMap[it.exchangeId]!!.lat) }
+				.map { PhotoInfoWithLocation(it, otherPhotosMap[it.exchangeId]?.lon ?: 0.0, otherPhotosMap[it.exchangeId]?.lat ?: 0.0) }
 		}.await()
 	}
 

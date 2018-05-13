@@ -13,81 +13,50 @@ class ErrorCode {
 	}
 
 	enum class UploadPhotoErrors(val value: Int) {
-		UnknownError(100),
-		Ok(101),
-		BadRequest(102),
-		DatabaseError(103),
-
-		LocalBadServerResponse(125),
-		LocalNoPhotoFileOnDisk(126),
-		LocalTimeout(127),
-		LocalInterrupted(128),
-		LocalDatabaseError(129),
-		LocalCouldNotGetUserId(130);
+		UnknownError(50),
+		Ok(51),
+		BadRequest(52),
+		DatabaseError(53);
 	}
 
 	enum class ReceivePhotosErrors(val value: Int) {
-		UnknownError(200),
-		Ok(201),
-		BadRequest(202),
-		NoPhotosInRequest(203),
-		NoPhotosToSendBack(204),
-
-		LocalDatabaseError(225),
-		LocalTooManyPhotosRequested(226),
-		LocalNotEnoughPhotosUploaded(227),
-		LocalBadServerResponse(228),
-		LocalTimeout(229);
+		UnknownError(100),
+		Ok(101),
+		BadRequest(102),
+		NoPhotosInRequest(103),
+		NoPhotosToSendBack(104);
 	}
 
 	enum class GalleryPhotosErrors(val value: Int) {
-		UnknownError(300),
-		Ok(301),
-		BadRequest(302),
-		NoPhotosInRequest(303),
-
-		LocalBadServerResponse(325),
-		LocalTimeout(326),
-		LocalDatabaseError(327);
+		UnknownError(150),
+		Ok(151),
+		BadRequest(152),
+		NoPhotosInRequest(153);
 	}
 
 	enum class FavouritePhotoErrors(val value: Int) {
-		UnknownError(400),
-		Ok(401),
-		BadRequest(402),
-
-		LocalBadServerResponse(425),
-		LocalTimeout(426);
+		UnknownError(200),
+		Ok(201),
+		BadRequest(202);
 	}
 
 	enum class ReportPhotoErrors(val value: Int) {
-		UnknownError(0),
-		Ok(1),
-		BadRequest(2),
-
-		LocalBadServerResponse(25),
-		LocalTimeout(26),
+		UnknownError(250),
+		Ok(251),
+		BadRequest(252);
 	}
 
 	enum class GetUserIdError(val value: Int) {
-		UnknownError(500),
-		Ok(501),
-		DatabaseError(502),
-
-		LocalBadServerResponse(525),
-		LocalTimeout(526),
-		LocalDatabaseError(527);
+		UnknownError(300),
+		Ok(301),
+		DatabaseError(302);
 	}
 
 	enum class GetUploadedPhotosError(val value: Int) {
-		UnknownError(600),
-		Ok(601),
-		DatabaseError(602),
-		BadRequest(603),
-		NoPhotosInRequest(604),
-
-		LocalBadServerResponse(625),
-		LocalTimeout(626),
-		LocalUserIdIsEmpty(627);
+		UnknownError(350),
+		Ok(351),
+		DatabaseError(352),
+		BadRequest(353),
+		NoPhotosInRequest(354);
 	}
 }
