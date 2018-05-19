@@ -3,66 +3,57 @@ package com.kirakishou.photoexchange.database.dao
 import com.kirakishou.photoexchange.model.repo.GalleryPhoto
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
-import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
+import reactor.core.publisher.Mono
 
-class GalleryPhotoDao(
-	private val template: MongoTemplate
+open class GalleryPhotoDao(
+	private val template: ReactiveMongoTemplate
 ) : BaseDao {
 	private val logger = LoggerFactory.getLogger(GalleryPhotoDao::class.java)
 
 	override fun create() {
-		if (!template.collectionExists(GalleryPhoto::class.java)) {
-			template.createCollection(GalleryPhoto::class.java)
+		if (!template.collectionExists(GalleryPhoto::class.java).block()) {
+			template.createCollection(GalleryPhoto::class.java).block()
 		}
 	}
 
 	override fun clear() {
-		if (template.collectionExists(GalleryPhoto::class.java)) {
-			template.dropCollection(GalleryPhoto::class.java)
+		if (template.collectionExists(GalleryPhoto::class.java).block()) {
+			template.dropCollection(GalleryPhoto::class.java).block()
 		}
 	}
 
-	suspend fun save(galleryPhoto: GalleryPhoto): Boolean {
-		try {
-			template.save(galleryPhoto)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			return false
-		}
-
-		return true
+	fun save(galleryPhoto: GalleryPhoto): Mono<Boolean> {
+		return template.save(galleryPhoto)
+			.map { true }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun findPaged(lastId: Long, count: Int): List<GalleryPhoto> {
+	fun findPaged(lastId: Long, count: Int): Mono<List<GalleryPhoto>> {
 		val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
 			.addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.ID).lt(lastId))
 			.limit(count)
 
-		val result = try {
-			template.find(query, GalleryPhoto::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			emptyList<GalleryPhoto>()
-		}
-
-		return result
+		return template.find(query, GalleryPhoto::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
 	}
 
-	fun findManyByIdList(photoIds: List<Long>): List<GalleryPhoto> {
+	fun findManyByIdList(photoIds: List<Long>): Mono<List<GalleryPhoto>> {
 		val query = Query()
 			.addCriteria((Criteria.where(GalleryPhoto.Mongo.Field.ID).`in`(photoIds)))
 			.limit(photoIds.size)
 
-		val result = try {
-			template.find(query, GalleryPhoto::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			emptyList<GalleryPhoto>()
-		}
-
-		return result
+		return template.find(query, GalleryPhoto::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
 	}
 
 	companion object {

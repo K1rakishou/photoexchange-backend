@@ -2,136 +2,111 @@ package com.kirakishou.photoexchange.database.dao
 
 import com.kirakishou.photoexchange.model.repo.FavouritedPhoto
 import org.slf4j.LoggerFactory
-import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
+import reactor.core.publisher.Mono
 
-class FavouritedPhotoDao(
-	private val template: MongoTemplate
+open class FavouritedPhotoDao(
+	private val template: ReactiveMongoTemplate
 ) : BaseDao {
 	private val logger = LoggerFactory.getLogger(FavouritedPhotoDao::class.java)
 
 	override fun create() {
-		if (!template.collectionExists(FavouritedPhoto::class.java)) {
-			template.createCollection(FavouritedPhoto::class.java)
+		if (!template.collectionExists(FavouritedPhoto::class.java).block()) {
+			template.createCollection(FavouritedPhoto::class.java).block()
 		}
 	}
 
 	override fun clear() {
-		if (template.collectionExists(FavouritedPhoto::class.java)) {
-			template.dropCollection(FavouritedPhoto::class.java)
+		if (template.collectionExists(FavouritedPhoto::class.java).block()) {
+			template.dropCollection(FavouritedPhoto::class.java).block()
 		}
 	}
 
-	suspend fun favouritePhoto(favouritedPhoto: FavouritedPhoto): Boolean {
-		try {
-			template.save(favouritedPhoto)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			return false
-		}
-
-		return true
+	fun favouritePhoto(favouritedPhoto: FavouritedPhoto): Mono<Boolean> {
+		return template.save(favouritedPhoto)
+			.map { true }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun unfavouritePhoto(userId: String, photoId: Long): Boolean {
+	fun unfavouritePhoto(userId: String, photoId: Long): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
 
-		val result = try {
-			val deletionResult = template.remove(query, FavouritedPhoto::class.java)
-			deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged()
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			false
-		}
-
-		return result
+		return template.remove(query, FavouritedPhoto::class.java)
+			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun findMany(photoIdList: List<Long>): List<FavouritedPhoto> {
+	fun findMany(photoIdList: List<Long>): Mono<List<FavouritedPhoto>> {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`in`(photoIdList))
 			.limit(photoIdList.size)
 
-		val result = try {
-			template.find(query, FavouritedPhoto::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			emptyList<FavouritedPhoto>()
-		}
-
-		return result
+		return template.find(query, FavouritedPhoto::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
 	}
 
-	suspend fun findMany(userId: String, photoIdList: List<Long>): List<FavouritedPhoto> {
+	fun findMany(userId: String, photoIdList: List<Long>): Mono<List<FavouritedPhoto>> {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`in`(photoIdList))
 			.limit(photoIdList.size)
 
-		val result = try {
-			template.find(query, FavouritedPhoto::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			emptyList<FavouritedPhoto>()
-		}
-
-		return result
+		return template.find(query, FavouritedPhoto::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
 	}
 
-	suspend fun isPhotoFavourited(userId: String, photoId: Long): Boolean {
+	fun isPhotoFavourited(userId: String, photoId: Long): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
 
 		return template.exists(query, FavouritedPhoto::class.java)
+			.defaultIfEmpty(false)
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun deleteByPhotoId(photoId: Long) {
+	fun deleteByPhotoId(photoId: Long): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
 
-		template.remove(query, FavouritedPhoto::class.java)
+		return template.remove(query, FavouritedPhoto::class.java)
+			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun deleteAll(photoIds: List<Long>): Boolean {
+	fun deleteAll(photoIds: List<Long>): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.ID).`in`(photoIds))
 			.limit(photoIds.size)
 
-		return try {
-			val deletionResult = template.remove(query, FavouritedPhoto::class.java)
-			deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == photoIds.size
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			false
-		}
+		return template.remove(query, FavouritedPhoto::class.java)
+			.map { deletionResult -> deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == photoIds.size }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun countByPhotoId(photoId: Long): Long {
+	fun countByPhotoId(photoId: Long): Mono<Long> {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
 
-		return try {
-			template.count(query, FavouritedPhoto::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			-1L
-		}
-	}
-
-	suspend fun countByUserId(userId: Long): Long {
-		val query = Query()
-			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
-
-		return try {
-			template.count(query, FavouritedPhoto::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			-1L
-		}
+		return template.count(query, FavouritedPhoto::class.java)
+			.defaultIfEmpty(0)
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(0)
 	}
 
 	companion object {

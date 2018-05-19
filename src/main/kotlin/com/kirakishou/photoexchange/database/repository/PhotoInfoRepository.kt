@@ -14,7 +14,7 @@ class PhotoInfoRepository(
 	private val galleryPhotoDao: GalleryPhotoDao,
 	private val favouritedPhotoDao: FavouritedPhotoDao,
 	private val reportedPhotoDao: ReportedPhotoDao,
-	private val userInfoRepository: UserInfoRepository,
+	private val userInfoDao: UserInfoDao,
 	private val generator: GeneratorService,
 	private val concurrentService: AbstractConcurrencyService
 ) {
@@ -93,7 +93,7 @@ class PhotoInfoRepository(
 	suspend fun findOlderThan(time: Long, maxCount: Int): List<PhotoInfo> {
 		return concurrentService.asyncMongo {
 			val photos = photoInfoDao.findOlderThan(time, maxCount)
-			val userInfos = userInfoRepository.findManyNotRegistered(photos.map { it.uploaderUserId })
+			val userInfos = userInfoDao.findManyNotRegistered(photos.map { it.uploaderUserId })
 
 			val userIdsSet = userInfos.map { it.userId }.toSet()
 			val resultList = mutableListOf<PhotoInfo>()

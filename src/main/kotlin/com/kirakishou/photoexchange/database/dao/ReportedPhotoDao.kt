@@ -2,121 +2,89 @@ package com.kirakishou.photoexchange.database.dao
 
 import com.kirakishou.photoexchange.model.repo.ReportedPhoto
 import org.slf4j.LoggerFactory
-import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
+import reactor.core.publisher.Mono
 
-class ReportedPhotoDao(
-	private val template: MongoTemplate
+open class ReportedPhotoDao(
+	private val template: ReactiveMongoTemplate
 ) : BaseDao {
 	private val logger = LoggerFactory.getLogger(ReportedPhotoDao::class.java)
 
 	override fun create() {
-		if (!template.collectionExists(ReportedPhoto::class.java)) {
-			template.createCollection(ReportedPhoto::class.java)
+		if (!template.collectionExists(ReportedPhoto::class.java).block()) {
+			template.createCollection(ReportedPhoto::class.java).block()
 		}
 	}
 
 	override fun clear() {
-		if (template.collectionExists(ReportedPhoto::class.java)) {
-			template.dropCollection(ReportedPhoto::class.java)
+		if (template.collectionExists(ReportedPhoto::class.java).block()) {
+			template.dropCollection(ReportedPhoto::class.java).block()
 		}
 	}
 
-	suspend fun reportPhoto(reportedPhoto: ReportedPhoto): Boolean {
-		try {
-			template.save(reportedPhoto)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			return false
-		}
-
-		return true
+	fun reportPhoto(reportedPhoto: ReportedPhoto): Mono<Boolean> {
+		return template.save(reportedPhoto)
+			.map { true }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun unreportPhoto(userId: String, photoId: Long): Boolean {
+	fun unreportPhoto(userId: String, photoId: Long): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
 
-		val result = try {
-			val deletionResult = template.remove(query, ReportedPhoto::class.java)
-			deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged()
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			false
-		}
-
-		return result
+		return template.remove(query, ReportedPhoto::class.java)
+			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun findMany(userId: String, photoIdList: List<Long>): List<ReportedPhoto> {
+	fun findMany(userId: String, photoIdList: List<Long>): Mono<List<ReportedPhoto>> {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`in`(photoIdList))
 			.limit(photoIdList.size)
 
-		val result = try {
-			template.find(query, ReportedPhoto::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			emptyList<ReportedPhoto>()
-		}
-
-		return result
+		return template.find(query, ReportedPhoto::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
 	}
 
-	suspend fun isPhotoReported(userId: String, photoId: Long): Boolean {
+	fun isPhotoReported(userId: String, photoId: Long): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
 
 		return template.exists(query, ReportedPhoto::class.java)
+			.defaultIfEmpty(false)
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun deleteByPhotoId(photoId: Long) {
+	fun deleteByPhotoId(photoId: Long): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
 
-		template.remove(query, ReportedPhoto::class.java)
+		return template.remove(query, ReportedPhoto::class.java)
+			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun deleteAll(photoIds: List<Long>): Boolean {
+	fun deleteAll(photoIds: List<Long>): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.ID).`in`(photoIds))
 			.limit(photoIds.size)
 
-		return try {
-			val deletionResult = template.remove(query, ReportedPhoto::class.java)
-			deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == photoIds.size
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			false
-		}
-	}
-
-	suspend fun countByPhotoId(photoId: Long): Long {
-		val query = Query()
-			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
-
-		return try {
-			template.count(query, ReportedPhoto::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			-1L
-		}
-	}
-
-	suspend fun countByUserId(userId: Long): Long {
-		val query = Query()
-			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
-
-		return try {
-			template.count(query, ReportedPhoto::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			-1L
-		}
+		return template.remove(query, ReportedPhoto::class.java)
+			.map { deletionResult -> deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == photoIds.size }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
 	companion object {

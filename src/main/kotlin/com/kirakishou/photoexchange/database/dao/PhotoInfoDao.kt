@@ -3,125 +3,80 @@ package com.kirakishou.photoexchange.database.dao
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
-import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
+import reactor.core.publisher.Mono
 
 open class PhotoInfoDao(
-	private val template: MongoTemplate
+	private val template: ReactiveMongoTemplate
 ) : BaseDao {
 	private val logger = LoggerFactory.getLogger(PhotoInfoDao::class.java)
 
 	override fun create() {
-		if (!template.collectionExists(PhotoInfo::class.java)) {
-			template.createCollection(PhotoInfo::class.java)
+		if (!template.collectionExists(PhotoInfo::class.java).block()) {
+			template.createCollection(PhotoInfo::class.java).block()
 		}
 	}
 
 	override fun clear() {
-		if (template.collectionExists(PhotoInfo::class.java)) {
-			template.dropCollection(PhotoInfo::class.java)
+		if (template.collectionExists(PhotoInfo::class.java).block()) {
+			template.dropCollection(PhotoInfo::class.java).block()
 		}
 	}
 
-	suspend fun save(photoInfo: PhotoInfo): PhotoInfo {
-		try {
-			template.save(photoInfo)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			return PhotoInfo.empty()
-		}
-
-		return photoInfo
+	fun save(photoInfo: PhotoInfo): Mono<PhotoInfo> {
+		return template.save(photoInfo)
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(PhotoInfo.empty())
 	}
 
-	suspend fun findAllPhotosByUserId(userId: String): List<PhotoInfo> {
-		val getUploadedPhotosQuery = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
-
-		val uploadedPhotos = try {
-			template.find(getUploadedPhotosQuery, PhotoInfo::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			emptyList<PhotoInfo>()
-		}
-
-		return uploadedPhotos
-	}
-
-	suspend fun findById(photoId: Long): PhotoInfo {
+	fun findById(photoId: Long): Mono<PhotoInfo> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
 
-		val photoInfo = try {
-			template.findOne(query, PhotoInfo::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			PhotoInfo.empty()
-		}
-
-		return photoInfo
+		return template.findOne(query, PhotoInfo::class.java)
+			.defaultIfEmpty(PhotoInfo.empty())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(PhotoInfo.empty())
 	}
 
-	suspend fun find(userId: String, photoName: String): PhotoInfo {
+	fun find(userId: String, photoName: String): Mono<PhotoInfo> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
-		val photoInfo = try {
-			template.findOne(query, PhotoInfo::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			PhotoInfo.empty()
-		}
-
-		if (photoInfo == null) {
-			return PhotoInfo.empty()
-		}
-
-		return photoInfo
+		return template.findOne(query, PhotoInfo::class.java)
+			.defaultIfEmpty(PhotoInfo.empty())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(PhotoInfo.empty())
 	}
 
-	suspend fun findByExchangeIdAndUserId(userId: String, exchangeId: Long): PhotoInfo {
+	fun findByExchangeIdAndUserId(userId: String, exchangeId: Long): Mono<PhotoInfo> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`is`(exchangeId))
 
-		val photoInfo = try {
-			template.findOne(query, PhotoInfo::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			PhotoInfo.empty()
-		}
-
-		if (photoInfo == null) {
-			return PhotoInfo.empty()
-		}
-
-		return photoInfo
+		return template.findOne(query, PhotoInfo::class.java)
+			.defaultIfEmpty(PhotoInfo.empty())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(PhotoInfo.empty())
 	}
 
-	suspend fun findMany(userId: String, photoNames: List<String>): List<PhotoInfo> {
+	fun findMany(userId: String, photoNames: List<String>): Mono<List<PhotoInfo>> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`in`(photoNames))
 
-		val photoInfo = try {
-			template.find(query, PhotoInfo::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			emptyList<PhotoInfo>()
-		}
-
-		if (photoInfo == null) {
-			return emptyList()
-		}
-
-		return photoInfo
+		return template.find(query, PhotoInfo::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
 	}
 
-	suspend fun findMany(photoIdList: List<Long>, sortOrder: SortOrder = SortOrder.Descending): List<PhotoInfo> {
+	fun findMany(photoIdList: List<Long>, sortOrder: SortOrder = SortOrder.Descending): Mono<List<PhotoInfo>> {
 		val query = when (sortOrder) {
 			PhotoInfoDao.SortOrder.Descending -> {
 				Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
@@ -136,179 +91,128 @@ open class PhotoInfoDao(
 		query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
 			.limit(photoIdList.size)
 
-		val photoInfoList = try {
-			template.find(query, PhotoInfo::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			emptyList<PhotoInfo>()
-		}
-
-		if (photoInfoList == null) {
-			return emptyList()
-		}
-
-		return photoInfoList
+		return template.find(query, PhotoInfo::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
 	}
 
-	suspend fun findManyByIds(userId: String, photoIdList: List<Long>): List<PhotoInfo> {
+	fun findManyByIds(userId: String, photoIdList: List<Long>): Mono<List<PhotoInfo>> {
 		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.limit(photoIdList.size)
 
-		val photoInfoList = try {
-			template.find(query, PhotoInfo::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			emptyList<PhotoInfo>()
-		}
-
-		if (photoInfoList == null) {
-			return emptyList()
-		}
-
-		return photoInfoList
+		return template.find(query, PhotoInfo::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
 	}
 
-	suspend fun findOlderThan(time: Long, maxCount: Int): List<PhotoInfo> {
+	fun findOlderThan(time: Long, maxCount: Int): Mono<List<PhotoInfo>> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(time))
 			.limit(maxCount)
 
-		val result = try {
-			template.find(query, PhotoInfo::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			emptyList<PhotoInfo>()
-		}
-
-		return result
+		return template.find(query, PhotoInfo::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
 	}
 
-	suspend fun findPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
+	fun findPaged(userId: String, lastId: Long, count: Int): Mono<List<PhotoInfo>> {
 		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).lt(lastId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.limit(count)
 
-		val result = try {
-			template.find(query, PhotoInfo::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			emptyList<PhotoInfo>()
-		}
-
-		return result
+		return template.find(query, PhotoInfo::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
 	}
 
-	suspend fun findManyPhotosByUserIdAndExchangeId(userId: String, exhangeIds: List<Long>): List<PhotoInfo> {
+	fun findManyPhotosByUserIdAndExchangeId(userId: String, exhangeIds: List<Long>): Mono<List<PhotoInfo>> {
 		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).ne(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`in`(exhangeIds))
 
-		val result = try {
-			template.find(query, PhotoInfo::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			emptyList<PhotoInfo>()
-		}
-
-		return result
+		return template.find(query, PhotoInfo::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
 	}
 
-	suspend fun updateSetExchangeId(photoId: Long, exchangeId: Long): Boolean {
+	fun updateSetExchangeId(photoId: Long, exchangeId: Long): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
 
 		val update = Update()
 			.set(PhotoInfo.Mongo.Field.EXCHANGE_ID, exchangeId)
 
-		val result = try {
-			val updateResult = template.updateFirst(query, update, PhotoInfo::class.java)
-			updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			false
-		}
-
-		return result
+		return template.updateFirst(query, update, PhotoInfo::class.java)
+			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	fun updateSetReceiverId(photoId: Long, receiverUserId: String): Boolean {
+	fun updateSetReceiverId(photoId: Long, receiverUserId: String): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
 
 		val update = Update()
 			.set(PhotoInfo.Mongo.Field.RECEIVER_USER_ID, receiverUserId)
 
-		val result = try {
-			val updateResult = template.updateFirst(query, update, PhotoInfo::class.java)
-			updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			false
-		}
-
-		return result
+		return template.updateFirst(query, update, PhotoInfo::class.java)
+			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun deleteById(photoId: Long) {
+	fun deleteById(photoId: Long): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
 
-		try {
-			template.remove(query, PhotoInfo::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-		}
+		return template.remove(query, PhotoInfo::class.java)
+			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun deleteUserById(userId: String, photoName: String) {
-		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
-			.limit(1)
-
-		try {
-			template.remove(query, PhotoInfo::class.java)
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-		}
-	}
-
-	suspend fun deleteAll(ids: List<Long>): Boolean {
+	fun deleteAll(ids: List<Long>): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(ids))
 			.limit(ids.size)
 
-		return try {
-			val deletionResult = template.remove(query, PhotoInfo::class.java)
-			deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == ids.size
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			false
-		}
+		return template.remove(query, PhotoInfo::class.java)
+			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun photoNameExists(generatedName: String): Boolean {
+	fun photoNameExists(generatedName: String): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(generatedName))
 
 		return template.exists(query, PhotoInfo::class.java)
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
 	}
 
-	suspend fun getPhotoIdByName(photoName: String): Long {
+	fun getPhotoIdByName(photoName: String): Mono<Long> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
-		val result = try {
-			template.findOne(query, PhotoInfo::class.java)?.photoId ?: -1L
-		} catch (error: Throwable) {
-			logger.error("DB error", error)
-			return -1L
-		}
-
-		return result
+		return template.findOne(query, PhotoInfo::class.java)
+			.defaultIfEmpty(PhotoInfo.empty())
+			.map { it.photoId }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(-1L)
 	}
 
 	enum class SortOrder {

@@ -1,7 +1,6 @@
 package com.kirakishou.photoexchange.handler
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
@@ -17,13 +16,13 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.springframework.http.MediaType
-import org.springframework.test.context.junit4.SpringRunner
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.server.router
 import java.time.Duration
 
-@RunWith(SpringRunner::class)
+@RunWith(SpringJUnit4ClassRunner::class)
 class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 
@@ -53,8 +52,6 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 		val generator = GeneratorService()
 
-		val userInfoRepository = UserInfoRepository(mongoSequenceDao, userInfoDao, generator, concurrentService)
-
 		photoInfoRepository = PhotoInfoRepository(
 			mongoSequenceDao,
 			photoInfoDao,
@@ -62,7 +59,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			galleryPhotoDao,
 			favouritedPhotoDao,
 			reportedPhotoDao,
-			userInfoRepository,
+			userInfoDao,
 			generator,
 			concurrentService
 		)
