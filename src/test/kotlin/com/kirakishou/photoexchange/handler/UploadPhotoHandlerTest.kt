@@ -1,7 +1,5 @@
 package com.kirakishou.photoexchange.handler
 
-import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
@@ -11,8 +9,6 @@ import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
-import com.kirakishou.photoexchange.service.concurrency.TestConcurrencyService
-import com.mongodb.MongoClient
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.experimental.runBlocking
 import org.junit.After
@@ -20,16 +16,9 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.springframework.core.io.ClassPathResource
-import org.springframework.data.mongodb.core.MongoTemplate
-import org.springframework.data.mongodb.core.SimpleMongoDbFactory
-import org.springframework.http.HttpEntity
-import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.context.junit4.SpringRunner
 import org.springframework.test.web.reactive.server.WebTestClient
-import org.springframework.util.LinkedMultiValueMap
-import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.server.router
 import java.time.Duration
@@ -37,18 +26,6 @@ import java.time.Duration
 @RunWith(SpringRunner::class)
 class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
-	lateinit var template: MongoTemplate
-
-	lateinit var concurrentService: AbstractConcurrencyService
-	lateinit var jsonConverterService: JsonConverterService
-
-	lateinit var mongoSequenceDao: MongoSequenceDao
-	lateinit var photoInfoDao: PhotoInfoDao
-	lateinit var photoInfoExchangeDao: PhotoInfoExchangeDao
-	lateinit var galleryPhotoDao: GalleryPhotoDao
-	lateinit var favouritedPhotoDao: FavouritedPhotoDao
-	lateinit var reportedPhotoDao: ReportedPhotoDao
-	lateinit var userInfoDao: UserInfoDao
 
 	lateinit var photoInfoRepository: PhotoInfoRepository
 
@@ -72,21 +49,9 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 	@Before
 	fun setUp() {
-		template = MongoTemplate(SimpleMongoDbFactory(MongoClient(ServerSettings.DatabaseInfo.HOST, ServerSettings.DatabaseInfo.PORT),
-			"photoexchange_test"))
+		super.init()
 
 		val generator = GeneratorService()
-
-		concurrentService = TestConcurrencyService()
-		jsonConverterService = JsonConverterService(gson)
-
-		mongoSequenceDao = MongoSequenceDao(template).also { it.create() }
-		photoInfoDao = PhotoInfoDao(template).also { it.create() }
-		photoInfoExchangeDao = PhotoInfoExchangeDao(template).also { it.create() }
-		galleryPhotoDao = GalleryPhotoDao(template).also { it.create() }
-		favouritedPhotoDao = FavouritedPhotoDao(template).also { it.create() }
-		reportedPhotoDao = ReportedPhotoDao(template).also { it.create() }
-		userInfoDao = UserInfoDao(template).also { it.create() }
 
 		val userInfoRepository = UserInfoRepository(mongoSequenceDao, userInfoDao, generator, concurrentService)
 
@@ -105,44 +70,22 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 	@After
 	fun tearDown() {
-		mongoSequenceDao.clear()
-		photoInfoDao.clear()
-		photoInfoExchangeDao.clear()
-		galleryPhotoDao.clear()
-		favouritedPhotoDao.clear()
-		reportedPhotoDao.clear()
-		userInfoDao.clear()
-	}
-
-	fun createTestMultipartFile(fileResourceName: String, packet: SendPhotoPacket): MultiValueMap<String, Any> {
-		val fileResource = ClassPathResource(fileResourceName)
-
-		val photoPart = HttpEntity(fileResource, HttpHeaders().also { it.contentType = MediaType.IMAGE_JPEG })
-		val packetPart = HttpEntity(jsonConverterService.toJson(packet), HttpHeaders().also { it.contentType = MediaType.APPLICATION_JSON })
-
-		val parts = LinkedMultiValueMap<String, Any>()
-		parts.add("photo", photoPart)
-		parts.add("packet", packetPart)
-
-		return parts
+		super.clear()
 	}
 
 	@Test
 	fun `test should exchange two photos`() {
 		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
 
-		val packet1 = SendPhotoPacket(33.4, 55.2, "111", true)
-		val multipartData1 = createTestMultipartFile("test_photos/photo_1.jpg", packet1)
-
-		val packet2 = SendPhotoPacket(11.4, 24.45, "222", true)
-		val multipartData2 = createTestMultipartFile("test_photos/photo_2.jpg", packet2)
-
 		kotlin.run {
+			val packet = SendPhotoPacket(33.4, 55.2, "111", true)
+			val multipartData = createTestMultipartFile("test_photos/photo_1.jpg", packet)
+
 			val content = webClient
 				.post()
 				.uri("v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
-				.body(BodyInserters.fromMultipartData(multipartData1))
+				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
 				.expectStatus().is2xxSuccessful
 				.expectBody()
@@ -155,26 +98,31 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			}
 
 			assertEquals(1, photoInfo.exchangeId)
-			assertEquals(packet1.userId, photoInfo.uploaderUserId)
+			assertEquals(packet.userId, photoInfo.uploaderUserId)
 			assertEquals("", photoInfo.receiverUserId)
-			assertEquals(packet1.isPublic, photoInfo.isPublic)
-			assertEquals(packet1.lon, photoInfo.lon, EPSILON)
-			assertEquals(packet1.lat, photoInfo.lat, EPSILON)
+			assertEquals(packet.isPublic, photoInfo.isPublic)
+			assertEquals(packet.lon, photoInfo.lon, EPSILON)
+			assertEquals(packet.lat, photoInfo.lat, EPSILON)
 
 			val photoInfoExchange = runBlocking {
 				photoInfoExchangeDao.findById(1)
 			}
 
+			assertEquals("111", photoInfoExchange.uploaderUserId)
+			assertEquals("", photoInfoExchange.receiverUserId)
 			assertEquals(1, photoInfoExchange.uploaderPhotoId)
-			assertEquals(-1L, photoInfoExchange.receiverPhotoId)
+			assertEquals(-1, photoInfoExchange.receiverPhotoId)
 		}
 
 		kotlin.run {
+			val packet = SendPhotoPacket(11.4, 24.45, "222", true)
+			val multipartData = createTestMultipartFile("test_photos/photo_2.jpg", packet)
+
 			val content = webClient
 				.post()
 				.uri("v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
-				.body(BodyInserters.fromMultipartData(multipartData2))
+				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
 				.expectStatus().is2xxSuccessful
 				.expectBody()
@@ -191,18 +139,327 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			}
 
 			assertEquals(1, photoInfo1.exchangeId)
-			assertEquals(packet1.userId, photoInfo1.uploaderUserId)
+			assertEquals("111", photoInfo1.uploaderUserId)
 			assertEquals("222", photoInfo1.receiverUserId)
-			assertEquals(packet1.isPublic, photoInfo1.isPublic)
-			assertEquals(packet1.lon, photoInfo1.lon, EPSILON)
-			assertEquals(packet1.lat, photoInfo1.lat, EPSILON)
+			assertEquals(true, photoInfo1.isPublic)
+			assertEquals(33.4, photoInfo1.lon, EPSILON)
+			assertEquals(55.2, photoInfo1.lat, EPSILON)
 
 			assertEquals(1, photoInfo1.exchangeId)
-			assertEquals(packet2.userId, photoInfo2.uploaderUserId)
+			assertEquals("222", photoInfo2.uploaderUserId)
 			assertEquals("111", photoInfo2.receiverUserId)
-			assertEquals(packet2.isPublic, photoInfo2.isPublic)
-			assertEquals(packet2.lon, photoInfo2.lon, EPSILON)
-			assertEquals(packet2.lat, photoInfo2.lat, EPSILON)
+			assertEquals(true, photoInfo2.isPublic)
+			assertEquals(11.4, photoInfo2.lon, EPSILON)
+			assertEquals(24.45, photoInfo2.lat, EPSILON)
+
+			val photoInfoExchange = runBlocking {
+				photoInfoExchangeDao.findById(1)
+			}
+
+			assertEquals(1, photoInfoExchange.uploaderPhotoId)
+			assertEquals(2, photoInfoExchange.receiverPhotoId)
+			assertEquals("111", photoInfoExchange.uploaderUserId)
+			assertEquals("222", photoInfoExchange.receiverUserId)
+		}
+	}
+
+	@Test
+	fun `test should not exchange two photos with the same user id`() {
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
+
+		kotlin.run {
+			val packet = SendPhotoPacket(33.4, 55.2, "111", true)
+			val multipartData = createTestMultipartFile("test_photos/photo_1.jpg", packet)
+
+			val content = webClient
+				.post()
+				.uri("v1/api/upload")
+				.contentType(MediaType.MULTIPART_FORM_DATA)
+				.body(BodyInserters.fromMultipartData(multipartData))
+				.exchange()
+				.expectStatus().is2xxSuccessful
+				.expectBody()
+
+			val response = fromBodyContent<UploadPhotoResponse>(content)
+			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
+
+			val photoInfo = runBlocking {
+				photoInfoDao.findById(1)
+			}
+
+			assertEquals(1, photoInfo.exchangeId)
+			assertEquals(packet.userId, photoInfo.uploaderUserId)
+			assertEquals("", photoInfo.receiverUserId)
+			assertEquals(packet.isPublic, photoInfo.isPublic)
+			assertEquals(packet.lon, photoInfo.lon, EPSILON)
+			assertEquals(packet.lat, photoInfo.lat, EPSILON)
+
+			val photoInfoExchange = runBlocking {
+				photoInfoExchangeDao.findById(1)
+			}
+
+			assertEquals("111", photoInfoExchange.uploaderUserId)
+			assertEquals("", photoInfoExchange.receiverUserId)
+			assertEquals(1, photoInfoExchange.uploaderPhotoId)
+			assertEquals(-1, photoInfoExchange.receiverPhotoId)
+		}
+
+		kotlin.run {
+			val packet = SendPhotoPacket(11.4, 24.45, "111", true)
+			val multipartData = createTestMultipartFile("test_photos/photo_2.jpg", packet)
+
+			val content = webClient
+				.post()
+				.uri("v1/api/upload")
+				.contentType(MediaType.MULTIPART_FORM_DATA)
+				.body(BodyInserters.fromMultipartData(multipartData))
+				.exchange()
+				.expectStatus().is2xxSuccessful
+				.expectBody()
+
+			val response = fromBodyContent<UploadPhotoResponse>(content)
+			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
+
+			val photoInfo1 = runBlocking {
+				photoInfoDao.findById(1)
+			}
+
+			val photoInfo2 = runBlocking {
+				photoInfoDao.findById(2)
+			}
+
+			assertEquals(1, photoInfo1.exchangeId)
+			assertEquals("111", photoInfo1.uploaderUserId)
+			assertEquals("", photoInfo1.receiverUserId)
+			assertEquals(true, photoInfo1.isPublic)
+			assertEquals(33.4, photoInfo1.lon, EPSILON)
+			assertEquals(55.2, photoInfo1.lat, EPSILON)
+
+			assertEquals(2, photoInfo2.exchangeId)
+			assertEquals("111", photoInfo2.uploaderUserId)
+			assertEquals("", photoInfo2.receiverUserId)
+			assertEquals(true, photoInfo2.isPublic)
+			assertEquals(11.4, photoInfo2.lon, EPSILON)
+			assertEquals(24.45, photoInfo2.lat, EPSILON)
+
+			val photoInfoExchange1 = runBlocking {
+				photoInfoExchangeDao.findById(1)
+			}
+
+			val photoInfoExchange2 = runBlocking {
+				photoInfoExchangeDao.findById(2)
+			}
+
+			assertEquals("111", photoInfoExchange1.uploaderUserId)
+			assertEquals("", photoInfoExchange1.receiverUserId)
+			assertEquals(1, photoInfoExchange1.uploaderPhotoId)
+			assertEquals(-1, photoInfoExchange1.receiverPhotoId)
+
+			assertEquals("111", photoInfoExchange2.uploaderUserId)
+			assertEquals("", photoInfoExchange2.receiverUserId)
+			assertEquals(2, photoInfoExchange2.uploaderPhotoId)
+			assertEquals(-1, photoInfoExchange2.receiverPhotoId)
+		}
+	}
+
+	@Test
+	fun `test should exchange 4 photos`() {
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
+
+		kotlin.run {
+			val packet = SendPhotoPacket(33.4, 55.2, "111", true)
+			val multipartData = createTestMultipartFile("test_photos/photo_1.jpg", packet)
+
+			val content = webClient
+				.post()
+				.uri("v1/api/upload")
+				.contentType(MediaType.MULTIPART_FORM_DATA)
+				.body(BodyInserters.fromMultipartData(multipartData))
+				.exchange()
+				.expectStatus().is2xxSuccessful
+				.expectBody()
+
+			val response = fromBodyContent<UploadPhotoResponse>(content)
+			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
+
+			val photoInfo = runBlocking {
+				photoInfoDao.findById(1)
+			}
+
+			assertEquals(1, photoInfo.exchangeId)
+			assertEquals(packet.userId, photoInfo.uploaderUserId)
+			assertEquals("", photoInfo.receiverUserId)
+			assertEquals(packet.isPublic, photoInfo.isPublic)
+			assertEquals(packet.lon, photoInfo.lon, EPSILON)
+			assertEquals(packet.lat, photoInfo.lat, EPSILON)
+
+			val photoInfoExchange = runBlocking {
+				photoInfoExchangeDao.findById(1)
+			}
+
+			assertEquals("111", photoInfoExchange.uploaderUserId)
+			assertEquals("", photoInfoExchange.receiverUserId)
+			assertEquals(1, photoInfoExchange.uploaderPhotoId)
+			assertEquals(-1, photoInfoExchange.receiverPhotoId)
+		}
+
+		kotlin.run {
+			val packet = SendPhotoPacket(11.4, 24.45, "222", true)
+			val multipartData = createTestMultipartFile("test_photos/photo_2.jpg", packet)
+
+			val content = webClient
+				.post()
+				.uri("v1/api/upload")
+				.contentType(MediaType.MULTIPART_FORM_DATA)
+				.body(BodyInserters.fromMultipartData(multipartData))
+				.exchange()
+				.expectStatus().is2xxSuccessful
+				.expectBody()
+
+			val response = fromBodyContent<UploadPhotoResponse>(content)
+			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
+
+			val photoInfo1 = runBlocking {
+				photoInfoDao.findById(1)
+			}
+
+			val photoInfo2 = runBlocking {
+				photoInfoDao.findById(2)
+			}
+
+			assertEquals(1, photoInfo1.exchangeId)
+			assertEquals("111", photoInfo1.uploaderUserId)
+			assertEquals("222", photoInfo1.receiverUserId)
+			assertEquals(true, photoInfo1.isPublic)
+			assertEquals(33.4, photoInfo1.lon, EPSILON)
+			assertEquals(55.2, photoInfo1.lat, EPSILON)
+
+			assertEquals(1, photoInfo2.exchangeId)
+			assertEquals("222", photoInfo2.uploaderUserId)
+			assertEquals("111", photoInfo2.receiverUserId)
+			assertEquals(true, photoInfo2.isPublic)
+			assertEquals(11.4, photoInfo2.lon, EPSILON)
+			assertEquals(24.45, photoInfo2.lat, EPSILON)
+
+			val photoInfoExchange1 = runBlocking {
+				photoInfoExchangeDao.findById(1)
+			}
+
+			val photoInfoExchange2 = runBlocking {
+				photoInfoExchangeDao.findById(2)
+			}
+
+			assertEquals("111", photoInfoExchange1.uploaderUserId)
+			assertEquals("222", photoInfoExchange1.receiverUserId)
+			assertEquals(1, photoInfoExchange1.uploaderPhotoId)
+			assertEquals(2, photoInfoExchange1.receiverPhotoId)
+
+			assertEquals(true, photoInfoExchange2.isEmpty())
+		}
+
+		kotlin.run {
+			val packet3 = SendPhotoPacket(36.4, 66.66, "333", true)
+			val multipartData3 = createTestMultipartFile("test_photos/photo_3.jpg", packet3)
+
+			val packet4 = SendPhotoPacket(38.4235, 16.7788, "444", true)
+			val multipartData4 = createTestMultipartFile("test_photos/photo_4.jpg", packet4)
+
+			val content1 = webClient
+				.post()
+				.uri("v1/api/upload")
+				.contentType(MediaType.MULTIPART_FORM_DATA)
+				.body(BodyInserters.fromMultipartData(multipartData3))
+				.exchange()
+				.expectStatus().is2xxSuccessful
+				.expectBody()
+
+			val response1 = fromBodyContent<UploadPhotoResponse>(content1)
+			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response1.errorCode)
+
+			val content2 = webClient
+				.post()
+				.uri("v1/api/upload")
+				.contentType(MediaType.MULTIPART_FORM_DATA)
+				.body(BodyInserters.fromMultipartData(multipartData4))
+				.exchange()
+				.expectStatus().is2xxSuccessful
+				.expectBody()
+
+			val response2 = fromBodyContent<UploadPhotoResponse>(content2)
+			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response2.errorCode)
+
+			val photoInfo1 = runBlocking {
+				photoInfoDao.findById(1)
+			}
+
+			val photoInfo2 = runBlocking {
+				photoInfoDao.findById(2)
+			}
+
+			val photoInfo3 = runBlocking {
+				photoInfoDao.findById(3)
+			}
+
+			val photoInfo4 = runBlocking {
+				photoInfoDao.findById(4)
+			}
+
+			assertEquals(1, photoInfo1.exchangeId)
+			assertEquals("111", photoInfo1.uploaderUserId)
+			assertEquals("222", photoInfo1.receiverUserId)
+			assertEquals(true, photoInfo1.isPublic)
+			assertEquals(33.4, photoInfo1.lon, EPSILON)
+			assertEquals(55.2, photoInfo1.lat, EPSILON)
+
+			assertEquals(1, photoInfo2.exchangeId)
+			assertEquals("222", photoInfo2.uploaderUserId)
+			assertEquals("111", photoInfo2.receiverUserId)
+			assertEquals(true, photoInfo2.isPublic)
+			assertEquals(11.4, photoInfo2.lon, EPSILON)
+			assertEquals(24.45, photoInfo2.lat, EPSILON)
+
+			assertEquals(2, photoInfo3.exchangeId)
+			assertEquals("333", photoInfo3.uploaderUserId)
+			assertEquals("444", photoInfo3.receiverUserId)
+			assertEquals(true, photoInfo3.isPublic)
+			assertEquals(36.4, photoInfo3.lon, EPSILON)
+			assertEquals(66.66, photoInfo3.lat, EPSILON)
+
+			assertEquals(2, photoInfo4.exchangeId)
+			assertEquals("444", photoInfo4.uploaderUserId)
+			assertEquals("333", photoInfo4.receiverUserId)
+			assertEquals(true, photoInfo4.isPublic)
+			assertEquals(38.4235, photoInfo4.lon, EPSILON)
+			assertEquals(16.7788, photoInfo4.lat, EPSILON)
+
+			val photoInfoExchange1 = runBlocking {
+				photoInfoExchangeDao.findById(1)
+			}
+
+			val photoInfoExchange2 = runBlocking {
+				photoInfoExchangeDao.findById(2)
+			}
+
+			val photoInfoExchange3 = runBlocking {
+				photoInfoExchangeDao.findById(3)
+			}
+
+			val photoInfoExchange4 = runBlocking {
+				photoInfoExchangeDao.findById(4)
+			}
+
+			assertEquals("111", photoInfoExchange1.uploaderUserId)
+			assertEquals("222", photoInfoExchange1.receiverUserId)
+			assertEquals(1, photoInfoExchange1.uploaderPhotoId)
+			assertEquals(2, photoInfoExchange1.receiverPhotoId)
+
+			assertEquals("333", photoInfoExchange2.uploaderUserId)
+			assertEquals("444", photoInfoExchange2.receiverUserId)
+			assertEquals(3, photoInfoExchange2.uploaderPhotoId)
+			assertEquals(4, photoInfoExchange2.receiverPhotoId)
+
+			assertEquals(true, photoInfoExchange3.isEmpty())
+			assertEquals(true, photoInfoExchange4.isEmpty())
 		}
 	}
 }

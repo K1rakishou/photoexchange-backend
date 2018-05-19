@@ -119,14 +119,16 @@ class PhotoInfoRepository(
 	suspend fun tryDoExchange(newUploadingPhoto: PhotoInfo): Boolean {
 		return concurrentService.asyncMongo {
 			mutex.withLock {
-				val photoInfoExchange = photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(newUploadingPhoto.photoId)
+				val photoInfoExchange = photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(
+					newUploadingPhoto.photoId, newUploadingPhoto.uploaderUserId)
 
 				val result = photoInfoExchange.isEmpty().let { isPhotoInfoExchangeEmpty ->
 					if (isPhotoInfoExchangeEmpty) {
 						val newPhotoExchangeResult = kotlin.run {
 							//there is no photo to do exchange with, create a new exchange request
 							val photoExchangeId = mongoSequenceDao.getNextPhotoExchangeId()
-							val newPhotoInfoExchange = photoInfoExchangeDao.save(PhotoInfoExchange.create(photoExchangeId, newUploadingPhoto.photoId))
+							val newPhotoInfoExchange = photoInfoExchangeDao.save(PhotoInfoExchange.create(photoExchangeId,
+								newUploadingPhoto.photoId, newUploadingPhoto.uploaderUserId))
 							if (newPhotoInfoExchange.isEmpty()) {
 								return@run false
 							}

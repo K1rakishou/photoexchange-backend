@@ -26,12 +26,6 @@ class PhotoInfoExchangeRepository(
 		}.await()
 	}
 
-	suspend fun tryDoExchangeWithOldestPhoto(receiverPhotoId: Long): PhotoInfoExchange {
-		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(receiverPhotoId)
-		}.await()
-	}
-
 	suspend fun findById(exchangeId: Long): PhotoInfoExchange {
 		return concurrentService.asyncMongo {
 			return@asyncMongo photoInfoExchangeDao.findById(exchangeId)

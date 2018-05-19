@@ -22,6 +22,14 @@ class PhotoInfoExchange(
 	@Field(Mongo.Field.RECEIVER_PHOTO_ID)
 	var receiverPhotoId: Long,
 
+	@Indexed(name = Mongo.Index.UPLOADER_USER_ID)
+	@Field(Mongo.Field.UPLOADER_USER_ID)
+	var uploaderUserId: String,
+
+	@Indexed(name = Mongo.Index.RECEIVER_USER_ID)
+	@Field(Mongo.Field.RECEIVER_USER_ID)
+	var receiverUserId: String,
+
 	@Indexed(name = Mongo.Index.CREATED_ON, direction = IndexDirection.DESCENDING)
 	@Field(Mongo.Field.CREATED_ON)
 	var createdOn: Long
@@ -33,11 +41,11 @@ class PhotoInfoExchange(
 
 	companion object {
 		fun empty(): PhotoInfoExchange {
-			return PhotoInfoExchange(-1L, -1L, -1L, 0L)
+			return PhotoInfoExchange(-1L, -1L, -1L, "", "", 0L)
 		}
 
-		fun create(photoExchangeId: Long, uploaderPhotoId: Long): PhotoInfoExchange {
-			return PhotoInfoExchange(photoExchangeId, uploaderPhotoId, -1L, TimeUtils.getTimeFast())
+		fun create(photoExchangeId: Long, uploaderPhotoId: Long, uploaderUserId: String): PhotoInfoExchange {
+			return PhotoInfoExchange(photoExchangeId, uploaderPhotoId, -1L, uploaderUserId, "", TimeUtils.getTimeFast())
 		}
 	}
 
@@ -46,12 +54,16 @@ class PhotoInfoExchange(
 			const val ID = "_id"
 			const val UPLOADER_PHOTO_ID = "uploader_photo_id"
 			const val RECEIVER_PHOTO_ID = "receiver_photo_id"
+			const val UPLOADER_USER_ID = "uploader_user_id"
+			const val RECEIVER_USER_ID = "receiver_user_id"
 			const val CREATED_ON = "created_on"
 		}
 
 		object Index {
 			const val UPLOADER_PHOTO_ID = "uploader_photo_id_index"
 			const val RECEIVER_PHOTO_ID = "receiver_photo_id_index"
+			const val UPLOADER_USER_ID = "uploader_user_id_index"
+			const val RECEIVER_USER_ID = "receiver_user_id_index"
 			const val CREATED_ON = "created_on_index"
 		}
 	}

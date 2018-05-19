@@ -70,14 +70,15 @@ open class PhotoInfoExchangeDao(
 		return result
 	}
 
-	suspend fun tryDoExchangeWithOldestPhoto(receiverPhotoId: Long): PhotoInfoExchange {
+	suspend fun tryDoExchangeWithOldestPhoto(receiverPhotoId: Long, receiverUserId: String): PhotoInfoExchange {
 		val query = Query().with(Sort(Sort.Direction.ASC, PhotoInfoExchange.Mongo.Field.CREATED_ON))
-			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_PHOTO_ID).ne(-1L)
-				.andOperator(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_PHOTO_ID).ne(receiverPhotoId)))
-			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_PHOTO_ID).`is`(-1L))
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_USER_ID).ne("")
+				.andOperator(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_USER_ID).ne(receiverUserId)))
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.RECEIVER_USER_ID).`is`(""))
 			.limit(1)
 
 		val update = Update()
+			.set(PhotoInfoExchange.Mongo.Field.RECEIVER_USER_ID, receiverUserId)
 			.set(PhotoInfoExchange.Mongo.Field.RECEIVER_PHOTO_ID, receiverPhotoId)
 
 		val options = FindAndModifyOptions.options().returnNew(true)
