@@ -5,7 +5,7 @@ import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
-import kotlinx.coroutines.experimental.Deferred
+import reactor.core.publisher.Mono
 
 class PhotoInfoExchangeRepository(
 	private val mongoSequenceDao: MongoSequenceDao,
@@ -13,28 +13,20 @@ class PhotoInfoExchangeRepository(
 	private val photoInfoExchangeDao: PhotoInfoExchangeDao,
 	private val concurrentService: ConcurrencyService
 ) {
-	suspend fun save(photoInfoExchange: PhotoInfoExchange): PhotoInfoExchange {
-		return concurrentService.asyncMongo {
-			photoInfoExchange.id = mongoSequenceDao.getNextPhotoExchangeId()
-			return@asyncMongo photoInfoExchangeDao.save(photoInfoExchange)
-		}.await()
+	fun save(photoInfoExchange: PhotoInfoExchange): Mono<PhotoInfoExchange> {
+		return mongoSequenceDao.getNextPhotoExchangeId()
+			.flatMap { photoInfoExchangeDao.save(photoInfoExchange) }
 	}
 
-	suspend fun findAllByIdList(ids: List<Long>): List<PhotoInfoExchange> {
-		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoExchangeDao.findManyByIdList(ids)
-		}.await()
+	fun findAllByIdList(ids: List<Long>): Mono<List<PhotoInfoExchange>> {
+		return photoInfoExchangeDao.findManyByIdList(ids)
 	}
 
-	suspend fun findById(exchangeId: Long): PhotoInfoExchange {
-		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoExchangeDao.findById(exchangeId)
-		}.await()
+	fun findById(exchangeId: Long): Mono<PhotoInfoExchange> {
+		return photoInfoExchangeDao.findById(exchangeId)
 	}
 
-	suspend fun findByIdAsync(exchangeId: Long): Deferred<PhotoInfoExchange> {
-		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoExchangeDao.findById(exchangeId)
-		}
+	fun findByIdAsync(exchangeId: Long): Mono<PhotoInfoExchange> {
+		return photoInfoExchangeDao.findById(exchangeId)
 	}
 }

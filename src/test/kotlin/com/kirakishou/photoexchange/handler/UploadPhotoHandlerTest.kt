@@ -9,6 +9,7 @@ import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import junit.framework.Assert.assertEquals
+import kotlinx.coroutines.experimental.reactive.awaitFirst
 import kotlinx.coroutines.experimental.runBlocking
 import org.junit.After
 import org.junit.Assert
@@ -91,7 +92,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
 
 			val photoInfo = runBlocking {
-				photoInfoDao.findById(1)
+				photoInfoDao.findById(1).awaitFirst()
 			}
 
 			assertEquals(1, photoInfo.exchangeId)
@@ -102,7 +103,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			assertEquals(packet.lat, photoInfo.lat, EPSILON)
 
 			val photoInfoExchange = runBlocking {
-				photoInfoExchangeDao.findById(1)
+				photoInfoExchangeDao.findById(1).awaitFirst()
 			}
 
 			assertEquals("111", photoInfoExchange.uploaderUserId)
@@ -128,11 +129,11 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
 
 			val photoInfo1 = runBlocking {
-				photoInfoDao.findById(1)
+				photoInfoDao.findById(1).awaitFirst()
 			}
 
 			val photoInfo2 = runBlocking {
-				photoInfoDao.findById(2)
+				photoInfoDao.findById(2).awaitFirst()
 			}
 
 			assertEquals(1, photoInfo1.exchangeId)
@@ -150,7 +151,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			assertEquals(24.45, photoInfo2.lat, EPSILON)
 
 			val photoInfoExchange = runBlocking {
-				photoInfoExchangeDao.findById(1)
+				photoInfoExchangeDao.findById(1).awaitFirst()
 			}
 
 			assertEquals(1, photoInfoExchange.uploaderPhotoId)
@@ -181,7 +182,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
 
 			val photoInfo = runBlocking {
-				photoInfoDao.findById(1)
+				photoInfoDao.findById(1).awaitFirst()
 			}
 
 			assertEquals(1, photoInfo.exchangeId)
@@ -192,7 +193,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			assertEquals(packet.lat, photoInfo.lat, EPSILON)
 
 			val photoInfoExchange = runBlocking {
-				photoInfoExchangeDao.findById(1)
+				photoInfoExchangeDao.findById(1).awaitFirst()
 			}
 
 			assertEquals("111", photoInfoExchange.uploaderUserId)
@@ -218,11 +219,11 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
 
 			val photoInfo1 = runBlocking {
-				photoInfoDao.findById(1)
+				photoInfoDao.findById(1).awaitFirst()
 			}
 
 			val photoInfo2 = runBlocking {
-				photoInfoDao.findById(2)
+				photoInfoDao.findById(2).awaitFirst()
 			}
 
 			assertEquals(1, photoInfo1.exchangeId)
@@ -240,11 +241,11 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			assertEquals(24.45, photoInfo2.lat, EPSILON)
 
 			val photoInfoExchange1 = runBlocking {
-				photoInfoExchangeDao.findById(1)
+				photoInfoExchangeDao.findById(1).awaitFirst()
 			}
 
 			val photoInfoExchange2 = runBlocking {
-				photoInfoExchangeDao.findById(2)
+				photoInfoExchangeDao.findById(2).awaitFirst()
 			}
 
 			assertEquals("111", photoInfoExchange1.uploaderUserId)
@@ -280,7 +281,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
 
 			val photoInfo = runBlocking {
-				photoInfoDao.findById(1)
+				photoInfoDao.findById(1).awaitFirst()
 			}
 
 			assertEquals(1, photoInfo.exchangeId)
@@ -291,7 +292,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			assertEquals(packet.lat, photoInfo.lat, EPSILON)
 
 			val photoInfoExchange = runBlocking {
-				photoInfoExchangeDao.findById(1)
+				photoInfoExchangeDao.findById(1).awaitFirst()
 			}
 
 			assertEquals("111", photoInfoExchange.uploaderUserId)
@@ -317,11 +318,11 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
 
 			val photoInfo1 = runBlocking {
-				photoInfoDao.findById(1)
+				photoInfoDao.findById(1).awaitFirst()
 			}
 
 			val photoInfo2 = runBlocking {
-				photoInfoDao.findById(2)
+				photoInfoDao.findById(2).awaitFirst()
 			}
 
 			assertEquals(1, photoInfo1.exchangeId)
@@ -339,11 +340,11 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			assertEquals(24.45, photoInfo2.lat, EPSILON)
 
 			val photoInfoExchange1 = runBlocking {
-				photoInfoExchangeDao.findById(1)
+				photoInfoExchangeDao.findById(1).awaitFirst()
 			}
 
 			val photoInfoExchange2 = runBlocking {
-				photoInfoExchangeDao.findById(2)
+				photoInfoExchangeDao.findById(2).awaitFirst()
 			}
 
 			assertEquals("111", photoInfoExchange1.uploaderUserId)
@@ -386,19 +387,19 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response2.errorCode)
 
 			val photoInfo1 = runBlocking {
-				photoInfoDao.findById(1)
+				photoInfoDao.findById(1).awaitFirst()
 			}
 
 			val photoInfo2 = runBlocking {
-				photoInfoDao.findById(2)
+				photoInfoDao.findById(2).awaitFirst()
 			}
 
 			val photoInfo3 = runBlocking {
-				photoInfoDao.findById(3)
+				photoInfoDao.findById(3).awaitFirst()
 			}
 
 			val photoInfo4 = runBlocking {
-				photoInfoDao.findById(4)
+				photoInfoDao.findById(4).awaitFirst()
 			}
 
 			assertEquals(1, photoInfo1.exchangeId)
@@ -430,19 +431,19 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			assertEquals(16.7788, photoInfo4.lat, EPSILON)
 
 			val photoInfoExchange1 = runBlocking {
-				photoInfoExchangeDao.findById(1)
+				photoInfoExchangeDao.findById(1).awaitFirst()
 			}
 
 			val photoInfoExchange2 = runBlocking {
-				photoInfoExchangeDao.findById(2)
+				photoInfoExchangeDao.findById(2).awaitFirst()
 			}
 
 			val photoInfoExchange3 = runBlocking {
-				photoInfoExchangeDao.findById(3)
+				photoInfoExchangeDao.findById(3).awaitFirst()
 			}
 
 			val photoInfoExchange4 = runBlocking {
-				photoInfoExchangeDao.findById(4)
+				photoInfoExchangeDao.findById(4).awaitFirst()
 			}
 
 			assertEquals("111", photoInfoExchange1.uploaderUserId)

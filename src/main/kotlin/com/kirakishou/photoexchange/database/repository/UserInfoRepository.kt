@@ -5,6 +5,7 @@ import com.kirakishou.photoexchange.database.dao.UserInfoDao
 import com.kirakishou.photoexchange.model.repo.UserInfo
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
+import kotlinx.coroutines.experimental.reactive.awaitFirst
 import kotlinx.coroutines.experimental.sync.Mutex
 import kotlinx.coroutines.experimental.sync.withLock
 
@@ -21,7 +22,7 @@ class UserInfoRepository(
 
 		while (true) {
 			val generatedUserId = generator.generateUserId()
-			if (!userInfoDao.userIdExists(generatedUserId)) {
+			if (!userInfoDao.userIdExists(generatedUserId).awaitFirst()) {
 				userId = generatedUserId
 				break
 			}
@@ -35,9 +36,9 @@ class UserInfoRepository(
 			return@asyncMongo mutex.withLock {
 				val userInfo = UserInfo.empty()
 				userInfo.userId = generateUserId()
-				userInfo.id = mongoSequenceDao.getNextUserId()
+				userInfo.id = mongoSequenceDao.getNextUserId().awaitFirst()
 
-				return@withLock userInfoDao.save(userInfo)
+				return@withLock userInfoDao.save(userInfo).awaitFirst()
 			}
 		}.await()
 	}
@@ -45,7 +46,7 @@ class UserInfoRepository(
 	suspend fun findManyNotRegistered(userIdList: List<String>): List<UserInfo> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
-				return@withLock userInfoDao.findManyNotRegistered(userIdList)
+				return@withLock userInfoDao.findManyNotRegistered(userIdList).awaitFirst()
 			}
 		}.await()
 	}

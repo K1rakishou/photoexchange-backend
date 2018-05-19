@@ -8,10 +8,10 @@ import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import com.kirakishou.photoexchange.service.concurrency.TestConcurrencyService
-import com.mongodb.MongoClient
+import com.mongodb.ConnectionString
 import org.springframework.core.io.ClassPathResource
-import org.springframework.data.mongodb.core.MongoTemplate
-import org.springframework.data.mongodb.core.SimpleMongoDbFactory
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate
+import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
@@ -23,7 +23,7 @@ abstract class AbstractHandlerTest {
 	val EPSILON = 0.00001
 	val gson = GsonBuilder().create()
 
-	lateinit var template: MongoTemplate
+	lateinit var template: ReactiveMongoTemplate
 
 	lateinit var concurrentService: AbstractConcurrencyService
 	lateinit var jsonConverterService: JsonConverterService
@@ -40,8 +40,9 @@ abstract class AbstractHandlerTest {
 		concurrentService = TestConcurrencyService()
 		jsonConverterService = JsonConverterService(gson)
 
-		template = MongoTemplate(SimpleMongoDbFactory(MongoClient(ServerSettings.DatabaseInfo.HOST, ServerSettings.DatabaseInfo.PORT),
-			"photoexchange_test"))
+		template = ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(
+			ConnectionString("mongodb://${ServerSettings.DatabaseInfo.HOST}:${ServerSettings.DatabaseInfo.PORT}/photoexchange_test"))
+		)
 
 		mongoSequenceDao = MongoSequenceDao(template).also {
 			it.clear()

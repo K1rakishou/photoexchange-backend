@@ -1,11 +1,11 @@
 package com.kirakishou.photoexchange.repository
 
 import com.kirakishou.photoexchange.database.dao.*
-import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 
 abstract class AbstractRepositoryTest {
 
-	lateinit var template: MongoTemplate
+	lateinit var template: ReactiveMongoTemplate
 
 	lateinit var mongoSequenceDao: MongoSequenceDao
 	lateinit var photoInfoDao: PhotoInfoDao

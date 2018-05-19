@@ -59,7 +59,7 @@ open class PhotoInfoExchangeDao(
 			.onErrorReturn(PhotoInfoExchange.empty())
 	}
 
-	fun tryDoExchangeWithOldestPhoto(receiverPhotoId: Long, receiverUserId: String): Mono<PhotoInfoExchange> {
+	open fun tryDoExchangeWithOldestPhoto(receiverPhotoId: Long, receiverUserId: String): Mono<PhotoInfoExchange> {
 		val query = Query().with(Sort(Sort.Direction.ASC, PhotoInfoExchange.Mongo.Field.CREATED_ON))
 			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_USER_ID).ne("")
 				.andOperator(Criteria.where(PhotoInfoExchange.Mongo.Field.UPLOADER_USER_ID).ne(receiverUserId)))

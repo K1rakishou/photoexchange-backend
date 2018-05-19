@@ -1,6 +1,7 @@
 package com.kirakishou.photoexchange.config
 
 import com.google.gson.GsonBuilder
+import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.DB_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.HOST
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
 import com.kirakishou.photoexchange.database.dao.*
@@ -38,7 +39,7 @@ fun myBeans() = beans {
 	bean { GsonBuilder().create() }
 	bean { JsonConverterService(ref()) }
 	bean { MongoRepositoryFactory(ref()) }
-	bean { ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(ConnectionString("mongodb://$HOST:$PORT/DB_NAME"))) }
+	bean { ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(ConnectionString("mongodb://$HOST:$PORT/$DB_NAME"))) }
 	bean<ConcurrencyService>()
 
 	//dao

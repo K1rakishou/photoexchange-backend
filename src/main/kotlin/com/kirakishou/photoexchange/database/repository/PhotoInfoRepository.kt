@@ -4,10 +4,11 @@ import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.model.repo.*
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
+import kotlinx.coroutines.experimental.reactive.awaitFirst
 import kotlinx.coroutines.experimental.sync.Mutex
 import kotlinx.coroutines.experimental.sync.withLock
 
-class PhotoInfoRepository(
+open class PhotoInfoRepository(
 	private val mongoSequenceDao: MongoSequenceDao,
 	private val photoInfoDao: PhotoInfoDao,
 	private val photoInfoExchangeDao: PhotoInfoExchangeDao,
@@ -27,7 +28,7 @@ class PhotoInfoRepository(
 
 				while (true) {
 					val generatedName = generator.generateNewPhotoName()
-					if (!photoInfoDao.photoNameExists(generatedName)) {
+					if (!photoInfoDao.photoNameExists(generatedName).awaitFirst()) {
 						photoName = generatedName
 						break
 					}
@@ -41,18 +42,18 @@ class PhotoInfoRepository(
 	suspend fun save(photoInfo: PhotoInfo): PhotoInfo {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
-				photoInfo.photoId = mongoSequenceDao.getNextPhotoId()
+				photoInfo.photoId = mongoSequenceDao.getNextPhotoId().awaitFirst()
 
-				val savedPhotoInfo = photoInfoDao.save(photoInfo)
+				val savedPhotoInfo = photoInfoDao.save(photoInfo).awaitFirst()
 				if (savedPhotoInfo.isEmpty()) {
 					return@withLock savedPhotoInfo
 				}
 
-				val galleryPhotoId = mongoSequenceDao.getNextGalleryPhotoId()
-				val result = galleryPhotoDao.save(GalleryPhoto.create(galleryPhotoId, photoInfo.photoId, savedPhotoInfo.uploadedOn))
+				val galleryPhotoId = mongoSequenceDao.getNextGalleryPhotoId().awaitFirst()
+				val result = galleryPhotoDao.save(GalleryPhoto.create(galleryPhotoId, photoInfo.photoId, savedPhotoInfo.uploadedOn)).awaitFirst()
 
 				if (!result) {
-					photoInfoDao.deleteById(photoInfo.photoId)
+					photoInfoDao.deleteById(photoInfo.photoId).awaitFirst()
 					return@withLock PhotoInfo.empty()
 				}
 
@@ -63,16 +64,16 @@ class PhotoInfoRepository(
 
 	suspend fun findMany(userId: String, photoNames: List<String>): List<PhotoInfo> {
 		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.findMany(userId, photoNames)
+			return@asyncMongo photoInfoDao.findMany(userId, photoNames).awaitFirst()
 		}.await()
 	}
 
 	suspend fun findManyUploadedPhotos(userId: String, photoIds: List<Long>): List<PhotoInfoWithLocation> {
 		return concurrentService.asyncMongo {
-			val photoInfos = photoInfoDao.findManyByIds(userId, photoIds)
+			val photoInfos = photoInfoDao.findManyByIds(userId, photoIds).awaitFirst()
 			val exhangeIds = photoInfos.map { it.exchangeId }
 
-			val otherPhotos = photoInfoDao.findManyPhotosByUserIdAndExchangeId(userId, exhangeIds)
+			val otherPhotos = photoInfoDao.findManyPhotosByUserIdAndExchangeId(userId, exhangeIds).awaitFirst()
 			val otherPhotosMap = mutableMapOf<Long, PhotoInfo>()
 
 			for (otherPhoto in otherPhotos) {
@@ -86,14 +87,14 @@ class PhotoInfoRepository(
 
 	suspend fun findByExchangeIdAndUserId(userId: String, exchangeId: Long): PhotoInfo {
 		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.findByExchangeIdAndUserId(userId, exchangeId)
+			return@asyncMongo photoInfoDao.findByExchangeIdAndUserId(userId, exchangeId).awaitFirst()
 		}.await()
 	}
 
 	suspend fun findOlderThan(time: Long, maxCount: Int): List<PhotoInfo> {
 		return concurrentService.asyncMongo {
-			val photos = photoInfoDao.findOlderThan(time, maxCount)
-			val userInfos = userInfoDao.findManyNotRegistered(photos.map { it.uploaderUserId })
+			val photos = photoInfoDao.findOlderThan(time, maxCount).awaitFirst()
+			val userInfos = userInfoDao.findManyNotRegistered(photos.map { it.uploaderUserId }).awaitFirst()
 
 			val userIdsSet = userInfos.map { it.userId }.toSet()
 			val resultList = mutableListOf<PhotoInfo>()
@@ -112,28 +113,29 @@ class PhotoInfoRepository(
 
 	suspend fun findPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
 		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.findPaged(userId, lastId, count)
+			return@asyncMongo photoInfoDao.findPaged(userId, lastId, count).awaitFirst()
 		}.await()
 	}
 
-	suspend fun tryDoExchange(newUploadingPhoto: PhotoInfo): Boolean {
+	open suspend fun tryDoExchange(newUploadingPhoto: PhotoInfo): Boolean {
 		return concurrentService.asyncMongo {
-			mutex.withLock {
+			return@asyncMongo mutex.withLock {
 				val photoInfoExchange = photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(
-					newUploadingPhoto.photoId, newUploadingPhoto.uploaderUserId)
+					newUploadingPhoto.photoId, newUploadingPhoto.uploaderUserId
+				).awaitFirst()
 
 				val result = photoInfoExchange.isEmpty().let { isPhotoInfoExchangeEmpty ->
 					if (isPhotoInfoExchangeEmpty) {
 						val newPhotoExchangeResult = kotlin.run {
 							//there is no photo to do exchange with, create a new exchange request
-							val photoExchangeId = mongoSequenceDao.getNextPhotoExchangeId()
+							val photoExchangeId = mongoSequenceDao.getNextPhotoExchangeId().awaitFirst()
 							val newPhotoInfoExchange = photoInfoExchangeDao.save(PhotoInfoExchange.create(photoExchangeId,
-								newUploadingPhoto.photoId, newUploadingPhoto.uploaderUserId))
+								newUploadingPhoto.photoId, newUploadingPhoto.uploaderUserId)).awaitFirst()
 							if (newPhotoInfoExchange.isEmpty()) {
 								return@run false
 							}
 
-							return@run photoInfoDao.updateSetExchangeId(newUploadingPhoto.photoId, newPhotoInfoExchange.id)
+							return@run photoInfoDao.updateSetExchangeId(newUploadingPhoto.photoId, newPhotoInfoExchange.id).awaitFirst()
 						}
 
 						if (!newPhotoExchangeResult) {
@@ -144,21 +146,21 @@ class PhotoInfoRepository(
 					} else {
 						val existingPhotoExchangeResult = kotlin.run {
 							//there is a photo, update exchange request with info about our photo
-							if (!photoInfoDao.updateSetExchangeId(newUploadingPhoto.photoId, photoInfoExchange.id)) {
+							if (!photoInfoDao.updateSetExchangeId(newUploadingPhoto.photoId, photoInfoExchange.id).awaitFirst()) {
 								return@run false
 							}
 
 							val ids = arrayListOf(photoInfoExchange.uploaderPhotoId, photoInfoExchange.receiverPhotoId)
-							val photos = photoInfoDao.findMany(ids, PhotoInfoDao.SortOrder.Unsorted)
+							val photos = photoInfoDao.findMany(ids, PhotoInfoDao.SortOrder.Unsorted).awaitFirst()
 							if (photos.size != ids.size) {
 								return@run false
 							}
 
-							if (!photoInfoDao.updateSetReceiverId(photoInfoExchange.uploaderPhotoId, photos.last().uploaderUserId)) {
+							if (!photoInfoDao.updateSetReceiverId(photoInfoExchange.uploaderPhotoId, photos.last().uploaderUserId).awaitFirst()) {
 								return@run false
 							}
 
-							return@run photoInfoDao.updateSetReceiverId(photoInfoExchange.receiverPhotoId, photos.first().uploaderUserId)
+							return@run photoInfoDao.updateSetReceiverId(photoInfoExchange.receiverPhotoId, photos.first().uploaderUserId).awaitFirst()
 						}
 
 						if (!existingPhotoExchangeResult) {
@@ -177,24 +179,24 @@ class PhotoInfoRepository(
 
 	suspend fun delete(userId: String, photoName: String): Boolean {
 		return concurrentService.asyncMongo {
-			val photoInfo = photoInfoDao.find(userId, photoName)
+			val photoInfo = photoInfoDao.find(userId, photoName).awaitFirst()
 			return@asyncMongo deletePhotoInternal(photoInfo)
 		}.await()
 	}
 
 	suspend fun deleteAll(ids: List<Long>): Boolean {
 		return concurrentService.asyncMongo {
-			val photoInfoList = photoInfoDao.findMany(ids)
+			val photoInfoList = photoInfoDao.findMany(ids).awaitFirst()
 			return@asyncMongo deletePhotosInternal(photoInfoList)
 		}.await()
 	}
 
 	private suspend fun deletePhotoInternal(photoInfo: PhotoInfo): Boolean {
 		return mutex.withLock {
-			photoInfoDao.deleteById(photoInfo.photoId)
-			photoInfoExchangeDao.deleteById(photoInfo.exchangeId)
-			favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
-			reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+			photoInfoDao.deleteById(photoInfo.photoId).awaitFirst()
+			photoInfoExchangeDao.deleteById(photoInfo.exchangeId).awaitFirst()
+			favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId).awaitFirst()
+			reportedPhotoDao.deleteByPhotoId(photoInfo.photoId).awaitFirst()
 
 			return@withLock true
 		}
@@ -205,10 +207,10 @@ class PhotoInfoRepository(
 			val photoIds = photoInfoList.map { it.photoId }
 			val exchangeIds = photoInfoList.map { it.exchangeId }
 
-			photoInfoDao.deleteAll(photoIds)
-			photoInfoExchangeDao.deleteAll(exchangeIds)
-			favouritedPhotoDao.deleteAll(photoIds)
-			reportedPhotoDao.deleteAll(photoIds)
+			photoInfoDao.deleteAll(photoIds).awaitFirst()
+			photoInfoExchangeDao.deleteAll(exchangeIds).awaitFirst()
+			favouritedPhotoDao.deleteAll(photoIds).awaitFirst()
+			reportedPhotoDao.deleteAll(photoIds).awaitFirst()
 
 			return@withLock true
 		}
@@ -217,22 +219,22 @@ class PhotoInfoRepository(
 	suspend fun favouritePhoto(userId: String, photoName: String): FavouritePhotoResult {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
-				val photoId = photoInfoDao.getPhotoIdByName(photoName)
+				val photoId = photoInfoDao.getPhotoIdByName(photoName).awaitFirst()
 
-				return@withLock if (favouritedPhotoDao.isPhotoFavourited(userId, photoId)) {
-					if (!favouritedPhotoDao.unfavouritePhoto(userId, photoId)) {
+				return@withLock if (favouritedPhotoDao.isPhotoFavourited(userId, photoId).awaitFirst()) {
+					if (!favouritedPhotoDao.unfavouritePhoto(userId, photoId).awaitFirst()) {
 						return@withLock FavouritePhotoResult.Error()
 					}
 
-					val favouritesCount = favouritedPhotoDao.countByPhotoId(photoId)
+					val favouritesCount = favouritedPhotoDao.countByPhotoId(photoId).awaitFirst()
 					FavouritePhotoResult.Unfavourited(favouritesCount)
 				} else {
-					val id = mongoSequenceDao.getNextFavouritedPhotoId()
-					if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, userId, photoId))) {
+					val id = mongoSequenceDao.getNextFavouritedPhotoId().awaitFirst()
+					if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, userId, photoId)).awaitFirst()) {
 						return@withLock FavouritePhotoResult.Error()
 					}
 
-					val favouritesCount = favouritedPhotoDao.countByPhotoId(photoId)
+					val favouritesCount = favouritedPhotoDao.countByPhotoId(photoId).awaitFirst()
 					FavouritePhotoResult.Favourited(favouritesCount)
 				}
 			}
@@ -242,18 +244,18 @@ class PhotoInfoRepository(
 	suspend fun reportPhoto(userId: String, photoName: String): ReportPhotoResult {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
-				val photoId = photoInfoDao.getPhotoIdByName(photoName)
+				val photoId = photoInfoDao.getPhotoIdByName(photoName).awaitFirst()
 
-				return@withLock if (reportedPhotoDao.isPhotoReported(userId, photoId)) {
-					if (!reportedPhotoDao.unreportPhoto(userId, photoId)) {
+				return@withLock if (reportedPhotoDao.isPhotoReported(userId, photoId).awaitFirst()) {
+					if (!reportedPhotoDao.unreportPhoto(userId, photoId).awaitFirst()) {
 						return@withLock ReportPhotoResult.Error()
 					}
 
 					ReportPhotoResult.Unreported()
 				} else {
 
-					val id = mongoSequenceDao.getNextReportedPhotoId()
-					if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, userId, photoId))) {
+					val id = mongoSequenceDao.getNextReportedPhotoId().awaitFirst()
+					if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, userId, photoId)).awaitFirst()) {
 						return@withLock ReportPhotoResult.Error()
 					}
 
@@ -268,13 +270,13 @@ class PhotoInfoRepository(
 			return@asyncMongo mutex.withLock {
 				val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
 
-				val galleryPhotos = galleryPhotoDao.findManyByIdList(galleryPhotoIdList)
+				val galleryPhotos = galleryPhotoDao.findManyByIdList(galleryPhotoIdList).awaitFirst()
 				val photoIds = galleryPhotos.map { it.photoId }
 
 				val photoInfos = photoInfoDao.findMany(photoIds)
-				val favouritedPhotosMap = favouritedPhotoDao.findMany(photoIds).groupBy { it.photoId }
+				val favouritedPhotosMap = favouritedPhotoDao.findMany(photoIds).awaitFirst().groupBy { it.photoId }
 
-				for (photo in photoInfos) {
+				for (photo in photoInfos.awaitFirst()) {
 					val galleryPhoto = galleryPhotos.first { it.photoId == photo.photoId }
 					val favouritedPhotos = favouritedPhotosMap[photo.photoId] ?: emptyList()
 
@@ -294,12 +296,12 @@ class PhotoInfoRepository(
 				val userFavouritedPhotos = favouritedPhotoDao.findMany(userId, galleryPhotoIdList)
 				val userReportedPhotos = reportedPhotoDao.findMany(userId, galleryPhotoIdList)
 
-				for (favouritedPhoto in userFavouritedPhotos) {
+				for (favouritedPhoto in userFavouritedPhotos.awaitFirst()) {
 					resultMap.putIfAbsent(favouritedPhoto.id, GalleryPhotoInfoDto(favouritedPhoto.photoId))
 					resultMap[favouritedPhoto.id]!!.isFavourited = true
 				}
 
-				for (reportedPhoto in userReportedPhotos) {
+				for (reportedPhoto in userReportedPhotos.awaitFirst()) {
 					resultMap.putIfAbsent(reportedPhoto.id, GalleryPhotoInfoDto(reportedPhoto.photoId))
 					resultMap[reportedPhoto.id]!!.isReported = true
 				}

@@ -4,14 +4,14 @@ import com.kirakishou.photoexchange.config.ServerSettings.ThreadPool.Common.COMM
 import com.kirakishou.photoexchange.config.ServerSettings.ThreadPool.Common.COMMON_THREADS_PERCENTAGE
 import com.kirakishou.photoexchange.config.ServerSettings.ThreadPool.Mongo.MONGO_POOL_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.ThreadPool.Mongo.MONGO_THREADS_PERCENTAGE
+import kotlinx.coroutines.experimental.CoroutineDispatcher
 import kotlinx.coroutines.experimental.Deferred
-import kotlinx.coroutines.experimental.ThreadPoolDispatcher
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 
 class ConcurrencyService : AbstractConcurrencyService() {
-	override val mongoThreadPool: ThreadPoolDispatcher
-	override val commonThreadPool: ThreadPoolDispatcher
+	override val mongoThreadPool: CoroutineDispatcher
+	override val commonThreadPool: CoroutineDispatcher
 
 	init {
 		val mongoThreadsCount = getThreadsCount(MONGO_THREADS_PERCENTAGE, Runtime.getRuntime().availableProcessors())
