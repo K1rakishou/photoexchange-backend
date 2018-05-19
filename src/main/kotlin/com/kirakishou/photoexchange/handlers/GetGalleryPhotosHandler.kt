@@ -26,9 +26,9 @@ class GetGalleryPhotosHandler(
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		return mono(concurrentService.commonThreadPool) {
-			try {
-				logger.debug("New GetGalleryPhotos request")
+			logger.debug("New GetGalleryPhotos request")
 
+			try {
 				if (!request.containsAllPathVars(PHOTO_IDS_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,

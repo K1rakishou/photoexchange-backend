@@ -24,6 +24,8 @@ class ReportPhotoHandler(
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		return mono(concurrentService.commonThreadPool) {
+			logger.debug("New ReportPhoto request")
+
 			try {
 				val packetBuffers = request.body(BodyExtractors.toDataBuffers())
 					.buffer()
@@ -39,12 +41,15 @@ class ReportPhotoHandler(
 
 				return@mono when (result) {
 					is PhotoInfoRepository.ReportPhotoResult.Error -> {
+						logger.debug("Could not report photo (${packet.photoName})")
 						formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.UnknownError))
 					}
 					is PhotoInfoRepository.ReportPhotoResult.Unreported -> {
+						logger.debug("A photo (${packet.photoName}) has been unreported")
 						formatResponse(HttpStatus.OK, ReportPhotoResponse.success(false))
 					}
 					is PhotoInfoRepository.ReportPhotoResult.Reported -> {
+						logger.debug("A photo (${packet.photoName}) has been reported")
 						formatResponse(HttpStatus.OK, ReportPhotoResponse.success(true))
 					}
 				}

@@ -24,6 +24,8 @@ class FavouritePhotoHandler(
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		return mono(concurrentService.commonThreadPool) {
+			logger.debug("New FavouritePhoto request")
+
 			try {
 				val packetBuffers = request.body(BodyExtractors.toDataBuffers())
 					.buffer()
@@ -39,12 +41,15 @@ class FavouritePhotoHandler(
 
 				return@mono when (result) {
 					is PhotoInfoRepository.FavouritePhotoResult.Error -> {
+						logger.debug("Could not favoutite photo (${packet.photoName})")
 						formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, FavouritePhotoResponse.fail(ErrorCode.FavouritePhotoErrors.UnknownError))
 					}
 					is PhotoInfoRepository.FavouritePhotoResult.Unfavourited -> {
+						logger.debug("A photo (${packet.photoName}) has been unfavourited")
 						formatResponse(HttpStatus.OK, FavouritePhotoResponse.success(false, result.count))
 					}
 					is PhotoInfoRepository.FavouritePhotoResult.Favourited -> {
+						logger.debug("A photo (${packet.photoName}) has been favourited")
 						formatResponse(HttpStatus.OK, FavouritePhotoResponse.success(true, result.count))
 					}
 				}

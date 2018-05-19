@@ -31,7 +31,7 @@ class ReceivePhotosHandler(
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		return mono(concurrentService.commonThreadPool) {
-			logger.debug("New ReceivePhotosH request")
+			logger.debug("New ReceivePhotos request")
 
 			try {
 				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_NAME_PATH_VARIABLE)) {
@@ -96,6 +96,7 @@ class ReceivePhotosHandler(
 
 				cleanUp()
 
+				logger.debug("Sent photos list to the client")
 				return@mono formatResponse(HttpStatus.OK, ReceivedPhotoResponse.success(photoAnswerList))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)

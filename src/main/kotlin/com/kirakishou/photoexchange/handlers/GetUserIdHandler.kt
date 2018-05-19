@@ -31,6 +31,7 @@ class GetUserIdHandler(
 						GetUserIdResponse.fail(ErrorCode.GetUserIdError.DatabaseError))
 				}
 
+				logger.debug("Successfully created new userId = ${userInfo.userId}")
 				return@mono formatResponse(HttpStatus.OK,
 					GetUserIdResponse.success(userInfo.userId))
 			} catch (error: Throwable) {
