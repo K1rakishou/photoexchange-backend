@@ -7,7 +7,7 @@ import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.GetUploadedPhotoIdsResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
-import kotlinx.coroutines.experimental.reactor.asMono
+import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -26,13 +26,13 @@ class GetUploadedPhotoIdsHandler(
 	private val COUNT_PATH_VARIABLE = "count"
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		val result = concurrentService.asyncCommon {
+		return mono(concurrentService.commonThreadPool) {
 			logger.debug("New GetUploadedPhotoIds request")
 
 			try {
 				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, LAST_ID_PATH_VARIABLE, COUNT_PATH_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
-					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						GetUploadedPhotoIdsResponse.fail(ErrorCode.GetUploadedPhotosError.BadRequest))
 				}
 
@@ -58,16 +58,12 @@ class GetUploadedPhotoIdsHandler(
 				val uploadedPhotoIds = photosPage.map { photoInfo -> photoInfo.photoId }
 
 				logger.debug("Found ${uploadedPhotoIds.size} photo ids")
-				return@asyncCommon formatResponse(HttpStatus.OK, GetUploadedPhotoIdsResponse.success(uploadedPhotoIds))
+				return@mono formatResponse(HttpStatus.OK, GetUploadedPhotoIdsResponse.success(uploadedPhotoIds))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
-				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 					GetUploadedPhotoIdsResponse.fail(ErrorCode.GetUploadedPhotosError.UnknownError))
 			}
-		}
-
-		return result
-			.asMono(concurrentService.commonThreadPool)
-			.flatMap { it }
+		}.flatMap { it }
 	}
 }

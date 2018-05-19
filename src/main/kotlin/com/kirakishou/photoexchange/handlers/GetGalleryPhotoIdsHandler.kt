@@ -7,7 +7,7 @@ import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.GalleryPhotoIdsResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
-import kotlinx.coroutines.experimental.reactor.asMono
+import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -25,13 +25,13 @@ class GetGalleryPhotoIdsHandler(
 	private val COUNT_VARIABLE = "count"
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		val result = concurrentService.asyncCommon {
+		return mono(concurrentService.commonThreadPool) {
 			try {
 				logger.debug("New GetGalleryPhotoIds request")
 
 				if (!request.containsAllPathVars(LAST_ID_VARIABLE, COUNT_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
-					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						GalleryPhotoIdsResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest))
 				}
 
@@ -50,17 +50,13 @@ class GetGalleryPhotoIdsHandler(
 				val galleryPhotoIds = galleryPhotosRepository.findPaged(lastId, count)
 
 				logger.debug("Found ${galleryPhotoIds.size} photo ids from gallery")
-				return@asyncCommon formatResponse(HttpStatus.OK,
+				return@mono formatResponse(HttpStatus.OK,
 					GalleryPhotoIdsResponse.success(galleryPhotoIds))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
-				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 					GalleryPhotoIdsResponse.fail(ErrorCode.GalleryPhotosErrors.UnknownError))
 			}
-		}
-
-		return result
-			.asMono(concurrentService.commonThreadPool)
-			.flatMap { it }
+		}.flatMap { it }
 	}
 }

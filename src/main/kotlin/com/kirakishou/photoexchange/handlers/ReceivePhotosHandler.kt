@@ -8,7 +8,7 @@ import com.kirakishou.photoexchange.model.net.response.ReceivedPhotoResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.TimeUtils
-import kotlinx.coroutines.experimental.reactor.asMono
+import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -30,13 +30,13 @@ class ReceivePhotosHandler(
 	private val FIVE_MINUTES = TimeUnit.MINUTES.toMillis(5)
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		logger.debug("New ReceivePhotosH request")
+		return mono(concurrentService.commonThreadPool) {
+			logger.debug("New ReceivePhotosH request")
 
-		val result = concurrentService.asyncCommon {
 			try {
 				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_NAME_PATH_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
-					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						ReceivedPhotoResponse.fail(ErrorCode.ReceivePhotosErrors.BadRequest))
 				}
 
@@ -47,7 +47,7 @@ class ReceivePhotosHandler(
 				val photoNameList = photoNames.split(DELIMITER)
 				if (photoNameList.isEmpty()) {
 					logger.debug("photoNameList is empty")
-					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						ReceivedPhotoResponse.fail(ErrorCode.ReceivePhotosErrors.NoPhotosInRequest))
 				}
 
@@ -90,23 +90,19 @@ class ReceivePhotosHandler(
 
 				if (photoAnswerList.isEmpty()) {
 					logger.debug("photoAnswerList is empty")
-					return@asyncCommon formatResponse(HttpStatus.OK,
+					return@mono formatResponse(HttpStatus.OK,
 						ReceivedPhotoResponse.fail(ErrorCode.ReceivePhotosErrors.NoPhotosToSendBack))
 				}
 
 				cleanUp()
 
-				return@asyncCommon formatResponse(HttpStatus.OK, ReceivedPhotoResponse.success(photoAnswerList))
+				return@mono formatResponse(HttpStatus.OK, ReceivedPhotoResponse.success(photoAnswerList))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
-				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 					ReceivedPhotoResponse.fail(ErrorCode.ReceivePhotosErrors.UnknownError))
 			}
-		}
-
-		return result
-			.asMono(concurrentService.commonThreadPool)
-			.flatMap { it }
+		}.flatMap { it }
 	}
 
 	@Synchronized

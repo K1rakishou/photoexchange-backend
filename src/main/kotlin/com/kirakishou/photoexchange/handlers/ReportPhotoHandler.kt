@@ -7,7 +7,7 @@ import com.kirakishou.photoexchange.model.net.response.ReportPhotoResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import kotlinx.coroutines.experimental.reactive.awaitSingle
-import kotlinx.coroutines.experimental.reactor.asMono
+import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.BodyExtractors
@@ -23,7 +23,7 @@ class ReportPhotoHandler(
 	private val logger = LoggerFactory.getLogger(ReportPhotoHandler::class.java)
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		val result = concurrentService.asyncCommon {
+		return mono(concurrentService.commonThreadPool) {
 			try {
 				val packetBuffers = request.body(BodyExtractors.toDataBuffers())
 					.buffer()
@@ -31,13 +31,13 @@ class ReportPhotoHandler(
 
 				val packet = jsonConverter.fromJson<ReportPhotoPacket>(packetBuffers)
 				if (!packet.isPacketOk()) {
-					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.BadRequest))
 				}
 
 				val result = photoInfoRepository.reportPhoto(packet.userId, packet.photoName)
 
-				return@asyncCommon when (result) {
+				return@mono when (result) {
 					is PhotoInfoRepository.ReportPhotoResult.Error -> {
 						formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.UnknownError))
 					}
@@ -50,13 +50,9 @@ class ReportPhotoHandler(
 				}
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
-				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 					ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.UnknownError))
 			}
-		}
-
-		return result
-			.asMono(concurrentService.commonThreadPool)
-			.flatMap { it }
+		}.flatMap { it }
 	}
 }

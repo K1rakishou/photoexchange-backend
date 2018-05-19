@@ -4,6 +4,7 @@ import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
+import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBufferUtils
 import org.springframework.core.io.buffer.DefaultDataBufferFactory
@@ -25,38 +26,40 @@ class GetPhotoHandler(
 	private val PHOTO_SIZE_PATH_VARIABLE = "photo_size"
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		logger.debug("GetPhoto request")
+		return mono(concurrentService.commonThreadPool) {
+			logger.debug("GetPhoto request")
 
-		if (!request.containsAllPathVars(PHOTO_NAME_PATH_VARIABLE, PHOTO_SIZE_PATH_VARIABLE)) {
-			logger.debug("Request does not contain one of the required path variables")
-			return ServerResponse.notFound().build()
-		}
+			if (!request.containsAllPathVars(PHOTO_NAME_PATH_VARIABLE, PHOTO_SIZE_PATH_VARIABLE)) {
+				logger.debug("Request does not contain one of the required path variables")
+				return@mono ServerResponse.notFound().build()
+			}
 
-		val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
-		val photoSize = request.pathVariable(PHOTO_SIZE_PATH_VARIABLE)
+			val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
+			val photoSize = request.pathVariable(PHOTO_SIZE_PATH_VARIABLE)
 
-		if (photoSize != "b" && photoSize != "s") {
-			logger.debug("Photo size param is neither \'b\' nor \'s\'")
-			return ServerResponse.notFound().build()
-		}
+			if (photoSize != "b" && photoSize != "s") {
+				logger.debug("Photo size param is neither \'b\' nor \'s\'")
+				return@mono ServerResponse.notFound().build()
+			}
 
-		val file = File("$FILE_DIR_PATH\\${photoName}_$photoSize")
-		if (!file.exists()) {
-			logger.debug("Photo not found on the disk")
-			return ServerResponse.notFound().build()
-		}
+			val file = File("$FILE_DIR_PATH\\${photoName}_$photoSize")
+			if (!file.exists()) {
+				logger.debug("Photo not found on the disk")
+				return@mono ServerResponse.notFound().build()
+			}
 
-		val photoStreamFlux = Flux.using({
-			return@using file.inputStream()
-		}, { inputStream ->
-			return@using DataBufferUtils.read(inputStream,
-				DefaultDataBufferFactory(false, readChuckSize), readChuckSize)
-		}, { inputStream ->
-			inputStream.close()
-		})
+			val photoStreamFlux = Flux.using({
+				return@using file.inputStream()
+			}, { inputStream ->
+				return@using DataBufferUtils.read(inputStream,
+					DefaultDataBufferFactory(false, readChuckSize), readChuckSize)
+			}, { inputStream ->
+				inputStream.close()
+			})
 
-		return ServerResponse.ok()
-			.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=photo")
-			.body(photoStreamFlux)
+			return@mono ServerResponse.ok()
+				.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=photo")
+				.body(photoStreamFlux)
+		}.flatMap { it }
 	}
 }

@@ -17,7 +17,7 @@ import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.ImageUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.reactive.awaitSingle
-import kotlinx.coroutines.experimental.reactor.asMono
+import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
@@ -49,14 +49,14 @@ class UploadPhotoHandler(
 	private val photoSizes = arrayOf(BIG_PHOTO_SUFFIX, SMALL_PHOTO_SUFFIX)
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		val result = concurrentService.asyncCommon {
+		return mono(concurrentService.commonThreadPool) {
 			logger.debug("New UploadPhoto request")
 
 			try {
 				val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitSingle()
 				if (!multiValueMap.containsAllParts(PACKET_PART_KEY, PHOTO_PART_KEY)) {
 					logger.debug("Request does not contain one of the required path variables")
-					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest))
 				}
 
@@ -66,13 +66,13 @@ class UploadPhotoHandler(
 				val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
 				if (!packet.isPacketOk()) {
 					logger.debug("One or more of the packet's fields are incorrect")
-					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest))
 				}
 
 				if (!checkPhotoTotalSize(photoParts)) {
 					logger.debug("Bad photo size")
-					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest))
 				}
 
@@ -81,14 +81,14 @@ class UploadPhotoHandler(
 
 				if (newUploadingPhoto.isEmpty()) {
 					logger.debug("Could not save a photoInfo")
-					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				}
 
 				val tempFile = saveTempFile(photoParts, newUploadingPhoto)
 				if (tempFile == null) {
 					logger.debug("Could not save file to disk")
-					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				}
 
@@ -106,7 +106,7 @@ class UploadPhotoHandler(
 				} catch (error: Throwable) {
 					logger.error("Unknown error", error)
 					photoInfoRepo.delete(newUploadingPhoto.userId, photoInfoName)
-					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				} finally {
 					if (tempFile.exists()) {
@@ -124,23 +124,19 @@ class UploadPhotoHandler(
 					photoInfoRepo.tryDoExchange(newUploadingPhoto)
 				} catch (error: Throwable) {
 					logger.error("Unknown error while trying to do photo exchange", error)
-					return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				}
 
 				logger.debug("Photo has been successfully uploaded")
-				return@asyncCommon formatResponse(HttpStatus.OK,
+				return@mono formatResponse(HttpStatus.OK,
 					UploadPhotoResponse.success(newUploadingPhoto.photoName))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
-				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 					UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.UnknownError))
 			}
-		}
-
-		return result
-			.asMono(concurrentService.commonThreadPool)
-			.flatMap { it }
+		}.flatMap { it }
 	}
 
 	private suspend fun deleteOldPhotos() {

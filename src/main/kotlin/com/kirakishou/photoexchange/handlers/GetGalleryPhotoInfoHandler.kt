@@ -8,7 +8,7 @@ import com.kirakishou.photoexchange.model.net.response.GalleryPhotoInfoResponse
 import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.Utils
-import kotlinx.coroutines.experimental.reactor.asMono
+import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -27,13 +27,13 @@ class GetGalleryPhotoInfoHandler(
 	private val DELIMITER = ','
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		val result = concurrentService.asyncCommon {
+		return mono(concurrentService.commonThreadPool) {
 			try {
 				logger.debug("New GetGalleryPhotoInfo request")
 
 				if (!request.containsAllPathVars(USER_ID_VARIABLE, PHOTO_IDS_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
-					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						GalleryPhotoInfoResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest))
 				}
 
@@ -42,7 +42,7 @@ class GetGalleryPhotoInfoHandler(
 
 				if (photoIdsString.isEmpty()) {
 					logger.debug("galleryPhotoIds is empty")
-					return@asyncCommon formatResponse(HttpStatus.BAD_REQUEST,
+					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						GalleryPhotoInfoResponse.fail(ErrorCode.GalleryPhotosErrors.NoPhotosInRequest))
 				}
 
@@ -54,16 +54,12 @@ class GetGalleryPhotoInfoHandler(
 				}
 
 				logger.debug("Found ${galleryPhotoInfoResponse.size} photo infos from gallery")
-				return@asyncCommon formatResponse(HttpStatus.OK, GalleryPhotoInfoResponse.success(galleryPhotoInfoResponse))
+				return@mono formatResponse(HttpStatus.OK, GalleryPhotoInfoResponse.success(galleryPhotoInfoResponse))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
-				return@asyncCommon formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 					GalleryPhotoInfoResponse.fail(ErrorCode.GalleryPhotosErrors.UnknownError))
 			}
-		}
-
-		return result
-			.asMono(concurrentService.commonThreadPool)
-			.flatMap { it }
+		}.flatMap { it }
 	}
 }
