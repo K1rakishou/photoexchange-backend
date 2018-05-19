@@ -95,21 +95,7 @@ class UploadPhotoHandler(
 				}
 
 				try {
-					//save resized (big) version of the image
-					val bigDimension = Dimension(BIG_PHOTO_SIZE, BIG_PHOTO_SIZE)
-					ImageUtils.resizeAndSaveImageOnDisk(tempFile, bigDimension, BIG_PHOTO_SUFFIX,
-						ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
-
-					//save resized (medium) version of the image
-					val mediumDimension = Dimension(MEDIUM_PHOTO_SIZE, MEDIUM_PHOTO_SIZE)
-					ImageUtils.resizeAndSaveImageOnDisk(tempFile, mediumDimension, MEDIUM_PHOTO_SUFFIX,
-						ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
-
-					//save resized (small) version of the image
-					val smallDimension =  Dimension(SMALL_PHOTO_SIZE, SMALL_PHOTO_SIZE)
-					ImageUtils.resizeAndSaveImageOnDisk(tempFile, smallDimension, SMALL_PHOTO_SUFFIX,
-						ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
-
+					resizeAndSavePhotos(tempFile, newUploadingPhoto)
 				} catch (error: Throwable) {
 					logger.error("Unknown error", error)
 					photoInfoRepo.delete(newUploadingPhoto.userId, photoInfoName)
@@ -144,6 +130,23 @@ class UploadPhotoHandler(
 					UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.UnknownError))
 			}
 		}.flatMap { it }
+	}
+
+	private fun resizeAndSavePhotos(tempFile: File, newUploadingPhoto: PhotoInfo) {
+		//save resized (big) version of the image
+		val bigDimension = Dimension(BIG_PHOTO_SIZE, BIG_PHOTO_SIZE)
+		ImageUtils.resizeAndSaveImageOnDisk(tempFile, bigDimension, BIG_PHOTO_SUFFIX,
+			ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
+
+		//save resized (medium) version of the image
+		val mediumDimension = Dimension(MEDIUM_PHOTO_SIZE, MEDIUM_PHOTO_SIZE)
+		ImageUtils.resizeAndSaveImageOnDisk(tempFile, mediumDimension, MEDIUM_PHOTO_SUFFIX,
+			ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
+
+		//save resized (small) version of the image
+		val smallDimension = Dimension(SMALL_PHOTO_SIZE, SMALL_PHOTO_SIZE)
+		ImageUtils.resizeAndSaveImageOnDisk(tempFile, smallDimension, SMALL_PHOTO_SUFFIX,
+			ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
 	}
 
 	private suspend fun deleteOldPhotos() {
