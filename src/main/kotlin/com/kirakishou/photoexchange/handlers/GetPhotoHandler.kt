@@ -24,6 +24,7 @@ class GetPhotoHandler(
 	private val readChuckSize = 16384
 	private val PHOTO_NAME_PATH_VARIABLE = "photo_name"
 	private val PHOTO_SIZE_PATH_VARIABLE = "photo_size"
+	private val photoSizes = arrayOf("b", "s", "m")
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		return mono(concurrentService.commonThreadPool) {
@@ -37,8 +38,8 @@ class GetPhotoHandler(
 			val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
 			val photoSize = request.pathVariable(PHOTO_SIZE_PATH_VARIABLE)
 
-			if (photoSize != "b" && photoSize != "s") {
-				logger.debug("Photo size param is neither \'b\' nor \'s\'")
+			if (!photoSizes.contains(photoSize)) {
+				logger.debug("Photo size param is neither of $photoSizes")
 				return@mono ServerResponse.notFound().build()
 			}
 
