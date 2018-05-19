@@ -1,4 +1,4 @@
-package com.kirakishou.photoexchange.service
+package com.kirakishou.photoexchange.service.concurrency
 
 import com.kirakishou.photoexchange.config.ServerSettings.ThreadPool.Common.COMMON_POOL_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.ThreadPool.Common.COMMON_THREADS_PERCENTAGE
@@ -9,9 +9,9 @@ import kotlinx.coroutines.experimental.ThreadPoolDispatcher
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 
-class ConcurrencyService {
-	val mongoThreadPool: ThreadPoolDispatcher
-	val commonThreadPool: ThreadPoolDispatcher
+class ConcurrencyService : AbstractConcurrencyService() {
+	override val mongoThreadPool: ThreadPoolDispatcher
+	override val commonThreadPool: ThreadPoolDispatcher
 
 	init {
 		val mongoThreadsCount = getThreadsCount(MONGO_THREADS_PERCENTAGE, Runtime.getRuntime().availableProcessors())
@@ -19,8 +19,6 @@ class ConcurrencyService {
 
 		val commonThreadsCount = getThreadsCount(COMMON_THREADS_PERCENTAGE, Runtime.getRuntime().availableProcessors())
 		commonThreadPool = newFixedThreadPoolContext(commonThreadsCount, COMMON_POOL_NAME)
-
-		System.err.println("mongoThreadsCount = $mongoThreadsCount, commonThreadsCount = $commonThreadsCount")
 	}
 
 	fun getThreadsCount(percentage: Double, processorsCount: Int): Int {
@@ -34,11 +32,11 @@ class ConcurrencyService {
 		return count
 	}
 
-	fun <T> asyncMongo(func: suspend () -> T): Deferred<T> {
+	override fun <T> asyncMongo(func: suspend () -> T): Deferred<T> {
 		return async(mongoThreadPool) { func() }
 	}
 
-	fun <T> asyncCommon(func: suspend () -> T): Deferred<T> {
+	override fun <T> asyncCommon(func: suspend () -> T): Deferred<T> {
 		return async(commonThreadPool) { func() }
 	}
 }

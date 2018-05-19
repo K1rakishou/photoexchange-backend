@@ -1,11 +1,12 @@
-package com.kirakishou.photoexchange.handlers
+package com.kirakishou.photoexchange.handlers.gallery_photos
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
+import com.kirakishou.photoexchange.handlers.AbstractWebHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.GalleryPhotoIdsResponse
-import com.kirakishou.photoexchange.service.ConcurrencyService
+import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory

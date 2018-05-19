@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.service
 
+import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import org.junit.Before
 import org.junit.Test
 
@@ -13,9 +14,9 @@ class ConcurrencyServiceTest {
 	}
 
 	@Test
-	fun `should return one thread`() {
-		assert(concurrencyService.getThreadsCount(0.25, 1) == 1)
-		assert(concurrencyService.getThreadsCount(0.25, 4) == 1)
+	fun `should return two threads`() {
+		assert(concurrencyService.getThreadsCount(0.25, 1) == 2)
+		assert(concurrencyService.getThreadsCount(0.25, 4) == 2)
 	}
 
 	@Test

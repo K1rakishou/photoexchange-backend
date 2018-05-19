@@ -11,9 +11,15 @@ class FavouritedPhotoDao(
 ) : BaseDao {
 	private val logger = LoggerFactory.getLogger(FavouritedPhotoDao::class.java)
 
-	override fun init() {
+	override fun create() {
 		if (!template.collectionExists(FavouritedPhoto::class.java)) {
 			template.createCollection(FavouritedPhoto::class.java)
+		}
+	}
+
+	override fun clear() {
+		if (template.collectionExists(FavouritedPhoto::class.java)) {
+			template.dropCollection(FavouritedPhoto::class.java)
 		}
 	}
 

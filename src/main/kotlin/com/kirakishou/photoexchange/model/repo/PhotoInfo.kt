@@ -16,9 +16,13 @@ class PhotoInfo(
 	@Field(Mongo.Field.EXCHANGE_ID)
 	var exchangeId: Long,
 
-	@Indexed(name = Mongo.Index.USER_ID)
-	@Field(Mongo.Field.USER_ID)
-	var userId: String,
+	@Indexed(name = Mongo.Index.UPLOADER_USER_ID)
+	@Field(Mongo.Field.UPLOADER_USER_ID)
+	var uploaderUserId: String,
+
+	@Indexed(name = Mongo.Index.RECEIVER_USER_ID)
+	@Field(Mongo.Field.RECEIVER_USER_ID)
+	var receiverUserId: String,
 
 	@Indexed(name = Mongo.Index.PHOTO_NAME)
 	@Field(Mongo.Field.PHOTO_NAME)
@@ -43,11 +47,11 @@ class PhotoInfo(
 
 	companion object {
 		fun empty(): PhotoInfo {
-			return PhotoInfo(-1L, -1L, "", "", false, 0.0, 0.0, 0L)
+			return PhotoInfo(-1L, -1L, "", "", "", false, 0.0, 0.0, 0L)
 		}
 
 		fun create(userId: String, photoName: String, isPublic: Boolean, lon: Double, lat: Double, time: Long): PhotoInfo {
-			return PhotoInfo(-1L, -1L, userId, photoName, isPublic, lon, lat, time)
+			return PhotoInfo(-1L, -1L, userId, "", photoName, isPublic, lon, lat, time)
 		}
 	}
 
@@ -55,7 +59,8 @@ class PhotoInfo(
 		object Field {
 			const val PHOTO_ID = "_id"
 			const val EXCHANGE_ID = "exchange_id"
-			const val USER_ID = "user_id"
+			const val UPLOADER_USER_ID = "uploader_user_id"
+			const val RECEIVER_USER_ID = "receiver_user_id"
 			const val PHOTO_NAME = "photo_name"
 			const val IS_PUBLIC = "is_public"
 			const val LONGITUDE = "longitude"
@@ -64,7 +69,8 @@ class PhotoInfo(
 		}
 
 		object Index {
-			const val USER_ID = "user_id_index"
+			const val UPLOADER_USER_ID = "uploader_user_id_index"
+			const val RECEIVER_USER_ID = "receiver_user_id_index"
 			const val PHOTO_NAME = "photo_name_index"
 			const val UPLOADED_ON = "uploaded_on_index"
 		}

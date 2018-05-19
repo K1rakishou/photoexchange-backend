@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.database.dao
 
 interface BaseDao {
-	fun init()
+	fun create()
+	fun clear()
 }

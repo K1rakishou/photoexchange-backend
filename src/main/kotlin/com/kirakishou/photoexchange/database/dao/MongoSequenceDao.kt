@@ -17,9 +17,15 @@ open class MongoSequenceDao(
 	private val REPORTED_PHOTO_SEQUENCE_NAME = "reported_photo_sequence"
 	private val USER_INFO_SEQUENCE_NAME = "user_info_sequence"
 
-	override fun init() {
+	override fun create() {
 		if (!template.collectionExists(MongoSequence::class.java)) {
 			template.createCollection(MongoSequence::class.java)
+		}
+	}
+
+	override fun clear() {
+		if (template.collectionExists(MongoSequence::class.java)) {
+			template.dropCollection(MongoSequence::class.java)
 		}
 	}
 

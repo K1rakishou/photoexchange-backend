@@ -1,11 +1,12 @@
-package com.kirakishou.photoexchange.handlers
+package com.kirakishou.photoexchange.handlers.uploaded_photos
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
+import com.kirakishou.photoexchange.handlers.AbstractWebHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.GetUploadedPhotoIdsResponse
-import com.kirakishou.photoexchange.service.ConcurrencyService
+import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
@@ -40,7 +41,7 @@ class GetUploadedPhotoIdsHandler(
 				val lastIdString = request.pathVariable(LAST_ID_PATH_VARIABLE)
 				val countString = request.pathVariable(COUNT_PATH_VARIABLE)
 
-				logger.debug("userId: $userId, lastId: $lastIdString, count: $countString")
+				logger.debug("uploaderPhotoId: $userId, lastId: $lastIdString, count: $countString")
 
 				val lastId = try {
 					lastIdString.toLong()

@@ -13,9 +13,15 @@ open class PhotoInfoDao(
 ) : BaseDao {
 	private val logger = LoggerFactory.getLogger(PhotoInfoDao::class.java)
 
-	override fun init() {
+	override fun create() {
 		if (!template.collectionExists(PhotoInfo::class.java)) {
 			template.createCollection(PhotoInfo::class.java)
+		}
+	}
+
+	override fun clear() {
+		if (template.collectionExists(PhotoInfo::class.java)) {
+			template.dropCollection(PhotoInfo::class.java)
 		}
 	}
 
@@ -32,7 +38,7 @@ open class PhotoInfoDao(
 
 	suspend fun findAllPhotosByUserId(userId: String): List<PhotoInfo> {
 		val getUploadedPhotosQuery = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 
 		val uploadedPhotos = try {
 			template.find(getUploadedPhotosQuery, PhotoInfo::class.java)
@@ -44,9 +50,23 @@ open class PhotoInfoDao(
 		return uploadedPhotos
 	}
 
+	suspend fun findById(photoId: Long): PhotoInfo {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		val photoInfo = try {
+			template.findOne(query, PhotoInfo::class.java)
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			PhotoInfo.empty()
+		}
+
+		return photoInfo
+	}
+
 	suspend fun find(userId: String, photoName: String): PhotoInfo {
 		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
 		val photoInfo = try {
@@ -65,7 +85,7 @@ open class PhotoInfoDao(
 
 	suspend fun findByExchangeIdAndUserId(userId: String, exchangeId: Long): PhotoInfo {
 		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`is`(exchangeId))
 
 		val photoInfo = try {
@@ -84,7 +104,7 @@ open class PhotoInfoDao(
 
 	suspend fun findMany(userId: String, photoNames: List<String>): List<PhotoInfo> {
 		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`in`(photoNames))
 
 		val photoInfo = try {
@@ -101,9 +121,19 @@ open class PhotoInfoDao(
 		return photoInfo
 	}
 
-	suspend fun findMany(photoIdList: List<Long>): List<PhotoInfo> {
-		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
+	suspend fun findMany(photoIdList: List<Long>, sortOrder: SortOrder = SortOrder.Descending): List<PhotoInfo> {
+		val query = when (sortOrder) {
+			PhotoInfoDao.SortOrder.Descending -> {
+				Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
+
+			}
+			PhotoInfoDao.SortOrder.Ascending -> {
+				Query().with(Sort(Sort.Direction.ASC, PhotoInfo.Mongo.Field.PHOTO_ID))
+			}
+			PhotoInfoDao.SortOrder.Unsorted -> Query()
+		}
+
+		query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
 			.limit(photoIdList.size)
 
 		val photoInfoList = try {
@@ -123,7 +153,7 @@ open class PhotoInfoDao(
 	suspend fun findManyByIds(userId: String, photoIdList: List<Long>): List<PhotoInfo> {
 		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.limit(photoIdList.size)
 
 		val photoInfoList = try {
@@ -158,7 +188,7 @@ open class PhotoInfoDao(
 	suspend fun findPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
 		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).lt(lastId))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.limit(count)
 
 		val result = try {
@@ -173,7 +203,7 @@ open class PhotoInfoDao(
 
 	suspend fun findManyPhotosByUserIdAndExchangeId(userId: String, exhangeIds: List<Long>): List<PhotoInfo> {
 		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).ne(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).ne(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`in`(exhangeIds))
 
 		val result = try {
@@ -204,6 +234,24 @@ open class PhotoInfoDao(
 		return result
 	}
 
+	fun updateSetReceiverId(photoId: Long, receiverUserId: String): Boolean {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		val update = Update()
+			.set(PhotoInfo.Mongo.Field.RECEIVER_USER_ID, receiverUserId)
+
+		val result = try {
+			val updateResult = template.updateFirst(query, update, PhotoInfo::class.java)
+			updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L
+		} catch (error: Throwable) {
+			logger.error("DB error", error)
+			false
+		}
+
+		return result
+	}
+
 	suspend fun deleteById(photoId: Long) {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
@@ -217,7 +265,7 @@ open class PhotoInfoDao(
 
 	suspend fun deleteUserById(userId: String, photoName: String) {
 		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.limit(1)
 
@@ -261,6 +309,12 @@ open class PhotoInfoDao(
 		}
 
 		return result
+	}
+
+	enum class SortOrder {
+		Descending,
+		Ascending,
+		Unsorted
 	}
 
 	companion object {

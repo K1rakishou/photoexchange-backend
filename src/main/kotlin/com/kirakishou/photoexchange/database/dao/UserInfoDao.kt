@@ -11,9 +11,15 @@ class UserInfoDao(
 ) : BaseDao {
 	private val logger = LoggerFactory.getLogger(UserInfoDao::class.java)
 
-	override fun init() {
+	override fun create() {
 		if (!template.collectionExists(UserInfo::class.java)) {
 			template.createCollection(UserInfo::class.java)
+		}
+	}
+
+	override fun clear() {
+		if (template.collectionExists(UserInfo::class.java)) {
+			template.dropCollection(UserInfo::class.java)
 		}
 	}
 

@@ -4,7 +4,7 @@ import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoExchangeDao
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
-import com.kirakishou.photoexchange.service.ConcurrencyService
+import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import kotlinx.coroutines.experimental.Deferred
 
 class PhotoInfoExchangeRepository(
@@ -26,9 +26,9 @@ class PhotoInfoExchangeRepository(
 		}.await()
 	}
 
-	suspend fun tryDoExchangeWithOldestPhoto(receiverUserId: String): PhotoInfoExchange {
+	suspend fun tryDoExchangeWithOldestPhoto(receiverPhotoId: Long): PhotoInfoExchange {
 		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(receiverUserId)
+			return@asyncMongo photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(receiverPhotoId)
 		}.await()
 	}
 

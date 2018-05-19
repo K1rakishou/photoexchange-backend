@@ -12,9 +12,15 @@ class GalleryPhotoDao(
 ) : BaseDao {
 	private val logger = LoggerFactory.getLogger(GalleryPhotoDao::class.java)
 
-	override fun init() {
+	override fun create() {
 		if (!template.collectionExists(GalleryPhoto::class.java)) {
 			template.createCollection(GalleryPhoto::class.java)
+		}
+	}
+
+	override fun clear() {
+		if (template.collectionExists(GalleryPhoto::class.java)) {
+			template.dropCollection(GalleryPhoto::class.java)
 		}
 	}
 

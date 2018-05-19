@@ -3,7 +3,7 @@ package com.kirakishou.photoexchange.handlers
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.GetUserIdResponse
-import com.kirakishou.photoexchange.service.ConcurrencyService
+import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
@@ -31,7 +31,7 @@ class GetUserIdHandler(
 						GetUserIdResponse.fail(ErrorCode.GetUserIdError.DatabaseError))
 				}
 
-				logger.debug("Successfully created new userId = ${userInfo.userId}")
+				logger.debug("Successfully created new uploaderPhotoId = ${userInfo.userId}")
 				return@mono formatResponse(HttpStatus.OK,
 					GetUserIdResponse.success(userInfo.userId))
 			} catch (error: Throwable) {

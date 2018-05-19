@@ -1,10 +1,12 @@
 package com.kirakishou.photoexchange.service
 
 import java.security.SecureRandom
+import java.util.*
 
-class GeneratorService {
-	private val numericAlphabetic = "0123456789abcdefghijklmnopqrstuvwxyz"
-	private val random = SecureRandom()
+open class GeneratorService(
+	private val random: Random = SecureRandom(),
+	private val numericAlphabetic: String = "0123456789abcdefghijklmnopqrstuvwxyz"
+) {
 
 	fun generateRandomString(len: Int, alphabet: String): String {
 		val bytes = ByteArray(len)

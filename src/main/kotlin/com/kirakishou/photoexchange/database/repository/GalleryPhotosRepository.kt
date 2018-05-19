@@ -3,7 +3,7 @@ package com.kirakishou.photoexchange.database.repository
 import com.kirakishou.photoexchange.database.dao.GalleryPhotoDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.model.repo.GalleryPhoto
-import com.kirakishou.photoexchange.service.ConcurrencyService
+import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import kotlinx.coroutines.experimental.sync.Mutex
 import kotlinx.coroutines.experimental.sync.withLock
 

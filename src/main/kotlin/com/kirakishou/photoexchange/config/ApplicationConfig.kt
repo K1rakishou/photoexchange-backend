@@ -10,8 +10,15 @@ import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeReposit
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.handlers.*
+import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoIdsHandler
+import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoHandler
+import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
+import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotoIdsHandler
+import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotosHandler
+import com.kirakishou.photoexchange.handlers.uploaded_photos.GetUploadedPhotoIdsHandler
+import com.kirakishou.photoexchange.handlers.uploaded_photos.GetUploadedPhotosHandler
 import com.kirakishou.photoexchange.routers.Router
-import com.kirakishou.photoexchange.service.ConcurrencyService
+import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.mongodb.MongoClient
@@ -36,13 +43,13 @@ fun myBeans() = beans {
 	bean<ConcurrencyService>()
 
 	//dao
-	bean { MongoSequenceDao(ref()).also { it.init() } }
-	bean { PhotoInfoDao(ref()).also { it.init() } }
-	bean { PhotoInfoExchangeDao(ref()).also { it.init() } }
-	bean { GalleryPhotoDao(ref()).also { it.init() } }
-	bean { FavouritedPhotoDao(ref()).also { it.init() } }
-	bean { ReportedPhotoDao(ref()).also { it.init() } }
-	bean { UserInfoDao(ref()).also { it.init() } }
+	bean { MongoSequenceDao(ref()).also { it.create() } }
+	bean { PhotoInfoDao(ref()).also { it.create() } }
+	bean { PhotoInfoExchangeDao(ref()).also { it.create() } }
+	bean { GalleryPhotoDao(ref()).also { it.create() } }
+	bean { FavouritedPhotoDao(ref()).also { it.create() } }
+	bean { ReportedPhotoDao(ref()).also { it.create() } }
+	bean { UserInfoDao(ref()).also { it.create() } }
 
 	//repository
 	bean<PhotoInfoRepository>()
@@ -65,6 +72,8 @@ fun myBeans() = beans {
 	bean<GetUserIdHandler>()
 	bean<GetUploadedPhotoIdsHandler>()
 	bean<GetUploadedPhotosHandler>()
+	bean<GetReceivedPhotoIdsHandler>()
+	bean<GetReceivedPhotosHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }

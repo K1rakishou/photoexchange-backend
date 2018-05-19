@@ -11,6 +11,7 @@ object ServerSettings {
 
 	const val MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT = 100
 	const val MAX_UPLOADED_PHOTOS_PER_REQUEST_COUNT = 50
+	const val MAX_RECEIVED_PHOTOS_PER_REQUEST_COUNT = 50
 
 	object ThreadPool {
 		object Mongo {
@@ -27,6 +28,6 @@ object ServerSettings {
 	object DatabaseInfo {
 		const val HOST = "192.168.99.100"
 		const val PORT = 27017
-		const val DB_NAME = "photoexhange"
+		const val DB_NAME = "photoexchange"
 	}
 }

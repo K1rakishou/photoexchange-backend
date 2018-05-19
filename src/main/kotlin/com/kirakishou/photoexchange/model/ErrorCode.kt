@@ -59,4 +59,12 @@ class ErrorCode {
 		BadRequest(353),
 		NoPhotosInRequest(354);
 	}
+
+	enum class GetReceivedPhotosError(val value: Int) {
+		UnknownError(400),
+		Ok(401),
+		DatabaseError(402),
+		BadRequest(403),
+		NoPhotosInRequest(404);
+	}
 }

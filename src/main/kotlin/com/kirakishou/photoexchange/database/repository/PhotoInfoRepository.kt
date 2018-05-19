@@ -2,8 +2,8 @@ package com.kirakishou.photoexchange.database.repository
 
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.model.repo.*
-import com.kirakishou.photoexchange.service.ConcurrencyService
 import com.kirakishou.photoexchange.service.GeneratorService
+import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import kotlinx.coroutines.experimental.sync.Mutex
 import kotlinx.coroutines.experimental.sync.withLock
 
@@ -16,7 +16,7 @@ class PhotoInfoRepository(
 	private val reportedPhotoDao: ReportedPhotoDao,
 	private val userInfoRepository: UserInfoRepository,
 	private val generator: GeneratorService,
-	private val concurrentService: ConcurrencyService
+	private val concurrentService: AbstractConcurrencyService
 ) {
 	private val mutex = Mutex()
 
@@ -93,13 +93,13 @@ class PhotoInfoRepository(
 	suspend fun findOlderThan(time: Long, maxCount: Int): List<PhotoInfo> {
 		return concurrentService.asyncMongo {
 			val photos = photoInfoDao.findOlderThan(time, maxCount)
-			val userInfos = userInfoRepository.findManyNotRegistered(photos.map { it.userId })
+			val userInfos = userInfoRepository.findManyNotRegistered(photos.map { it.uploaderUserId })
 
 			val userIdsSet = userInfos.map { it.userId }.toSet()
 			val resultList = mutableListOf<PhotoInfo>()
 
 			for (photoInfo in photos) {
-				if (!userIdsSet.contains(photoInfo.userId)) {
+				if (!userIdsSet.contains(photoInfo.uploaderUserId)) {
 					continue
 				}
 
@@ -116,27 +116,61 @@ class PhotoInfoRepository(
 		}.await()
 	}
 
-	suspend fun updateSetExchangeInfoId(photoId: Long, exchangeId: Long): Boolean {
+	suspend fun tryDoExchange(newUploadingPhoto: PhotoInfo): Boolean {
 		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.updateSetExchangeId(photoId, exchangeId)
-		}.await()
-	}
-
-	suspend fun tryDoExchange(newUploadingPhoto: PhotoInfo) {
-		concurrentService.asyncMongo {
 			mutex.withLock {
-				val photoInfoExchange = photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(newUploadingPhoto.userId)
-				if (photoInfoExchange.isEmpty()) {
-					//there is no photo to do exchange with, create a new exchange request
-					val photoExchangeId = mongoSequenceDao.getNextPhotoExchangeId()
-					val newPhotoInfoExchange = photoInfoExchangeDao.save(PhotoInfoExchange.create(photoExchangeId, newUploadingPhoto.userId))
-					updateSetExchangeInfoId(newUploadingPhoto.photoId, newPhotoInfoExchange.id)
-				} else {
-					//there is a photo, update exchange request with info about our photo
-					updateSetExchangeInfoId(newUploadingPhoto.photoId, photoInfoExchange.id)
+				val photoInfoExchange = photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(newUploadingPhoto.photoId)
+
+				val result = photoInfoExchange.isEmpty().let { isPhotoInfoExchangeEmpty ->
+					if (isPhotoInfoExchangeEmpty) {
+						val newPhotoExchangeResult = kotlin.run {
+							//there is no photo to do exchange with, create a new exchange request
+							val photoExchangeId = mongoSequenceDao.getNextPhotoExchangeId()
+							val newPhotoInfoExchange = photoInfoExchangeDao.save(PhotoInfoExchange.create(photoExchangeId, newUploadingPhoto.photoId))
+							if (newPhotoInfoExchange.isEmpty()) {
+								return@run false
+							}
+
+							return@run photoInfoDao.updateSetExchangeId(newUploadingPhoto.photoId, newPhotoInfoExchange.id)
+						}
+
+						if (!newPhotoExchangeResult) {
+							//TODO: error handling
+						}
+
+						return@let newPhotoExchangeResult
+					} else {
+						val existingPhotoExchangeResult = kotlin.run {
+							//there is a photo, update exchange request with info about our photo
+							if (!photoInfoDao.updateSetExchangeId(newUploadingPhoto.photoId, photoInfoExchange.id)) {
+								return@run false
+							}
+
+							val ids = arrayListOf(photoInfoExchange.uploaderPhotoId, photoInfoExchange.receiverPhotoId)
+							val photos = photoInfoDao.findMany(ids, PhotoInfoDao.SortOrder.Unsorted)
+							if (photos.size != ids.size) {
+								return@run false
+							}
+
+							if (!photoInfoDao.updateSetReceiverId(photoInfoExchange.uploaderPhotoId, photos.last().uploaderUserId)) {
+								return@run false
+							}
+
+							return@run photoInfoDao.updateSetReceiverId(photoInfoExchange.receiverPhotoId, photos.first().uploaderUserId)
+						}
+
+						if (!existingPhotoExchangeResult) {
+							//TODO: error handling
+						}
+
+						return@let existingPhotoExchangeResult
+					}
+
 				}
+
+				return@withLock result
 			}
-		}
+		}.await()
 	}
 
 	suspend fun delete(userId: String, photoName: String): Boolean {
