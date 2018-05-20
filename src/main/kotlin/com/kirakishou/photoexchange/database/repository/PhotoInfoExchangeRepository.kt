@@ -13,20 +13,10 @@ class PhotoInfoExchangeRepository(
 	private val photoInfoExchangeDao: PhotoInfoExchangeDao,
 	private val concurrentService: ConcurrencyService
 ) {
-	fun save(photoInfoExchange: PhotoInfoExchange): Mono<PhotoInfoExchange> {
-		return mongoSequenceDao.getNextPhotoExchangeId()
-			.flatMap { photoInfoExchangeDao.save(photoInfoExchange) }
-	}
-
-	fun findAllByIdList(ids: List<Long>): Mono<List<PhotoInfoExchange>> {
-		return photoInfoExchangeDao.findManyByIdList(ids)
-	}
-
-	fun findById(exchangeId: Long): Mono<PhotoInfoExchange> {
-		return photoInfoExchangeDao.findById(exchangeId)
-	}
-
-	fun findByIdAsync(exchangeId: Long): Mono<PhotoInfoExchange> {
-		return photoInfoExchangeDao.findById(exchangeId)
+	suspend fun save(photoInfoExchange: PhotoInfoExchange): Mono<PhotoInfoExchange> {
+		return concurrentService.asyncMongo {
+			return@asyncMongo mongoSequenceDao.getNextPhotoExchangeId()
+				.flatMap { photoInfoExchangeDao.save(photoInfoExchange) }
+		}.await()
 	}
 }

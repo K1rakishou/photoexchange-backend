@@ -66,12 +66,6 @@ open class PhotoInfoRepository(
 		}.await()
 	}
 
-	suspend fun findMany(userId: String, photoNames: List<String>): List<PhotoInfo> {
-		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.findMany(userId, photoNames).awaitFirst()
-		}.await()
-	}
-
 	suspend fun findManyPhotos(userId: String, photoIds: List<Long>, searchForUploaded: Boolean): List<PhotoInfoWithLocation> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
@@ -91,44 +85,35 @@ open class PhotoInfoRepository(
 		}.await()
 	}
 
-	suspend fun findByExchangeIdAndUserId(userId: String, exchangeId: Long): PhotoInfo {
-		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.findByExchangeIdAndUserId(userId, exchangeId)
-				.awaitFirst()
-		}.await()
-	}
-
 	suspend fun findOlderThan(time: Long, maxCount: Int): List<PhotoInfo> {
 		return concurrentService.asyncMongo {
-			val photos = photoInfoDao.findOlderThan(time, maxCount).awaitFirst()
-			val userInfos = userInfoDao.findManyNotRegistered(photos.map { it.uploaderUserId })
-				.awaitFirst()
+			return@asyncMongo mutex.withLock {
+				val photos = photoInfoDao.findOlderThan(time, maxCount).awaitFirst()
+				val userInfos = userInfoDao.findManyNotRegistered(photos.map { it.uploaderUserId })
+					.awaitFirst()
 
-			val userIdsSet = userInfos.map { it.userId }.toSet()
-			val resultList = mutableListOf<PhotoInfo>()
+				val userIdsSet = userInfos.map { it.userId }.toSet()
+				val resultList = mutableListOf<PhotoInfo>()
 
-			for (photoInfo in photos) {
-				if (!userIdsSet.contains(photoInfo.uploaderUserId)) {
-					continue
+				for (photoInfo in photos) {
+					if (!userIdsSet.contains(photoInfo.uploaderUserId)) {
+						continue
+					}
+
+					resultList += photoInfo
 				}
 
-				resultList += photoInfo
+				return@withLock resultList
 			}
-
-			return@asyncMongo resultList
 		}.await()
 	}
 
 	suspend fun findUploadedPhotosPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
-		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.findPaged(userId, lastId, count, true).awaitFirst()
-		}.await()
+		return photoInfoDao.findPaged(userId, lastId, count, true).awaitFirst()
 	}
 
 	suspend fun findReceivedPhotosPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
-		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.findPaged(userId, lastId, count, false).awaitFirst()
-		}.await()
+		return photoInfoDao.findPaged(userId, lastId, count, false).awaitFirst()
 	}
 
 	suspend fun tryDoExchange(newUploadingPhoto: PhotoInfo): Boolean {
@@ -235,28 +220,37 @@ open class PhotoInfoRepository(
 	}
 
 	private suspend fun deletePhotoInternal(photoInfo: PhotoInfo): Boolean {
-		return mutex.withLock {
-			photoInfoDao.deleteById(photoInfo.photoId).awaitFirst()
-			photoInfoExchangeDao.deleteById(photoInfo.exchangeId).awaitFirst()
-			favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId).awaitFirst()
-			reportedPhotoDao.deleteByPhotoId(photoInfo.photoId).awaitFirst()
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				val results = mutableListOf<Mono<Boolean>>()
 
-			return@withLock true
-		}
+				results += photoInfoDao.deleteById(photoInfo.photoId)
+				results += photoInfoExchangeDao.deleteById(photoInfo.exchangeId)
+				results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+				results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+
+				return@withLock results.map { it.awaitFirst() }
+					.any { !it }
+			}
+		}.await()
 	}
 
 	private suspend fun deletePhotosInternal(photoInfoList: List<PhotoInfo>): Boolean {
-		return mutex.withLock {
-			val photoIds = photoInfoList.map { it.photoId }
-			val exchangeIds = photoInfoList.map { it.exchangeId }
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				val photoIds = photoInfoList.map { it.photoId }
+				val exchangeIds = photoInfoList.map { it.exchangeId }
+				val results = mutableListOf<Mono<Boolean>>()
 
-			photoInfoDao.deleteAll(photoIds).awaitFirst()
-			photoInfoExchangeDao.deleteAll(exchangeIds).awaitFirst()
-			favouritedPhotoDao.deleteAll(photoIds).awaitFirst()
-			reportedPhotoDao.deleteAll(photoIds).awaitFirst()
+				results += photoInfoDao.deleteAll(photoIds)
+				results += photoInfoExchangeDao.deleteAll(exchangeIds)
+				results += favouritedPhotoDao.deleteAll(photoIds)
+				results += reportedPhotoDao.deleteAll(photoIds)
 
-			return@withLock true
-		}
+				return@withLock results.map { it.awaitFirst() }
+					.any { !it }
+			}
+		}.await()
 	}
 
 	suspend fun favouritePhoto(userId: String, photoName: String): FavouritePhotoResult {

@@ -13,9 +13,11 @@ class GalleryPhotosRepository(
 ) {
 	private val mutex = Mutex()
 
-	suspend fun findPaged(lastId: Long, count: Int):List<Long> {
-		return galleryPhotoDao.findPaged(lastId, count)
-			.map { it.map { it.id } }
-			.awaitFirst()
+	suspend fun findPaged(lastId: Long, count: Int): List<Long> {
+		return concurrentService.asyncMongo {
+			return@asyncMongo galleryPhotoDao.findPaged(lastId, count)
+				.map { it.map { it.id } }
+				.awaitFirst()
+		}.await()
 	}
 }
