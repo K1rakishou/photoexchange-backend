@@ -123,10 +123,16 @@ open class PhotoInfoDao(
 			.onErrorReturn(emptyList())
 	}
 
-	fun findPaged(userId: String, lastId: Long, count: Int): Mono<List<PhotoInfo>> {
+	fun findPaged(userId: String, lastId: Long, count: Int, searchForUploadedPhotos: Boolean): Mono<List<PhotoInfo>> {
 		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).lt(lastId))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
+
+		if (searchForUploadedPhotos) {
+			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
+		} else {
+			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_USER_ID).`is`(userId))
+		}
+
+		query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).lt(lastId))
 			.limit(count)
 
 		return template.find(query, PhotoInfo::class.java)
@@ -136,10 +142,10 @@ open class PhotoInfoDao(
 			.onErrorReturn(emptyList())
 	}
 
-	fun findManyPhotosByUserIdAndExchangeId(userId: String, exhangeIds: List<Long>): Mono<List<PhotoInfo>> {
+	fun findManyPhotosUploadedByUser(userId: String, exchangeIds: List<Long>): Mono<List<PhotoInfo>> {
 		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).ne(userId))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`in`(exhangeIds))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`in`(exchangeIds))
 
 		return template.find(query, PhotoInfo::class.java)
 			.collectList()

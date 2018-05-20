@@ -1,15 +1,23 @@
 package com.kirakishou.photoexchange.handlers.received_photos
 
+import com.kirakishou.photoexchange.config.ServerSettings
+import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.handlers.AbstractWebHandler
-import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
+import com.kirakishou.photoexchange.model.ErrorCode
+import com.kirakishou.photoexchange.model.net.response.GetReceivedPhotoIdsResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
+import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
 
 class GetReceivedPhotoIdsHandler(
 	jsonConverter: JsonConverterService,
+	private val photoInfoRepo: PhotoInfoRepository,
 	private val concurrentService: ConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
 
@@ -19,7 +27,7 @@ class GetReceivedPhotoIdsHandler(
 	private val COUNT_PATH_VARIABLE = "count"
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		/*return mono(concurrentService.commonThreadPool) {
+		return mono(concurrentService.commonThreadPool) {
 			logger.debug("New GetReceivedPhotoIds request")
 
 			try {
@@ -29,11 +37,11 @@ class GetReceivedPhotoIdsHandler(
 						GetReceivedPhotoIdsResponse.fail(ErrorCode.GetReceivedPhotosError.BadRequest))
 				}
 
-				val uploaderPhotoId = request.pathVariable(USER_ID_PATH_VARIABLE)
+				val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
 				val lastIdString = request.pathVariable(LAST_ID_PATH_VARIABLE)
 				val countString = request.pathVariable(COUNT_PATH_VARIABLE)
 
-				logger.debug("uploaderPhotoId: $uploaderPhotoId, lastId: $lastIdString, count: $countString")
+				logger.debug("userId: $userId, lastId: $lastIdString, count: $countString")
 
 				val lastId = try {
 					lastIdString.toLong()
@@ -47,48 +55,16 @@ class GetReceivedPhotoIdsHandler(
 					ServerSettings.MAX_RECEIVED_PHOTOS_PER_REQUEST_COUNT
 				}
 
-				val photoAnswerList = arrayListOf<ReceivedPhotoResponse.ReceivedPhoto>()
-				val photoInfoList = photoInfoRepo.findMany(uploaderPhotoId, photoNameList)
+				val photosPage = photoInfoRepo.findReceivedPhotosPaged(userId, lastId, count)
+				val receivedPhotoIds = photosPage.map { photoInfo -> photoInfo.photoId }
 
-				//TODO: remake DB requests in batches
-				for (photoInfo in photoInfoList) {
-					val uploadedPhotoName = photoInfo.photoName
-					logger.debug("PhotoName = $uploadedPhotoName")
-
-					if (photoInfo.isEmpty()) {
-						logger.debug("Could not find photoInfo = uploaderPhotoId: $uploaderPhotoId, uploadedPhotoName: $uploadedPhotoName")
-						continue
-					}
-
-					val exchangeId = photoInfo.exchangeId
-					val photoInfoExchange = photoInfoExchangeRepository.findById(exchangeId)
-
-					val otherUserId = if (photoInfoExchange.receiverPhotoId == uploaderPhotoId) {
-						photoInfoExchange.uploaderPhotoId
-					} else {
-						photoInfoExchange.receiverPhotoId
-					}
-
-					if (otherUserId.isEmpty()) {
-						logger.debug("Other user has not not received photo yet")
-						continue
-					}
-
-					val otherUserPhotoInfo = photoInfoRepo.findByExchangeIdAndUserId(otherUserId, exchangeId)
-					if (otherUserPhotoInfo.isEmpty()) {
-						logger.debug("Could not find other user's photoInfo = otherUserId: $otherUserId, exchangeId: $exchangeId")
-						continue
-					}
-
-					photoAnswerList += ReceivedPhotoResponse.ReceivedPhoto(uploadedPhotoName, otherUserPhotoInfo.photoName,
-						otherUserPhotoInfo.lon, otherUserPhotoInfo.lat)
-				}
-
+				logger.debug("Found ${receivedPhotoIds.size} photo ids")
+				return@mono formatResponse(HttpStatus.OK, GetReceivedPhotoIdsResponse.success(receivedPhotoIds))
 			} catch (error: Throwable) {
-
+				logger.error("Unknown error", error)
+				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+					GetReceivedPhotoIdsResponse.fail(ErrorCode.GetReceivedPhotosError.UnknownError))
 			}
-		}.flatMap { it }*/
-
-		TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+		}.flatMap { it }
 	}
 }

@@ -6,8 +6,8 @@ import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.handlers.AbstractWebHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.GetUploadedPhotoIdsResponse
-import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -55,7 +55,7 @@ class GetUploadedPhotoIdsHandler(
 					ServerSettings.MAX_UPLOADED_PHOTOS_PER_REQUEST_COUNT
 				}
 
-				val photosPage = photoInfoRepo.findPaged(userId, lastId, count)
+				val photosPage = photoInfoRepo.findUploadedPhotosPaged(userId, lastId, count)
 				val uploadedPhotoIds = photosPage.map { photoInfo -> photoInfo.photoId }
 
 				logger.debug("Found ${uploadedPhotoIds.size} photo ids")

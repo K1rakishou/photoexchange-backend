@@ -25,7 +25,7 @@ class PhotoInfoRepositoryTest : AbstractRepositoryTest() {
 	fun tearDown() {
 		super.clear()
 	}
-	
+
 	@Test
 	fun `delete photo info exchange record from the database when something happened in first part of photo exchange`() {
 		runBlocking {

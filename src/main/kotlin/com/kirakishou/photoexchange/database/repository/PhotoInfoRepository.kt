@@ -76,7 +76,7 @@ open class PhotoInfoRepository(
 			val photoInfos = photoInfoDao.findManyByIds(userId, photoIds).awaitFirst()
 			val exhangeIds = photoInfos.map { it.exchangeId }
 
-			val otherPhotos = photoInfoDao.findManyPhotosByUserIdAndExchangeId(userId, exhangeIds).awaitFirst()
+			val otherPhotos = photoInfoDao.findManyPhotosUploadedByUser(userId, exhangeIds).awaitFirst()
 			val otherPhotosMap = mutableMapOf<Long, PhotoInfo>()
 
 			for (otherPhoto in otherPhotos) {
@@ -114,9 +114,15 @@ open class PhotoInfoRepository(
 		}.await()
 	}
 
-	suspend fun findPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
+	suspend fun findUploadedPhotosPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
 		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.findPaged(userId, lastId, count).awaitFirst()
+			return@asyncMongo photoInfoDao.findPaged(userId, lastId, count, true).awaitFirst()
+		}.await()
+	}
+
+	suspend fun findReceivedPhotosPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.findPaged(userId, lastId, count, false).awaitFirst()
 		}.await()
 	}
 
