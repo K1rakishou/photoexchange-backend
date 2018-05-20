@@ -13,6 +13,13 @@ object ServerSettings {
 	const val MAX_UPLOADED_PHOTOS_PER_REQUEST_COUNT = 50
 	const val MAX_RECEIVED_PHOTOS_PER_REQUEST_COUNT = 50
 
+	const val BIG_PHOTO_SIZE = 3072
+	const val MEDIUM_PHOTO_SIZE = 1024
+	const val SMALL_PHOTO_SIZE = 512
+	const val BIG_PHOTO_SUFFIX = "_b"
+	const val MEDIUM_PHOTO_SUFFIX = "_m"
+	const val SMALL_PHOTO_SUFFIX = "_s"
+
 	object ThreadPool {
 		object Mongo {
 			const val MONGO_POOL_NAME = "mongoPool"

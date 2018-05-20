@@ -78,6 +78,20 @@ open class PhotoInfoExchangeDao(
 			.onErrorReturn(PhotoInfoExchange.empty())
 	}
 
+	fun updateResetReceiverInfo(exchangeId: Long): Mono<Boolean> {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.ID).`is`(exchangeId))
+
+		val update = Update()
+			.set(PhotoInfoExchange.Mongo.Field.RECEIVER_PHOTO_ID, -1)
+			.set(PhotoInfoExchange.Mongo.Field.RECEIVER_USER_ID, "")
+
+		return template.updateFirst(query, update, PhotoInfoExchange::class.java)
+			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
+	}
+
 	fun deleteById(exchangeId: Long): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.ID).`is`(exchangeId))

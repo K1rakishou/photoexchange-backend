@@ -1,9 +1,15 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
+import com.kirakishou.photoexchange.config.ServerSettings.BIG_PHOTO_SIZE
+import com.kirakishou.photoexchange.config.ServerSettings.BIG_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.config.ServerSettings.DELETE_PHOTOS_OLDER_THAN
 import com.kirakishou.photoexchange.config.ServerSettings.MAX_PHOTO_SIZE
+import com.kirakishou.photoexchange.config.ServerSettings.MEDIUM_PHOTO_SIZE
+import com.kirakishou.photoexchange.config.ServerSettings.MEDIUM_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.config.ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL
+import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SIZE
+import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
 import com.kirakishou.photoexchange.model.ErrorCode
@@ -40,12 +46,6 @@ class UploadPhotoHandler(
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
 	private val PACKET_PART_KEY = "packet"
 	private val PHOTO_PART_KEY = "photo"
-	private val BIG_PHOTO_SIZE = 3072
-	private val MEDIUM_PHOTO_SIZE = 1024
-	private val SMALL_PHOTO_SIZE = 512
-	private val BIG_PHOTO_SUFFIX = "_b"
-	private val MEDIUM_PHOTO_SUFFIX = "_m"
-	private val SMALL_PHOTO_SUFFIX = "_s"
 	private var lastTimeCheck = 0L
 	private val MAX_PHOTOS_TO_DELETE_PER_RUN = 1000
 	private val photoSizes = arrayOf(BIG_PHOTO_SUFFIX, MEDIUM_PHOTO_SUFFIX, SMALL_PHOTO_SUFFIX)

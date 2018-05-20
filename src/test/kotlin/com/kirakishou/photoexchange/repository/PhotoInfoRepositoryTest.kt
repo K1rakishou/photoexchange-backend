@@ -1,101 +1,71 @@
 package com.kirakishou.photoexchange.repository
 
-import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.dao.*
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
-import com.kirakishou.photoexchange.service.GeneratorService
-import com.kirakishou.photoexchange.service.concurrency.TestConcurrencyService
-import com.mongodb.ConnectionString
+import junit.framework.Assert.assertEquals
+import kotlinx.coroutines.experimental.reactive.awaitFirst
 import kotlinx.coroutines.experimental.runBlocking
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate
-import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import reactor.core.publisher.Mono
 
 @RunWith(SpringJUnit4ClassRunner::class)
-class PhotoInfoRepositoryTest {
-	lateinit var photoInfoRepository: PhotoInfoRepository
+class PhotoInfoRepositoryTest : AbstractRepositoryTest() {
 
-	lateinit var template: ReactiveMongoTemplate
-	lateinit var mongoSequenceDao: MongoSequenceDao
-	lateinit var photoInfoDao: PhotoInfoDao
-	lateinit var photoInfoExchangeDao: PhotoInfoExchangeDao
-	lateinit var galleryPhotoDao: GalleryPhotoDao
-	lateinit var favouritedPhotoDao: FavouritedPhotoDao
-	lateinit var reportedPhotoDao: ReportedPhotoDao
-	lateinit var userInfoDao: UserInfoDao
+	@Before
+	fun setup() {
+		super.init()
+	}
 
+	@After
+	fun tearDown() {
+		super.clear()
+	}
+	
 	@Test
-	fun `test try do exchange`() {
+	fun `delete photo info exchange record from the database when something happened in first part of photo exchange`() {
 		runBlocking {
-			createPhotoInfoRepository()
+			val photoInfo = PhotoInfo.create("111", "photo_name", true, 11.1, 11.1, 1500L)
 
-			Mockito.doReturn(Mono.just(PhotoInfoExchange.empty())).`when`(photoInfoExchangeDao)
-				.tryDoExchangeWithOldestPhoto(Mockito.anyLong(), Mockito.anyString())
+			Mockito.`when`(photoInfoDao.updateSetExchangeId(1L, 1L))
+				.thenReturn(Mono.just(false))
 
-			val result = photoInfoRepository.tryDoExchange(PhotoInfo.empty())
+			val newPhotoInfo = photoInfoRepository.save(photoInfo)
 
-			println()
-			println()
-			println()
-			println()
-			println()
-			println()
+			assertEquals(false, newPhotoInfo.isEmpty())
+			assertEquals(false, photoInfoRepository.tryDoExchange(newPhotoInfo))
+			assertEquals(true, photoInfoExchangeDao.findById(1).awaitFirst().isEmpty())
 		}
 	}
 
-	private fun createPhotoInfoRepository() {
-		template = ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(
-			ConnectionString("mongodb://${ServerSettings.DatabaseInfo.HOST}:${ServerSettings.DatabaseInfo.PORT}/photoexchange_test"))
-		)
+	@Test
+	fun `delete photo info exchange record from the database when something happened in the second part of photo exchange`() {
+		runBlocking {
+			val photoInfo1 = PhotoInfo(1, 1, "111", "", "photo_name", true, 11.1, 11.1, 1500L)
+			val photoInfo2 = PhotoInfo(2, -1, "222", "", "photo_name2", true, 22.2, 22.2, 1505L)
+			val photoInfoExchange = PhotoInfoExchange(1, 1, -1, "111", "", 1500L)
 
-		mongoSequenceDao = Mockito.spy(MongoSequenceDao(template).also {
-			it.clear()
-			it.create()
-		})
-		photoInfoDao = Mockito.spy(PhotoInfoDao(template).also {
-			it.clear()
-			it.create()
-		})
-		photoInfoExchangeDao = Mockito.spy(PhotoInfoExchangeDao(template).also {
-			it.clear()
-			it.create()
-		})
-		galleryPhotoDao = Mockito.spy(GalleryPhotoDao(template).also {
-			it.clear()
-			it.create()
-		})
-		favouritedPhotoDao = Mockito.spy(FavouritedPhotoDao(template).also {
-			it.clear()
-			it.create()
-		})
-		reportedPhotoDao = Mockito.spy(ReportedPhotoDao(template).also {
-			it.clear()
-			it.create()
-		})
-		userInfoDao = Mockito.spy(UserInfoDao(template).also {
-			it.clear()
-			it.create()
-		})
+			photoInfoDao.save(photoInfo1).awaitFirst()
+			photoInfoDao.save(photoInfo2).awaitFirst()
+			photoInfoExchangeDao.save(photoInfoExchange).awaitFirst()
 
-		val generator = Mockito.spy(GeneratorService())
-		val concurrentService = TestConcurrencyService()
+			Mockito.`when`(photoInfoDao.updateSetReceiverId(2, "111"))
+				.thenReturn(Mono.just(false))
 
-		photoInfoRepository = Mockito.spy(PhotoInfoRepository(
-			mongoSequenceDao,
-			photoInfoDao,
-			photoInfoExchangeDao,
-			galleryPhotoDao,
-			favouritedPhotoDao,
-			reportedPhotoDao,
-			userInfoDao,
-			generator,
-			concurrentService)
-		)
+			assertEquals(false, photoInfoRepository.tryDoExchange(photoInfo2))
+
+			val resultPhotoInfo1 = photoInfoDao.findById(1).awaitFirst()
+			val resultPhotoInfo2 = photoInfoDao.findById(2).awaitFirst()
+			val resultPhotoInfoExchange = photoInfoExchangeDao.findById(1).awaitFirst()
+
+			assertEquals("", resultPhotoInfo1.receiverUserId)
+			assertEquals(-1L, resultPhotoInfo2.exchangeId)
+			assertEquals(-1L, resultPhotoInfoExchange.receiverPhotoId)
+			assertEquals("", resultPhotoInfoExchange.receiverUserId)
+		}
 	}
 }

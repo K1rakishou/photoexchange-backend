@@ -1,7 +1,14 @@
 package com.kirakishou.photoexchange.repository
 
+import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.dao.*
+import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.service.GeneratorService
+import com.kirakishou.photoexchange.service.concurrency.TestConcurrencyService
+import com.mongodb.ConnectionString
+import org.mockito.Mockito
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
+import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory
 
 abstract class AbstractRepositoryTest {
 
@@ -15,35 +22,56 @@ abstract class AbstractRepositoryTest {
 	lateinit var reportedPhotoDao: ReportedPhotoDao
 	lateinit var userInfoDao: UserInfoDao
 
+	lateinit var photoInfoRepository: PhotoInfoRepository
+
 	fun init() {
-		mongoSequenceDao = MongoSequenceDao(template).also {
+		template = ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(
+			ConnectionString("mongodb://${ServerSettings.DatabaseInfo.HOST}:${ServerSettings.DatabaseInfo.PORT}/photoexchange_test"))
+		)
+
+		mongoSequenceDao = Mockito.spy(MongoSequenceDao(template).also {
 			it.clear()
 			it.create()
-		}
-		photoInfoDao = PhotoInfoDao(template).also {
+		})
+		photoInfoDao = Mockito.spy(PhotoInfoDao(template).also {
 			it.clear()
 			it.create()
-		}
-		photoInfoExchangeDao = PhotoInfoExchangeDao(template).also {
+		})
+		photoInfoExchangeDao = Mockito.spy(PhotoInfoExchangeDao(template).also {
 			it.clear()
 			it.create()
-		}
-		galleryPhotoDao = GalleryPhotoDao(template).also {
+		})
+		galleryPhotoDao = Mockito.spy(GalleryPhotoDao(template).also {
 			it.clear()
 			it.create()
-		}
-		favouritedPhotoDao = FavouritedPhotoDao(template).also {
+		})
+		favouritedPhotoDao = Mockito.spy(FavouritedPhotoDao(template).also {
 			it.clear()
 			it.create()
-		}
-		reportedPhotoDao = ReportedPhotoDao(template).also {
+		})
+		reportedPhotoDao = Mockito.spy(ReportedPhotoDao(template).also {
 			it.clear()
 			it.create()
-		}
-		userInfoDao = UserInfoDao(template).also {
+		})
+		userInfoDao = Mockito.spy(UserInfoDao(template).also {
 			it.clear()
 			it.create()
-		}
+		})
+
+		val generator = Mockito.spy(GeneratorService())
+		val concurrentService = TestConcurrencyService()
+
+		photoInfoRepository = Mockito.spy(PhotoInfoRepository(
+			mongoSequenceDao,
+			photoInfoDao,
+			photoInfoExchangeDao,
+			galleryPhotoDao,
+			favouritedPhotoDao,
+			reportedPhotoDao,
+			userInfoDao,
+			generator,
+			concurrentService)
+		)
 	}
 
 	fun clear() {
