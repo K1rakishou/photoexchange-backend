@@ -6,8 +6,8 @@ import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.handlers.AbstractWebHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.GalleryPhotoIdsResponse
-import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -49,8 +49,8 @@ class GetGalleryPhotoIdsHandler(
 				}
 
 				val galleryPhotoIds = galleryPhotosRepository.findPaged(lastId, count)
-
 				logger.debug("Found ${galleryPhotoIds.size} photo ids from gallery")
+
 				return@mono formatResponse(HttpStatus.OK,
 					GalleryPhotoIdsResponse.success(galleryPhotoIds))
 			} catch (error: Throwable) {

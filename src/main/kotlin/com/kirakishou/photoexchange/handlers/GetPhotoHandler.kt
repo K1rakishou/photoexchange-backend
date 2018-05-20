@@ -1,9 +1,10 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
+import com.kirakishou.photoexchange.config.ServerSettings.PHOTO_SIZES
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
-import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBufferUtils
@@ -25,7 +26,6 @@ class GetPhotoHandler(
 	private val readChuckSize = 16384
 	private val PHOTO_NAME_PATH_VARIABLE = "photo_name"
 	private val PHOTO_SIZE_PATH_VARIABLE = "photo_size"
-	private val photoSizes = arrayOf("b", "s", "m")
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		return mono(concurrentService.commonThreadPool) {
@@ -40,8 +40,8 @@ class GetPhotoHandler(
 				val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
 				val photoSize = request.pathVariable(PHOTO_SIZE_PATH_VARIABLE)
 
-				if (!photoSizes.contains(photoSize)) {
-					logger.debug("Photo size param is neither of $photoSizes")
+				if (!PHOTO_SIZES.contains(photoSize)) {
+					logger.debug("Photo size param is neither of $PHOTO_SIZES")
 					return@mono ServerResponse.badRequest().build()
 				}
 

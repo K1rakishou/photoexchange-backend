@@ -20,6 +20,8 @@ object ServerSettings {
 	const val MEDIUM_PHOTO_SUFFIX = "_m"
 	const val SMALL_PHOTO_SUFFIX = "_s"
 
+	val PHOTO_SIZES = arrayOf("b", "s", "m")
+
 	object ThreadPool {
 		object Mongo {
 			const val MONGO_POOL_NAME = "mongoPool"
