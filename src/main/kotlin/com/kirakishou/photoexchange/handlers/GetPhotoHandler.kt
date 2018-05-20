@@ -62,7 +62,7 @@ class GetPhotoHandler(
 
 				logger.debug("Returning photo")
 				return@mono ServerResponse.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=photo")
+					.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=$photoName")
 					.body(photoStreamFlux)
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)

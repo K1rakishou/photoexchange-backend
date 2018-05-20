@@ -7,7 +7,7 @@ class GetUploadedPhotosResponse
 private constructor(
 
 	@SerializedName("uploaded_photos")
-	val uploadedPhotoss: List<UploadedPhoto>,
+	val uploadedPhotos: List<UploadedPhoto>,
 
 	errorCode: ErrorCode.GetUploadedPhotosError
 ) : StatusResponse(errorCode.value) {

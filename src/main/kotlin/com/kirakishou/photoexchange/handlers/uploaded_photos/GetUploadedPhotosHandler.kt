@@ -6,8 +6,8 @@ import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.handlers.AbstractWebHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.GetUploadedPhotosResponse
-import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.kirakishou.photoexchange.util.Utils
 import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
@@ -50,7 +50,7 @@ class GetUploadedPhotosHandler(
 						GetUploadedPhotosResponse.fail(ErrorCode.GetUploadedPhotosError.NoPhotosInRequest))
 				}
 
-				val uploadedPhotos = photoInfoRepo.findManyUploadedPhotos(userId, uploadedPhotoIds)
+				val uploadedPhotos = photoInfoRepo.findManyPhotos(userId, uploadedPhotoIds, true)
 				val uploadedPhotosDataList = uploadedPhotos.map { uploadedPhoto ->
 					GetUploadedPhotosResponse.UploadedPhoto(
 						uploadedPhoto.photoInfo.photoId,
@@ -59,7 +59,7 @@ class GetUploadedPhotosHandler(
 						uploadedPhoto.lat)
 				}
 
-				logger.debug("Found ${uploadedPhotos.size} photos")
+				logger.debug("Found ${uploadedPhotos.size} uploaded photos")
 				return@mono formatResponse(HttpStatus.OK,
 					GetUploadedPhotosResponse.success(uploadedPhotosDataList))
 			} catch (error: Throwable) {

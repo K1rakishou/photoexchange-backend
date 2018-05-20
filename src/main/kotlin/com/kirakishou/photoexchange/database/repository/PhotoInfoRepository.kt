@@ -53,7 +53,8 @@ open class PhotoInfoRepository(
 				}
 
 				val galleryPhotoId = mongoSequenceDao.getNextGalleryPhotoId().awaitFirst()
-				val result = galleryPhotoDao.save(GalleryPhoto.create(galleryPhotoId, photoInfo.photoId, savedPhotoInfo.uploadedOn)).awaitFirst()
+				val result = galleryPhotoDao.save(GalleryPhoto.create(galleryPhotoId, photoInfo.photoId,
+					savedPhotoInfo.uploadedOn)).awaitFirst()
 
 				if (!result) {
 					photoInfoDao.deleteById(photoInfo.photoId).awaitFirst()
@@ -71,33 +72,41 @@ open class PhotoInfoRepository(
 		}.await()
 	}
 
-	suspend fun findManyUploadedPhotos(userId: String, photoIds: List<Long>): List<PhotoInfoWithLocation> {
+	suspend fun findManyPhotos(userId: String, photoIds: List<Long>, searchForUploaded: Boolean): List<PhotoInfoWithLocation> {
 		return concurrentService.asyncMongo {
-			val photoInfos = photoInfoDao.findManyByIds(userId, photoIds).awaitFirst()
-			val exhangeIds = photoInfos.map { it.exchangeId }
+			return@asyncMongo mutex.withLock {
+				val photoInfos = photoInfoDao.findManyByIds(userId, photoIds, searchForUploaded).awaitFirst()
+				val exhangeIds = photoInfos.map { it.exchangeId }
 
-			val otherPhotos = photoInfoDao.findManyPhotosUploadedByUser(userId, exhangeIds).awaitFirst()
-			val otherPhotosMap = mutableMapOf<Long, PhotoInfo>()
+				val otherPhotos = photoInfoDao.findManyPhotosUploadedByUser(userId, exhangeIds, searchForUploaded).awaitFirst()
+				val otherPhotosMap = mutableMapOf<Long, PhotoInfo>()
 
-			for (otherPhoto in otherPhotos) {
-				otherPhotosMap[otherPhoto.exchangeId] = otherPhoto
+				for (otherPhoto in otherPhotos) {
+					otherPhotosMap[otherPhoto.exchangeId] = otherPhoto
+				}
+
+				return@withLock photoInfos
+					.map {
+						PhotoInfoWithLocation(it,
+							otherPhotosMap[it.exchangeId]?.lon ?: 0.0,
+							otherPhotosMap[it.exchangeId]?.lat ?: 0.0)
+					}
 			}
-
-			return@asyncMongo photoInfos
-				.map { PhotoInfoWithLocation(it, otherPhotosMap[it.exchangeId]?.lon ?: 0.0, otherPhotosMap[it.exchangeId]?.lat ?: 0.0) }
 		}.await()
 	}
 
 	suspend fun findByExchangeIdAndUserId(userId: String, exchangeId: Long): PhotoInfo {
 		return concurrentService.asyncMongo {
-			return@asyncMongo photoInfoDao.findByExchangeIdAndUserId(userId, exchangeId).awaitFirst()
+			return@asyncMongo photoInfoDao.findByExchangeIdAndUserId(userId, exchangeId)
+				.awaitFirst()
 		}.await()
 	}
 
 	suspend fun findOlderThan(time: Long, maxCount: Int): List<PhotoInfo> {
 		return concurrentService.asyncMongo {
 			val photos = photoInfoDao.findOlderThan(time, maxCount).awaitFirst()
-			val userInfos = userInfoDao.findManyNotRegistered(photos.map { it.uploaderUserId }).awaitFirst()
+			val userInfos = userInfoDao.findManyNotRegistered(photos.map { it.uploaderUserId })
+				.awaitFirst()
 
 			val userIdsSet = userInfos.map { it.userId }.toSet()
 			val resultList = mutableListOf<PhotoInfo>()
