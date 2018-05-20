@@ -64,10 +64,26 @@ open class PhotoInfoDao(
 			.onErrorReturn(PhotoInfo.empty())
 	}
 
-	fun findMany(userId: String, photoNames: List<String>): Mono<List<PhotoInfo>> {
+	fun findManyByUploaderUserIdAndExchangeId(uploaderUserIdList: List<String>, exchangeIdList: List<Long>): Mono<List<PhotoInfo>> {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`in`(uploaderUserIdList))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`in`(exchangeIdList))
+
+		return template.find(query, PhotoInfo::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
+	}
+
+	fun findMany(userId: String, photoNames: List<String>, includeEmptyReceiver: Boolean = true): Mono<List<PhotoInfo>> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`in`(photoNames))
+
+		if (!includeEmptyReceiver) {
+			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_USER_ID).ne(""))
+		}
 
 		return template.find(query, PhotoInfo::class.java)
 			.collectList()

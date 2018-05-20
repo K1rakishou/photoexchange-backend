@@ -1,11 +1,16 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
+import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
+import com.kirakishou.photoexchange.extensions.containsAllPathVars
+import com.kirakishou.photoexchange.model.ErrorCode
+import com.kirakishou.photoexchange.model.net.response.ReceivePhotosResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import com.kirakishou.photoexchange.util.TimeUtils
+import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
@@ -14,93 +19,57 @@ import java.util.concurrent.TimeUnit
 class ReceivePhotosHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
-	private val photoInfoExchangeRepository: PhotoInfoExchangeRepository,
-	private val concurrentService: ConcurrencyService
+	private val concurrentService: AbstractConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
 	private val logger = LoggerFactory.getLogger(ReceivePhotosHandler::class.java)
 	private val USER_ID_PATH_VARIABLE = "user_id"
 	private val PHOTO_NAME_PATH_VARIABLE = "photo_names"
-	private val DELIMITER = ','
 	private var lastTimeCheck = 0L
 	private val FIVE_MINUTES = TimeUnit.MINUTES.toMillis(5)
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-//		return mono(concurrentService.commonThreadPool) {
-//			logger.debug("New ReceivePhotos request")
-//
-//			try {
-//				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_NAME_PATH_VARIABLE)) {
-//					logger.debug("Request does not contain one of the required path variables")
-//					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-//						ReceivedPhotoResponse.fail(ErrorCode.ReceivePhotosErrors.BadRequest))
-//				}
-//
-//				val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
-//				val photoNames = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
-//				logger.debug("UserId: $userId, photoNames: $photoNames")
-//
-//				val photoNameList = photoNames.split(DELIMITER)
-//				if (photoNameList.isEmpty()) {
-//					logger.debug("photoNameList is empty")
-//					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-//						ReceivedPhotoResponse.fail(ErrorCode.ReceivePhotosErrors.NoPhotosInRequest))
-//				}
-//
-//				val photoAnswerList = arrayListOf<ReceivedPhotoResponse.ReceivedPhoto>()
-//				val photoInfoList = photoInfoRepo.findMany(userId, photoNameList)
-//
-//				//TODO: remake DB requests in batches
-//				for (photoInfo in photoInfoList) {
-//					val uploadedPhotoName = photoInfo.photoName
-//					logger.debug("PhotoName = $uploadedPhotoName")
-//
-//					if (photoInfo.isEmpty()) {
-//						logger.debug("Could not find photoInfo = uploaderPhotoId: $userId, uploadedPhotoName: $uploadedPhotoName")
-//						continue
-//					}
-//
-//					val exchangeId = photoInfo.exchangeId
-//					val photoInfoExchange = photoInfoExchangeRepository.findById(exchangeId)
-//
-//					val otherPhotoId = if (photoInfoExchange.receiverPhotoId == photoInfo.photoId) {
-//						photoInfoExchange.uploaderPhotoId
-//					} else {
-//						photoInfoExchange.receiverPhotoId
-//					}
-//
-//					if (otherPhotoId == -1L) {
-//						logger.debug("Other user has not not received photo yet")
-//						continue
-//					}
-//
-//					val otherUserPhotoInfo = photoInfoRepo.findByExchangeIdAndUserId(otherPhotoId, exchangeId)
-//					if (otherUserPhotoInfo.isEmpty()) {
-//						logger.debug("Could not find other user's photoInfo = otherUserId: $otherPhotoId, exchangeId: $exchangeId")
-//						continue
-//					}
-//
-//					photoAnswerList += ReceivedPhotoResponse.ReceivedPhoto(uploadedPhotoName, otherUserPhotoInfo.photoName,
-//						otherUserPhotoInfo.lon, otherUserPhotoInfo.lat)
-//				}
-//
-//				if (photoAnswerList.isEmpty()) {
-//					logger.debug("photoAnswerList is empty")
-//					return@mono formatResponse(HttpStatus.OK,
-//						ReceivedPhotoResponse.fail(ErrorCode.ReceivePhotosErrors.NoPhotosToSendBack))
-//				}
-//
-//				cleanUp()
-//
-//				logger.debug("Sent photos list to the client")
-//				return@mono formatResponse(HttpStatus.OK, ReceivedPhotoResponse.success(photoAnswerList))
-//			} catch (error: Throwable) {
-//				logger.error("Unknown error", error)
-//				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-//					ReceivedPhotoResponse.fail(ErrorCode.ReceivePhotosErrors.UnknownError))
-//			}
-//		}.flatMap { it }
+		return mono(concurrentService.commonThreadPool) {
+			logger.debug("New ReceivePhotos request")
 
-		TODO()
+			try {
+				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_NAME_PATH_VARIABLE)) {
+					logger.debug("Request does not contain one of the required path variables")
+					return@mono formatResponse(HttpStatus.BAD_REQUEST,
+						ReceivePhotosResponse.fail(ErrorCode.ReceivePhotosErrors.BadRequest))
+				}
+
+				val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
+				val photoNames = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
+				logger.debug("UserId: $userId, photoNames: $photoNames")
+
+				val photoNameList = photoNames.split(ServerSettings.PHOTOS_DELIMITER)
+				if (photoNameList.isEmpty()) {
+					logger.debug("photoNameList is empty")
+					return@mono formatResponse(HttpStatus.BAD_REQUEST,
+						ReceivePhotosResponse.fail(ErrorCode.ReceivePhotosErrors.NoPhotosInRequest))
+				}
+
+				val photoInfoList = photoInfoRepo.findPhotosWithReceiver(userId, photoNameList)
+				val photoAnswerList = photoInfoList.map {
+					ReceivePhotosResponse.ReceivedPhoto(it.first.photoName, it.second.photoName, it.second.lon, it.second.lat)
+				}
+
+				if (photoAnswerList.isEmpty()) {
+					logger.debug("photoAnswerList is empty")
+					return@mono formatResponse(HttpStatus.OK,
+						ReceivePhotosResponse.fail(ErrorCode.ReceivePhotosErrors.NoPhotosToSendBack))
+				}
+
+				cleanUp()
+
+				logger.debug("Sent photos list to the client")
+				return@mono formatResponse(HttpStatus.OK, ReceivePhotosResponse.success(photoAnswerList))
+			} catch (error: Throwable) {
+				logger.error("Unknown error", error)
+				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+					ReceivePhotosResponse.fail(ErrorCode.ReceivePhotosErrors.UnknownError))
+			}
+		}.flatMap { it }
 	}
 
 	@Synchronized
