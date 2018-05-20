@@ -3,7 +3,7 @@ package com.kirakishou.photoexchange.handler
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotosHandler
 import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.GetUploadedPhotosResponse
+import com.kirakishou.photoexchange.model.net.response.GetReceivedPhotosResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -53,7 +53,7 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 	}
 
 	@Test
-	fun `should return uploaded photos`() {
+	fun `should return received photos with receiver coordinates`() {
 		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
 
 		runBlocking {
@@ -77,12 +77,37 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 
 		val content = webClient
 			.get()
-			.uri("v1/api/get_received_photos/111/1,2,3,4,5,6")
+			.uri("v1/api/get_received_photos/111/1,2,3,4,5")
 			.exchange()
 			.expectStatus().is2xxSuccessful
 			.expectBody()
 
-		val response = fromBodyContent<GetUploadedPhotosResponse>(content)
-		assertEquals(ErrorCode.GetUploadedPhotosError.Ok.value, response.errorCode)
+		val response = fromBodyContent<GetReceivedPhotosResponse>(content)
+		assertEquals(ErrorCode.GetReceivedPhotosError.Ok.value, response.errorCode)
+
+		assertEquals(10, response.receivedPhotos[0].photoId)
+		assertEquals("photo10", response.receivedPhotos[0].photoName)
+		assertEquals(22.2, response.receivedPhotos[0].receiverLon, EPSILON)
+		assertEquals(22.2, response.receivedPhotos[0].receiverLat, EPSILON)
+
+		assertEquals(9, response.receivedPhotos[1].photoId)
+		assertEquals("photo9", response.receivedPhotos[1].photoName)
+		assertEquals(22.2, response.receivedPhotos[1].receiverLon, EPSILON)
+		assertEquals(22.2, response.receivedPhotos[1].receiverLat, EPSILON)
+
+		assertEquals(8, response.receivedPhotos[2].photoId)
+		assertEquals("photo8", response.receivedPhotos[2].photoName)
+		assertEquals(22.2, response.receivedPhotos[2].receiverLon, EPSILON)
+		assertEquals(22.2, response.receivedPhotos[2].receiverLat, EPSILON)
+
+		assertEquals(7, response.receivedPhotos[3].photoId)
+		assertEquals("photo7", response.receivedPhotos[3].photoName)
+		assertEquals(22.2, response.receivedPhotos[3].receiverLon, EPSILON)
+		assertEquals(22.2, response.receivedPhotos[3].receiverLat, EPSILON)
+
+		assertEquals(6, response.receivedPhotos[4].photoId)
+		assertEquals("photo6", response.receivedPhotos[4].photoName)
+		assertEquals(22.2, response.receivedPhotos[4].receiverLon, EPSILON)
+		assertEquals(22.2, response.receivedPhotos[4].receiverLat, EPSILON)
 	}
 }

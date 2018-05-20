@@ -98,17 +98,11 @@ open class PhotoInfoDao(
 			.onErrorReturn(emptyList())
 	}
 
-	fun findManyByIds(userId: String, photoIdList: List<Long>, searchForUploaded: Boolean): Mono<List<PhotoInfo>> {
+	fun findManyByIds(userId: String, photoIdList: List<Long>): Mono<List<PhotoInfo>> {
 		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
-
-		if (searchForUploaded) {
-			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
-		} else {
-			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_USER_ID).`is`(userId))
-		}
-
-		query.limit(photoIdList.size)
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
+			.limit(photoIdList.size)
 
 		return template.find(query, PhotoInfo::class.java)
 			.collectList()

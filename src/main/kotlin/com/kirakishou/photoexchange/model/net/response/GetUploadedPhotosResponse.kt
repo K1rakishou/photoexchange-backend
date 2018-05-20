@@ -30,10 +30,10 @@ private constructor(
 		@SerializedName("photo_name")
 		val photoName: String,
 
-		@SerializedName("receiver_lon")
-		val receiverLon: Double,
+		@SerializedName("uploader_lon")
+		val uploaderLon: Double,
 
-		@SerializedName("receiver_lat")
-		val receiverLat: Double
+		@SerializedName("uploader_lat")
+		val uploaderLat: Double
 	)
 }

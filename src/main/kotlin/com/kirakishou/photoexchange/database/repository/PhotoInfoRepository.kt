@@ -75,22 +75,18 @@ open class PhotoInfoRepository(
 	suspend fun findManyPhotos(userId: String, photoIds: List<Long>, searchForUploaded: Boolean): List<PhotoInfoWithLocation> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
-				val photoInfos = photoInfoDao.findManyByIds(userId, photoIds, searchForUploaded).awaitFirst()
+				val photoInfos = photoInfoDao.findManyByIds(userId, photoIds).awaitFirst()
 				val exhangeIds = photoInfos.map { it.exchangeId }
 
-				val otherPhotos = photoInfoDao.findManyPhotosByUserIdAndExchangeIds(userId, exhangeIds, searchForUploaded).awaitFirst()
-				val otherPhotosMap = mutableMapOf<Long, PhotoInfo>()
+				if (searchForUploaded) {
+					return@withLock photoInfos
+						.map { PhotoInfoWithLocation(it, it.lon, it.lat) }
+				} else {
+					val otherPhotos = photoInfoDao.findManyPhotosByUserIdAndExchangeIds(userId, exhangeIds, searchForUploaded).awaitFirst()
 
-				for (otherPhoto in otherPhotos) {
-					otherPhotosMap[otherPhoto.exchangeId] = otherPhoto
+					return@withLock otherPhotos
+						.map { PhotoInfoWithLocation(it, it.lon, it.lat) }
 				}
-
-				return@withLock photoInfos
-					.map {
-						PhotoInfoWithLocation(it,
-							otherPhotosMap[it.exchangeId]?.lon ?: 0.0,
-							otherPhotosMap[it.exchangeId]?.lat ?: 0.0)
-					}
 			}
 		}.await()
 	}
