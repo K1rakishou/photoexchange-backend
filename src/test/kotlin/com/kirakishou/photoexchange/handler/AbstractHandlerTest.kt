@@ -3,8 +3,10 @@ package com.kirakishou.photoexchange.handler
 import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.dao.*
+import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
+import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import com.kirakishou.photoexchange.service.concurrency.TestConcurrencyService
@@ -35,6 +37,8 @@ abstract class AbstractHandlerTest {
 	lateinit var favouritedPhotoDao: FavouritedPhotoDao
 	lateinit var reportedPhotoDao: ReportedPhotoDao
 	lateinit var userInfoDao: UserInfoDao
+
+	lateinit var photoInfoRepository: PhotoInfoRepository
 
 	fun init() {
 		concurrentService = TestConcurrencyService()
@@ -72,6 +76,20 @@ abstract class AbstractHandlerTest {
 			it.clear()
 			it.create()
 		}
+
+		val generator = GeneratorService()
+
+		photoInfoRepository = PhotoInfoRepository(
+			mongoSequenceDao,
+			photoInfoDao,
+			photoInfoExchangeDao,
+			galleryPhotoDao,
+			favouritedPhotoDao,
+			reportedPhotoDao,
+			userInfoDao,
+			generator,
+			concurrentService
+		)
 	}
 
 	fun clear() {
@@ -98,6 +116,6 @@ abstract class AbstractHandlerTest {
 	}
 
 	inline fun <reified T> fromBodyContent(content: WebTestClient.BodyContentSpec): T {
-		return gson.fromJson<UploadPhotoResponse>(String(content.returnResult().responseBody), UploadPhotoResponse::class.java) as T
+		return gson.fromJson<UploadPhotoResponse>(String(content.returnResult().responseBody), T::class.java) as T
 	}
 }

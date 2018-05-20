@@ -5,7 +5,6 @@ import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
-import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import junit.framework.Assert.assertEquals
@@ -21,49 +20,30 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.server.router
-import java.time.Duration
 
 @RunWith(SpringJUnit4ClassRunner::class)
 class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
-
-	lateinit var photoInfoRepository: PhotoInfoRepository
-
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
 								 photoInfoRepository: PhotoInfoRepository,
 								 concurrencyService: AbstractConcurrencyService): WebTestClient {
-		val uploadPhotoHandler = UploadPhotoHandler(jsonConverterService, photoInfoRepository, concurrencyService)
+		val handler = UploadPhotoHandler(jsonConverterService, photoInfoRepository, concurrencyService)
 
 		return WebTestClient.bindToRouterFunction(router {
 			"/v1".nest {
 				"/api".nest {
 					accept(MediaType.MULTIPART_FORM_DATA).nest {
-						POST("/upload", uploadPhotoHandler::handle)
+						POST("/upload", handler::handle)
 					}
 				}
 			}
 		})
-			.configureClient().responseTimeout(Duration.ofMillis(1_000_000))
 			.build()
 	}
 
 	@Before
 	fun setUp() {
 		super.init()
-
-		val generator = GeneratorService()
-
-		photoInfoRepository = PhotoInfoRepository(
-			mongoSequenceDao,
-			photoInfoDao,
-			photoInfoExchangeDao,
-			galleryPhotoDao,
-			favouritedPhotoDao,
-			reportedPhotoDao,
-			userInfoDao,
-			generator,
-			concurrentService
-		)
 	}
 
 	@After

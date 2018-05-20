@@ -78,7 +78,7 @@ open class PhotoInfoRepository(
 				val photoInfos = photoInfoDao.findManyByIds(userId, photoIds, searchForUploaded).awaitFirst()
 				val exhangeIds = photoInfos.map { it.exchangeId }
 
-				val otherPhotos = photoInfoDao.findManyPhotosUploadedByUser(userId, exhangeIds, searchForUploaded).awaitFirst()
+				val otherPhotos = photoInfoDao.findManyPhotosByUserIdAndExchangeIds(userId, exhangeIds, searchForUploaded).awaitFirst()
 				val otherPhotosMap = mutableMapOf<Long, PhotoInfo>()
 
 				for (otherPhoto in otherPhotos) {
