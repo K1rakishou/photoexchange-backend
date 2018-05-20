@@ -25,6 +25,14 @@ abstract class AbstractHandlerTest {
 	val EPSILON = 0.00001
 	val gson = GsonBuilder().create()
 
+	//any photos should work
+	val PHOTO1 = "test_photos/photo_1.jpg"
+	val PHOTO2 = "test_photos/photo_2.jpg"
+	val PHOTO3 = "test_photos/photo_3.jpg"
+	val PHOTO4 = "test_photos/photo_4.jpg"
+	val PHOTO5 = "test_photos/photo_5.jpg"
+	val PHOTO6 = "test_photos/photo_6.jpg"
+
 	lateinit var template: ReactiveMongoTemplate
 
 	lateinit var concurrentService: AbstractConcurrencyService

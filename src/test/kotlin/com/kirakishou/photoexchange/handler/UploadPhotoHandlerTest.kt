@@ -57,7 +57,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 		kotlin.run {
 			val packet = SendPhotoPacket(33.4, 55.2, "111", true)
-			val multipartData = createTestMultipartFile("test_photos/photo_1.jpg", packet)
+			val multipartData = createTestMultipartFile(PHOTO1, packet)
 
 			val content = webClient
 				.post()
@@ -94,7 +94,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 		kotlin.run {
 			val packet = SendPhotoPacket(11.4, 24.45, "222", true)
-			val multipartData = createTestMultipartFile("test_photos/photo_2.jpg", packet)
+			val multipartData = createTestMultipartFile(PHOTO2, packet)
 
 			val content = webClient
 				.post()
@@ -147,7 +147,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 		kotlin.run {
 			val packet = SendPhotoPacket(33.4, 55.2, "111", true)
-			val multipartData = createTestMultipartFile("test_photos/photo_1.jpg", packet)
+			val multipartData = createTestMultipartFile(PHOTO1, packet)
 
 			val content = webClient
 				.post()
@@ -184,7 +184,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 		kotlin.run {
 			val packet = SendPhotoPacket(11.4, 24.45, "111", true)
-			val multipartData = createTestMultipartFile("test_photos/photo_2.jpg", packet)
+			val multipartData = createTestMultipartFile(PHOTO2, packet)
 
 			val content = webClient
 				.post()
@@ -246,7 +246,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 		kotlin.run {
 			val packet = SendPhotoPacket(33.4, 55.2, "111", true)
-			val multipartData = createTestMultipartFile("test_photos/photo_1.jpg", packet)
+			val multipartData = createTestMultipartFile(PHOTO1, packet)
 
 			val content = webClient
 				.post()
@@ -283,7 +283,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 		kotlin.run {
 			val packet = SendPhotoPacket(11.4, 24.45, "222", true)
-			val multipartData = createTestMultipartFile("test_photos/photo_2.jpg", packet)
+			val multipartData = createTestMultipartFile(PHOTO2, packet)
 
 			val content = webClient
 				.post()
@@ -337,10 +337,10 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 		kotlin.run {
 			val packet3 = SendPhotoPacket(36.4, 66.66, "333", true)
-			val multipartData3 = createTestMultipartFile("test_photos/photo_3.jpg", packet3)
+			val multipartData3 = createTestMultipartFile(PHOTO3, packet3)
 
 			val packet4 = SendPhotoPacket(38.4235, 16.7788, "444", true)
-			val multipartData4 = createTestMultipartFile("test_photos/photo_4.jpg", packet4)
+			val multipartData4 = createTestMultipartFile(PHOTO4, packet4)
 
 			val content1 = webClient
 				.post()
