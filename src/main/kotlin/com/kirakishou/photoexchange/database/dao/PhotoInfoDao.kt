@@ -153,9 +153,9 @@ open class PhotoInfoDao(
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`in`(exchangeIds))
 
 		if (searchForUploaded) {
-			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_USER_ID).`is`(userId))
-		} else {
 			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
+		} else {
+			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).ne(userId))
 		}
 
 		return template.find(query, PhotoInfo::class.java)

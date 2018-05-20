@@ -1,7 +1,7 @@
 package com.kirakishou.photoexchange.handler
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.handlers.uploaded_photos.GetUploadedPhotosHandler
+import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotosHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.GetUploadedPhotosResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
@@ -19,24 +19,26 @@ import org.springframework.http.MediaType
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.reactive.function.server.router
+import java.time.Duration
 
 @RunWith(SpringJUnit4ClassRunner::class)
-class GetUploadedPhotosHandlerTest : AbstractHandlerTest() {
+class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
 								 photoInfoRepository: PhotoInfoRepository,
 								 concurrencyService: AbstractConcurrencyService): WebTestClient {
-		val handler = GetUploadedPhotosHandler(jsonConverterService, photoInfoRepository, concurrencyService)
+		val handler = GetReceivedPhotosHandler(jsonConverterService, photoInfoRepository, concurrencyService)
 
 		return WebTestClient.bindToRouterFunction(router {
 			"/v1".nest {
 				"/api".nest {
 					accept(MediaType.APPLICATION_JSON).nest {
-						GET("/get_uploaded_photos/{user_id}/{photo_ids}", handler::handle)
+						GET("/get_received_photos/{user_id}/{photo_ids}", handler::handle)
 					}
 				}
 			}
 		})
+			.configureClient().responseTimeout(Duration.ofMillis(1_000_000))
 			.build()
 	}
 
@@ -75,37 +77,12 @@ class GetUploadedPhotosHandlerTest : AbstractHandlerTest() {
 
 		val content = webClient
 			.get()
-			.uri("v1/api/get_uploaded_photos/111/1,2,3,4,5,6")
+			.uri("v1/api/get_received_photos/111/1,2,3,4,5,6")
 			.exchange()
 			.expectStatus().is2xxSuccessful
 			.expectBody()
 
 		val response = fromBodyContent<GetUploadedPhotosResponse>(content)
 		assertEquals(ErrorCode.GetUploadedPhotosError.Ok.value, response.errorCode)
-
-		assertEquals(5, response.uploadedPhotos[0].photoId)
-		assertEquals("photo5", response.uploadedPhotos[0].photoName)
-		assertEquals(11.1, response.uploadedPhotos[0].receiverLon, EPSILON)
-		assertEquals(11.1, response.uploadedPhotos[0].receiverLat, EPSILON)
-
-		assertEquals(4, response.uploadedPhotos[1].photoId)
-		assertEquals("photo4", response.uploadedPhotos[1].photoName)
-		assertEquals(11.1, response.uploadedPhotos[1].receiverLon, EPSILON)
-		assertEquals(11.1, response.uploadedPhotos[1].receiverLat, EPSILON)
-
-		assertEquals(3, response.uploadedPhotos[2].photoId)
-		assertEquals("photo3", response.uploadedPhotos[2].photoName)
-		assertEquals(11.1, response.uploadedPhotos[2].receiverLon, EPSILON)
-		assertEquals(11.1, response.uploadedPhotos[2].receiverLat, EPSILON)
-
-		assertEquals(2, response.uploadedPhotos[3].photoId)
-		assertEquals("photo2", response.uploadedPhotos[3].photoName)
-		assertEquals(11.1, response.uploadedPhotos[3].receiverLon, EPSILON)
-		assertEquals(11.1, response.uploadedPhotos[3].receiverLat, EPSILON)
-
-		assertEquals(1, response.uploadedPhotos[4].photoId)
-		assertEquals("photo1", response.uploadedPhotos[4].photoName)
-		assertEquals(11.1, response.uploadedPhotos[4].receiverLon, EPSILON)
-		assertEquals(11.1, response.uploadedPhotos[4].receiverLat, EPSILON)
 	}
 }
