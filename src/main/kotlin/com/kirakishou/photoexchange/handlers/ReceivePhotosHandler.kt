@@ -51,7 +51,7 @@ class ReceivePhotosHandler(
 
 				val photoInfoList = photoInfoRepo.findPhotosWithReceiver(userId, photoNameList)
 				val photoAnswerList = photoInfoList.map {
-					ReceivePhotosResponse.ReceivedPhoto(it.first.photoName, it.second.photoName, it.second.lon, it.second.lat)
+					ReceivePhotosResponse.ReceivedPhoto(it.second.photoId, it.first.photoName, it.second.photoName, it.second.lon, it.second.lat)
 				}
 
 				if (photoAnswerList.isEmpty()) {
@@ -63,7 +63,8 @@ class ReceivePhotosHandler(
 				cleanUp()
 
 				logger.debug("Sent photos list to the client")
-				return@mono formatResponse(HttpStatus.OK, ReceivePhotosResponse.success(photoAnswerList))
+				return@mono formatResponse(HttpStatus.OK,
+					ReceivePhotosResponse.success(photoAnswerList))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,

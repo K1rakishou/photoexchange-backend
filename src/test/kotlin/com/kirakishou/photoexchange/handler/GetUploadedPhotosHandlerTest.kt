@@ -81,7 +81,8 @@ class GetUploadedPhotosHandlerTest : AbstractHandlerTest() {
 			.expectBody()
 
 		val response = fromBodyContent<GetUploadedPhotosResponse>(content)
-		assertEquals(ErrorCode.GetUploadedPhotosError.Ok.value, response.errorCode)
+		assertEquals(ErrorCode.GetUploadedPhotosErrors.Ok.value, response.errorCode)
+		assertEquals(5, response.uploadedPhotos.size)
 
 		assertEquals(5, response.uploadedPhotos[0].photoId)
 		assertEquals("photo5", response.uploadedPhotos[0].photoName)

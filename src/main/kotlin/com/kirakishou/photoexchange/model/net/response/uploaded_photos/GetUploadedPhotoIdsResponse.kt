@@ -10,15 +10,15 @@ private constructor(
 	@SerializedName("uploaded_photo_ids")
 	val uploadedPhotoIds: List<Long>,
 
-	errorCode: ErrorCode.GetUploadedPhotosError
+	errorCode: ErrorCode.GetUploadedPhotosErrors
 ) : StatusResponse(errorCode.value) {
 
 	companion object {
 		fun success(uploadedPhotoIds: List<Long>): GetUploadedPhotoIdsResponse {
-			return GetUploadedPhotoIdsResponse(uploadedPhotoIds, ErrorCode.GetUploadedPhotosError.Ok)
+			return GetUploadedPhotoIdsResponse(uploadedPhotoIds, ErrorCode.GetUploadedPhotosErrors.Ok)
 		}
 
-		fun fail(errorCode: ErrorCode.GetUploadedPhotosError): GetUploadedPhotoIdsResponse {
+		fun fail(errorCode: ErrorCode.GetUploadedPhotosErrors): GetUploadedPhotoIdsResponse {
 			return GetUploadedPhotoIdsResponse(emptyList(), errorCode)
 		}
 	}

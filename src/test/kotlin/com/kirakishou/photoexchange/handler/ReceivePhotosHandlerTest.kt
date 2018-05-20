@@ -84,27 +84,33 @@ class ReceivePhotosHandlerTest  : AbstractHandlerTest() {
 
 		val response = fromBodyContent<ReceivePhotosResponse>(content)
 		assertEquals(ErrorCode.ReceivePhotosErrors.Ok.value, response.errorCode)
+		assertEquals(5, response.receivedPhotos.size)
 
+		assertEquals(6, response.receivedPhotos[0].photoId)
 		assertEquals("photo1", response.receivedPhotos[0].uploadedPhotoName)
 		assertEquals("photo6", response.receivedPhotos[0].receivedPhotoName)
 		assertEquals(22.2, response.receivedPhotos[0].lon, EPSILON)
 		assertEquals(22.2, response.receivedPhotos[0].lat, EPSILON)
 
+		assertEquals(7, response.receivedPhotos[1].photoId)
 		assertEquals("photo2", response.receivedPhotos[1].uploadedPhotoName)
 		assertEquals("photo7", response.receivedPhotos[1].receivedPhotoName)
 		assertEquals(22.2, response.receivedPhotos[1].lon, EPSILON)
 		assertEquals(22.2, response.receivedPhotos[1].lat, EPSILON)
 
+		assertEquals(8, response.receivedPhotos[2].photoId)
 		assertEquals("photo3", response.receivedPhotos[2].uploadedPhotoName)
 		assertEquals("photo8", response.receivedPhotos[2].receivedPhotoName)
 		assertEquals(22.2, response.receivedPhotos[2].lon, EPSILON)
 		assertEquals(22.2, response.receivedPhotos[2].lat, EPSILON)
 
+		assertEquals(9, response.receivedPhotos[3].photoId)
 		assertEquals("photo4", response.receivedPhotos[3].uploadedPhotoName)
 		assertEquals("photo9", response.receivedPhotos[3].receivedPhotoName)
 		assertEquals(22.2, response.receivedPhotos[3].lon, EPSILON)
 		assertEquals(22.2, response.receivedPhotos[3].lat, EPSILON)
 
+		assertEquals(10, response.receivedPhotos[4].photoId)
 		assertEquals("photo5", response.receivedPhotos[4].uploadedPhotoName)
 		assertEquals("photo10", response.receivedPhotos[4].receivedPhotoName)
 		assertEquals(22.2, response.receivedPhotos[4].lon, EPSILON)

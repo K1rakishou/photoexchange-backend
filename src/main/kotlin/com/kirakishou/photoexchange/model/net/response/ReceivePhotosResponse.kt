@@ -1,13 +1,11 @@
 package com.kirakishou.photoexchange.model.net.response
 
-import com.google.gson.annotations.Expose
 import com.google.gson.annotations.SerializedName
 import com.kirakishou.photoexchange.model.ErrorCode
 
 class ReceivePhotosResponse
 private constructor(
 
-	@Expose
 	@SerializedName("received_photos")
 	val receivedPhotos: List<ReceivedPhoto>,
 
@@ -25,19 +23,19 @@ private constructor(
 	}
 
 	class ReceivedPhoto(
-		@Expose
+
+		@SerializedName("photo_id")
+		val photoId: Long,
+
 		@SerializedName("uploaded_photo_name")
 		val uploadedPhotoName: String,
 
-		@Expose
 		@SerializedName("received_photo_name")
 		val receivedPhotoName: String,
 
-		@Expose
 		@SerializedName("lon")
 		val lon: Double,
 
-		@Expose
 		@SerializedName("lat")
 		val lat: Double
 	)

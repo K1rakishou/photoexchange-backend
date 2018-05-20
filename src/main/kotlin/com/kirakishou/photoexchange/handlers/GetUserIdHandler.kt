@@ -28,7 +28,7 @@ class GetUserIdHandler(
 				val userInfo = userInfoRepository.createNew()
 				if (userInfo.isEmpty()) {
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						GetUserIdResponse.fail(ErrorCode.GetUserIdError.DatabaseError))
+						GetUserIdResponse.fail(ErrorCode.GetUserIdErrors.DatabaseError))
 				}
 
 				logger.debug("Successfully created new uploaderPhotoId = ${userInfo.userId}")
@@ -37,7 +37,7 @@ class GetUserIdHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GetUserIdResponse.fail(ErrorCode.GetUserIdError.UnknownError))
+					GetUserIdResponse.fail(ErrorCode.GetUserIdErrors.UnknownError))
 			}
 		}.flatMap { it }
 	}

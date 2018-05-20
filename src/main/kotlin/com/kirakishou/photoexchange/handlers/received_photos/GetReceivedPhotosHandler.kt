@@ -35,7 +35,7 @@ class GetReceivedPhotosHandler(
 				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_IDS_PATH_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						GetReceivedPhotosResponse.fail(ErrorCode.GetReceivedPhotosError.BadRequest))
+						GetReceivedPhotosResponse.fail(ErrorCode.GetReceivedPhotosErrors.BadRequest))
 				}
 
 				val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
@@ -48,7 +48,7 @@ class GetReceivedPhotosHandler(
 				if (receivedPhotoIds.isEmpty()) {
 					logger.debug("uploadedPhotoIds is empty")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						GetReceivedPhotosResponse.fail(ErrorCode.GetReceivedPhotosError.NoPhotosInRequest))
+						GetReceivedPhotosResponse.fail(ErrorCode.GetReceivedPhotosErrors.NoPhotosInRequest))
 				}
 				val receivedPhotos = photoInfoRepo.findManyPhotos(userId, receivedPhotoIds, false)
 				val receivedPhotosDataList = receivedPhotos.map { receivedPhoto ->
@@ -65,7 +65,7 @@ class GetReceivedPhotosHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GetReceivedPhotosResponse.fail(ErrorCode.GetReceivedPhotosError.UnknownError))
+					GetReceivedPhotosResponse.fail(ErrorCode.GetReceivedPhotosErrors.UnknownError))
 			}
 
 		}.flatMap { it }

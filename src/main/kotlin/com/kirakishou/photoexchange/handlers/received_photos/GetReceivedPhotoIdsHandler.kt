@@ -34,7 +34,7 @@ class GetReceivedPhotoIdsHandler(
 				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, LAST_ID_PATH_VARIABLE, COUNT_PATH_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						GetReceivedPhotoIdsResponse.fail(ErrorCode.GetReceivedPhotosError.BadRequest))
+						GetReceivedPhotoIdsResponse.fail(ErrorCode.GetReceivedPhotosErrors.BadRequest))
 				}
 
 				val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
@@ -64,7 +64,7 @@ class GetReceivedPhotoIdsHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GetReceivedPhotoIdsResponse.fail(ErrorCode.GetReceivedPhotosError.UnknownError))
+					GetReceivedPhotoIdsResponse.fail(ErrorCode.GetReceivedPhotosErrors.UnknownError))
 			}
 		}.flatMap { it }
 	}

@@ -46,13 +46,13 @@ class ErrorCode {
 		BadRequest(252);
 	}
 
-	enum class GetUserIdError(val value: Int) {
+	enum class GetUserIdErrors(val value: Int) {
 		UnknownError(300),
 		Ok(301),
 		DatabaseError(302);
 	}
 
-	enum class GetUploadedPhotosError(val value: Int) {
+	enum class GetUploadedPhotosErrors(val value: Int) {
 		UnknownError(350),
 		Ok(351),
 		DatabaseError(352),
@@ -60,7 +60,7 @@ class ErrorCode {
 		NoPhotosInRequest(354);
 	}
 
-	enum class GetReceivedPhotosError(val value: Int) {
+	enum class GetReceivedPhotosErrors(val value: Int) {
 		UnknownError(400),
 		Ok(401),
 		DatabaseError(402),
