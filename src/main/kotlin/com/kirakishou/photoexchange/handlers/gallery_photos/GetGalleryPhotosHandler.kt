@@ -5,7 +5,7 @@ import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.handlers.AbstractWebHandler
 import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.GalleryPhotosResponse
+import com.kirakishou.photoexchange.model.net.response.gallery_photos.GalleryPhotosResponse
 import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.Utils

@@ -3,7 +3,7 @@ package com.kirakishou.photoexchange.handler
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotosHandler
 import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.GetReceivedPhotosResponse
+import com.kirakishou.photoexchange.model.net.response.received_photos.GetReceivedPhotosResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.JsonConverterService

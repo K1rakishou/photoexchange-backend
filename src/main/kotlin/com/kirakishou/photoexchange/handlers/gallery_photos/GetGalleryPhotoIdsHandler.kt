@@ -5,7 +5,7 @@ import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.handlers.AbstractWebHandler
 import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.GalleryPhotoIdsResponse
+import com.kirakishou.photoexchange.model.net.response.gallery_photos.GalleryPhotoIdsResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import kotlinx.coroutines.experimental.reactor.mono
