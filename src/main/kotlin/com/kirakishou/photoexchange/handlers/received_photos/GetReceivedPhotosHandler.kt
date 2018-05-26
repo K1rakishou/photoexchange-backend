@@ -4,7 +4,6 @@ import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.handlers.AbstractWebHandler
-import com.kirakishou.photoexchange.handlers.uploaded_photos.GetUploadedPhotosHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.received_photos.GetReceivedPhotosResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -23,13 +22,13 @@ class GetReceivedPhotosHandler(
 	private val concurrentService: AbstractConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
 
-	private val logger = LoggerFactory.getLogger(GetUploadedPhotosHandler::class.java)
+	private val logger = LoggerFactory.getLogger(GetReceivedPhotosHandler::class.java)
 	private val USER_ID_PATH_VARIABLE = "user_id"
 	private val PHOTO_IDS_PATH_VARIABLE = "photo_ids"
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		return mono(concurrentService.commonThreadPool) {
-			logger.debug("New GetUploadedPhotos request")
+			logger.debug("New GetReceivedPhotos request")
 
 			try {
 				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_IDS_PATH_VARIABLE)) {

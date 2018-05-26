@@ -62,7 +62,7 @@ class ReceivePhotosHandler(
 
 				cleanUp()
 
-				logger.debug("Sent photos list to the client")
+				logger.debug("Found ${photoAnswerList.size} photos")
 				return@mono formatResponse(HttpStatus.OK,
 					ReceivePhotosResponse.success(photoAnswerList))
 			} catch (error: Throwable) {
