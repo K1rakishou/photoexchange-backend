@@ -75,7 +75,7 @@ open class PhotoInfoRepository(
 	suspend fun findManyPhotos(userId: String, photoIds: List<Long>, searchForUploaded: Boolean): List<PhotoInfoWithLocation> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
-				val photoInfos = photoInfoDao.findManyByIds(userId, photoIds).awaitFirst()
+				val photoInfos = photoInfoDao.findManyByIds(userId, photoIds, searchForUploaded).awaitFirst()
 				val exhangeIds = photoInfos.map { it.exchangeId }
 
 				if (searchForUploaded) {
@@ -361,33 +361,47 @@ open class PhotoInfoRepository(
 		}.await()
 	}
 
-	suspend fun findPhotosWithReceiver(userId: String, photoNameList: List<String>): List<Pair<PhotoInfo, PhotoInfo>> {
+	suspend fun findPhotosWithReceiverByPhotoNamesList(userId: String, photoNameList: List<String>): List<Pair<PhotoInfo, PhotoInfo>> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
-				val resultList = mutableListOf<Pair<PhotoInfo, PhotoInfo>>()
 				val photoInfoList = photoInfoDao.findMany(userId, photoNameList,
 					includeEmptyReceiver = false
 				).awaitFirst()
 
-				val uploaderUserIdList = photoInfoList.map { it.receiverUserId }
-				val exchangeIdList = photoInfoList.map { it.exchangeId }
-
-				val exchangedPhotoInfoList = photoInfoDao.findManyByUploaderUserIdAndExchangeId(uploaderUserIdList, exchangeIdList)
-					.awaitFirst()
-
-				val photoInfoMap = photoInfoList.associateBy { it.exchangeId }
-				val exchangedPhotoInfoMap = exchangedPhotoInfoList.associateBy { it.exchangeId }
-
-				for (photoInfo in photoInfoList) {
-					resultList += Pair(
-						photoInfoMap[photoInfo.exchangeId]!!,
-						exchangedPhotoInfoMap[photoInfo.exchangeId]!!
-					)
-				}
-
-				return@withLock resultList
+				return@withLock findPhotosWithReceiver(photoInfoList)
 			}
 		}.await()
+	}
+
+	suspend fun findPhotosWithReceiverByPhotoIdsList(userId: String, photoIdList: List<Long>): List<Pair<PhotoInfo, PhotoInfo>> {
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				val photoInfoList = photoInfoDao.findManyByIds(userId, photoIdList, true).awaitFirst()
+				return@withLock findPhotosWithReceiver(photoInfoList)
+			}
+		}.await()
+	}
+
+	private suspend fun findPhotosWithReceiver(photoInfoList: List<PhotoInfo>): List<Pair<PhotoInfo, PhotoInfo>> {
+		val resultList = mutableListOf<Pair<PhotoInfo, PhotoInfo>>()
+
+		val uploaderUserIdList = photoInfoList.map { it.receiverUserId }
+		val exchangeIdList = photoInfoList.map { it.exchangeId }
+
+		val exchangedPhotoInfoList = photoInfoDao.findManyByUploaderUserIdAndExchangeId(uploaderUserIdList, exchangeIdList)
+			.awaitFirst()
+
+		val photoInfoMap = photoInfoList.associateBy { it.exchangeId }
+		val exchangedPhotoInfoMap = exchangedPhotoInfoList.associateBy { it.exchangeId }
+
+		for (photoInfo in photoInfoList) {
+			resultList += Pair(
+				photoInfoMap[photoInfo.exchangeId]!!,
+				exchangedPhotoInfoMap[photoInfo.exchangeId]!!
+			)
+		}
+
+		return resultList
 	}
 
 	data class PhotoInfoWithLocation(

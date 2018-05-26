@@ -28,8 +28,11 @@ private constructor(
 		@SerializedName("photo_id")
 		val photoId: Long,
 
-		@SerializedName("photo_name")
-		val photoName: String,
+		@SerializedName("uploaded_photo_name")
+		val uploadedPhotoName: String,
+
+		@SerializedName("received_photo_name")
+		val receivedPhotoName: String,
 
 		@SerializedName("receiver_lon")
 		val receiverLon: Double,

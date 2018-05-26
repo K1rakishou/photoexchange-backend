@@ -49,7 +49,7 @@ class ReceivePhotosHandler(
 						ReceivePhotosResponse.fail(ErrorCode.ReceivePhotosErrors.NoPhotosInRequest))
 				}
 
-				val photoInfoList = photoInfoRepo.findPhotosWithReceiver(userId, photoNameList)
+				val photoInfoList = photoInfoRepo.findPhotosWithReceiverByPhotoNamesList(userId, photoNameList)
 				val photoAnswerList = photoInfoList.map {
 					ReceivePhotosResponse.ReceivedPhoto(it.second.photoId, it.first.photoName, it.second.photoName, it.second.lon, it.second.lat)
 				}

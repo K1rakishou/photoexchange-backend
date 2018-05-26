@@ -50,13 +50,15 @@ class GetReceivedPhotosHandler(
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						GetReceivedPhotosResponse.fail(ErrorCode.GetReceivedPhotosErrors.NoPhotosInRequest))
 				}
-				val receivedPhotos = photoInfoRepo.findManyPhotos(userId, receivedPhotoIds, false)
-				val receivedPhotosDataList = receivedPhotos.map { receivedPhoto ->
+				val receivedPhotos = photoInfoRepo.findPhotosWithReceiverByPhotoIdsList(userId, receivedPhotoIds)
+				val receivedPhotosDataList = receivedPhotos.map { photos ->
 					GetReceivedPhotosResponse.ReceivedPhoto(
-						receivedPhoto.photoInfo.photoId,
-						receivedPhoto.photoInfo.photoName,
-						receivedPhoto.lon,
-						receivedPhoto.lat)
+						photos.second.photoId,
+						photos.first.photoName,
+						photos.second.photoName,
+						photos.second.lon,
+						photos.second.lat
+					)
 				}
 
 				logger.debug("Found ${receivedPhotos.size} received photos")
