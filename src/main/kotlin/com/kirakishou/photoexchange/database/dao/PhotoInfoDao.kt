@@ -64,10 +64,15 @@ open class PhotoInfoDao(
 			.onErrorReturn(PhotoInfo.empty())
 	}
 
-	fun findManyByUploaderUserIdAndExchangeId(uploaderUserIdList: List<String>, exchangeIdList: List<Long>): Mono<List<PhotoInfo>> {
+	fun findManyByUserIdAndExchangeId(uploaderUserIdList: List<String>, exchangeIdList: List<Long>, isUploader: Boolean): Mono<List<PhotoInfo>> {
 		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`in`(uploaderUserIdList))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`in`(exchangeIdList))
+
+		if (isUploader) {
+			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`in`(uploaderUserIdList))
+		} else {
+			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_USER_ID).`in`(uploaderUserIdList))
+		}
 
 		return template.find(query, PhotoInfo::class.java)
 			.collectList()

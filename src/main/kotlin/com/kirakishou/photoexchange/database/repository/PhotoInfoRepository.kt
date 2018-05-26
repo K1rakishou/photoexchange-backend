@@ -368,7 +368,7 @@ open class PhotoInfoRepository(
 					includeEmptyReceiver = false
 				).awaitFirst()
 
-				return@withLock findPhotosWithReceiver(photoInfoList)
+				return@withLock findPhotosWithReceiver(photoInfoList, true)
 			}
 		}.await()
 	}
@@ -377,18 +377,18 @@ open class PhotoInfoRepository(
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
 				val photoInfoList = photoInfoDao.findManyByIds(userId, photoIdList, true).awaitFirst()
-				return@withLock findPhotosWithReceiver(photoInfoList)
+				return@withLock findPhotosWithReceiver(photoInfoList, true)
 			}
 		}.await()
 	}
 
-	private suspend fun findPhotosWithReceiver(photoInfoList: List<PhotoInfo>): List<Pair<PhotoInfo, PhotoInfo>> {
+	private suspend fun findPhotosWithReceiver(photoInfoList: List<PhotoInfo>, isUploader: Boolean): List<Pair<PhotoInfo, PhotoInfo>> {
 		val resultList = mutableListOf<Pair<PhotoInfo, PhotoInfo>>()
 
 		val uploaderUserIdList = photoInfoList.map { it.receiverUserId }
 		val exchangeIdList = photoInfoList.map { it.exchangeId }
 
-		val exchangedPhotoInfoList = photoInfoDao.findManyByUploaderUserIdAndExchangeId(uploaderUserIdList, exchangeIdList)
+		val exchangedPhotoInfoList = photoInfoDao.findManyByUserIdAndExchangeId(uploaderUserIdList, exchangeIdList, isUploader)
 			.awaitFirst()
 
 		val photoInfoMap = photoInfoList.associateBy { it.exchangeId }
