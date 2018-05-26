@@ -35,6 +35,12 @@ private constructor(
 		val uploaderLon: Double,
 
 		@SerializedName("uploader_lat")
-		val uploaderLat: Double
+		val uploaderLat: Double,
+
+		@SerializedName("has_receiver_info")
+		val hasReceivedInfo: Boolean,
+
+		@SerializedName("uploaded_on")
+		val uploadedOn: Long
 	)
 }

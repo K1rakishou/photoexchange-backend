@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.handler
 import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.dao.*
+import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
@@ -47,6 +48,7 @@ abstract class AbstractHandlerTest {
 	lateinit var userInfoDao: UserInfoDao
 
 	lateinit var photoInfoRepository: PhotoInfoRepository
+	lateinit var photoInfoExchangeRepository: PhotoInfoExchangeRepository
 
 	fun init() {
 		concurrentService = TestConcurrencyService()
@@ -96,6 +98,12 @@ abstract class AbstractHandlerTest {
 			reportedPhotoDao,
 			userInfoDao,
 			generator,
+			concurrentService
+		)
+
+		photoInfoExchangeRepository = PhotoInfoExchangeRepository(
+			mongoSequenceDao,
+			photoInfoExchangeDao,
 			concurrentService
 		)
 	}
