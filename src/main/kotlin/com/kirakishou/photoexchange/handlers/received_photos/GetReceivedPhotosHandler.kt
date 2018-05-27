@@ -52,11 +52,11 @@ class GetReceivedPhotosHandler(
 				val receivedPhotos = photoInfoRepo.findPhotosWithReceiverByPhotoIdsList(userId, receivedPhotoIds)
 				val receivedPhotosDataList = receivedPhotos.map { photos ->
 					GetReceivedPhotosResponse.ReceivedPhoto(
-						photos.second.photoId,
-						photos.first.photoName,
+						photos.first.photoId,
 						photos.second.photoName,
-						photos.second.lon,
-						photos.second.lat
+						photos.first.photoName,
+						photos.first.lon,
+						photos.first.lat
 					)
 				}
 
