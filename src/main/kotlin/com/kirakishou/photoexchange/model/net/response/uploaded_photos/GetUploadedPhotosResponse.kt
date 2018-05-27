@@ -38,7 +38,7 @@ private constructor(
 		val uploaderLat: Double,
 
 		@SerializedName("has_receiver_info")
-		val hasReceivedInfo: Boolean,
+		val hasReceiverInfo: Boolean,
 
 		@SerializedName("uploaded_on")
 		val uploadedOn: Long

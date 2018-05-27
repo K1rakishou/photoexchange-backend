@@ -76,45 +76,90 @@ class GetUploadedPhotosHandlerTest : AbstractHandlerTest() {
 			photoInfoExchangeDao.save(PhotoInfoExchange(5, 5, 10, "111", "222", 9)).awaitFirst()
 		}
 
-		val content = webClient
-			.get()
-			.uri("v1/api/get_uploaded_photos/111/1,2,3,4,5")
-			.exchange()
-			.expectStatus().is2xxSuccessful
-			.expectBody()
+		kotlin.run {
+			val content = webClient
+				.get()
+				.uri("v1/api/get_uploaded_photos/111/1,2,3,4,5")
+				.exchange()
+				.expectStatus().is2xxSuccessful
+				.expectBody()
 
-		val response = fromBodyContent<GetUploadedPhotosResponse>(content)
-		assertEquals(ErrorCode.GetUploadedPhotosErrors.Ok.value, response.errorCode)
-		assertEquals(5, response.uploadedPhotos.size)
+			val response = fromBodyContent<GetUploadedPhotosResponse>(content)
+			assertEquals(ErrorCode.GetUploadedPhotosErrors.Ok.value, response.errorCode)
+			assertEquals(5, response.uploadedPhotos.size)
 
-		assertEquals(5, response.uploadedPhotos[0].photoId)
-		assertEquals("photo5", response.uploadedPhotos[0].photoName)
-		assertEquals(11.1, response.uploadedPhotos[0].uploaderLon, EPSILON)
-		assertEquals(11.1, response.uploadedPhotos[0].uploaderLat, EPSILON)
-		assertEquals(true, response.uploadedPhotos[0].hasReceivedInfo)
+			assertEquals(5, response.uploadedPhotos[0].photoId)
+			assertEquals("photo5", response.uploadedPhotos[0].photoName)
+			assertEquals(11.1, response.uploadedPhotos[0].uploaderLon, EPSILON)
+			assertEquals(11.1, response.uploadedPhotos[0].uploaderLat, EPSILON)
+			assertEquals(true, response.uploadedPhotos[0].hasReceiverInfo)
 
-		assertEquals(4, response.uploadedPhotos[1].photoId)
-		assertEquals("photo4", response.uploadedPhotos[1].photoName)
-		assertEquals(11.1, response.uploadedPhotos[1].uploaderLon, EPSILON)
-		assertEquals(11.1, response.uploadedPhotos[1].uploaderLat, EPSILON)
-		assertEquals(true, response.uploadedPhotos[1].hasReceivedInfo)
+			assertEquals(4, response.uploadedPhotos[1].photoId)
+			assertEquals("photo4", response.uploadedPhotos[1].photoName)
+			assertEquals(11.1, response.uploadedPhotos[1].uploaderLon, EPSILON)
+			assertEquals(11.1, response.uploadedPhotos[1].uploaderLat, EPSILON)
+			assertEquals(true, response.uploadedPhotos[1].hasReceiverInfo)
 
-		assertEquals(3, response.uploadedPhotos[2].photoId)
-		assertEquals("photo3", response.uploadedPhotos[2].photoName)
-		assertEquals(11.1, response.uploadedPhotos[2].uploaderLon, EPSILON)
-		assertEquals(11.1, response.uploadedPhotos[2].uploaderLat, EPSILON)
-		assertEquals(true, response.uploadedPhotos[2].hasReceivedInfo)
+			assertEquals(3, response.uploadedPhotos[2].photoId)
+			assertEquals("photo3", response.uploadedPhotos[2].photoName)
+			assertEquals(11.1, response.uploadedPhotos[2].uploaderLon, EPSILON)
+			assertEquals(11.1, response.uploadedPhotos[2].uploaderLat, EPSILON)
+			assertEquals(true, response.uploadedPhotos[2].hasReceiverInfo)
 
-		assertEquals(2, response.uploadedPhotos[3].photoId)
-		assertEquals("photo2", response.uploadedPhotos[3].photoName)
-		assertEquals(11.1, response.uploadedPhotos[3].uploaderLon, EPSILON)
-		assertEquals(11.1, response.uploadedPhotos[3].uploaderLat, EPSILON)
-		assertEquals(true, response.uploadedPhotos[3].hasReceivedInfo)
+			assertEquals(2, response.uploadedPhotos[3].photoId)
+			assertEquals("photo2", response.uploadedPhotos[3].photoName)
+			assertEquals(11.1, response.uploadedPhotos[3].uploaderLon, EPSILON)
+			assertEquals(11.1, response.uploadedPhotos[3].uploaderLat, EPSILON)
+			assertEquals(true, response.uploadedPhotos[3].hasReceiverInfo)
 
-		assertEquals(1, response.uploadedPhotos[4].photoId)
-		assertEquals("photo1", response.uploadedPhotos[4].photoName)
-		assertEquals(11.1, response.uploadedPhotos[4].uploaderLon, EPSILON)
-		assertEquals(11.1, response.uploadedPhotos[4].uploaderLat, EPSILON)
-		assertEquals(true, response.uploadedPhotos[4].hasReceivedInfo)
+			assertEquals(1, response.uploadedPhotos[4].photoId)
+			assertEquals("photo1", response.uploadedPhotos[4].photoName)
+			assertEquals(11.1, response.uploadedPhotos[4].uploaderLon, EPSILON)
+			assertEquals(11.1, response.uploadedPhotos[4].uploaderLat, EPSILON)
+			assertEquals(true, response.uploadedPhotos[4].hasReceiverInfo)
+		}
+
+		kotlin.run {
+			val content = webClient
+				.get()
+				.uri("v1/api/get_uploaded_photos/222/6,7,8,9,10")
+				.exchange()
+				.expectStatus().is2xxSuccessful
+				.expectBody()
+
+			val response = fromBodyContent<GetUploadedPhotosResponse>(content)
+			assertEquals(ErrorCode.GetUploadedPhotosErrors.Ok.value, response.errorCode)
+			assertEquals(5, response.uploadedPhotos.size)
+
+			assertEquals(10, response.uploadedPhotos[0].photoId)
+			assertEquals("photo10", response.uploadedPhotos[0].photoName)
+			assertEquals(22.2, response.uploadedPhotos[0].uploaderLon, EPSILON)
+			assertEquals(22.2, response.uploadedPhotos[0].uploaderLat, EPSILON)
+			assertEquals(true, response.uploadedPhotos[0].hasReceiverInfo)
+
+			assertEquals(9, response.uploadedPhotos[1].photoId)
+			assertEquals("photo9", response.uploadedPhotos[1].photoName)
+			assertEquals(22.2, response.uploadedPhotos[1].uploaderLon, EPSILON)
+			assertEquals(22.2, response.uploadedPhotos[1].uploaderLat, EPSILON)
+			assertEquals(true, response.uploadedPhotos[1].hasReceiverInfo)
+
+			assertEquals(8, response.uploadedPhotos[2].photoId)
+			assertEquals("photo8", response.uploadedPhotos[2].photoName)
+			assertEquals(22.2, response.uploadedPhotos[2].uploaderLon, EPSILON)
+			assertEquals(22.2, response.uploadedPhotos[2].uploaderLat, EPSILON)
+			assertEquals(true, response.uploadedPhotos[2].hasReceiverInfo)
+
+			assertEquals(7, response.uploadedPhotos[3].photoId)
+			assertEquals("photo7", response.uploadedPhotos[3].photoName)
+			assertEquals(22.2, response.uploadedPhotos[3].uploaderLon, EPSILON)
+			assertEquals(22.2, response.uploadedPhotos[3].uploaderLat, EPSILON)
+			assertEquals(true, response.uploadedPhotos[3].hasReceiverInfo)
+
+			assertEquals(6, response.uploadedPhotos[4].photoId)
+			assertEquals("photo6", response.uploadedPhotos[4].photoName)
+			assertEquals(22.2, response.uploadedPhotos[4].uploaderLon, EPSILON)
+			assertEquals(22.2, response.uploadedPhotos[4].uploaderLat, EPSILON)
+			assertEquals(true, response.uploadedPhotos[4].hasReceiverInfo)
+		}
 	}
 }

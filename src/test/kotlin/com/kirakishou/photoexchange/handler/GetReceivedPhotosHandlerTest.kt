@@ -75,50 +75,100 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 			photoInfoExchangeDao.save(PhotoInfoExchange(5, 5, 10, "111", "222", 9)).awaitFirst()
 		}
 
-		val content = webClient
-			.get()
-			.uri("v1/api/get_received_photos/111/1,2,3,4,5")
-			.exchange()
-			.expectStatus().is2xxSuccessful
-			.expectBody()
+		kotlin.run {
+			val content = webClient
+				.get()
+				.uri("v1/api/get_received_photos/111/1,2,3,4,5")
+				.exchange()
+				.expectStatus().is2xxSuccessful
+				.expectBody()
 
-		val response = fromBodyContent<GetReceivedPhotosResponse>(content)
-		assertEquals(ErrorCode.GetReceivedPhotosErrors.Ok.value, response.errorCode)
-		assertEquals(5, response.receivedPhotos.size)
+			val response = fromBodyContent<GetReceivedPhotosResponse>(content)
+			assertEquals(ErrorCode.GetReceivedPhotosErrors.Ok.value, response.errorCode)
+			assertEquals(5, response.receivedPhotos.size)
 
-		assertEquals(10, response.receivedPhotos[0].photoId)
-		assertEquals("photo5", response.receivedPhotos[0].uploadedPhotoName)
-		assertEquals("photo10", response.receivedPhotos[0].receivedPhotoName)
-		assertEquals(22.2, response.receivedPhotos[0].receiverLon, EPSILON)
-		assertEquals(22.2, response.receivedPhotos[0].receiverLat, EPSILON)
-		assertEquals(false, response.receivedPhotos[0].uploadedPhotoName == response.receivedPhotos[0].receivedPhotoName)
+			assertEquals(10, response.receivedPhotos[0].photoId)
+			assertEquals("photo5", response.receivedPhotos[0].uploadedPhotoName)
+			assertEquals("photo10", response.receivedPhotos[0].receivedPhotoName)
+			assertEquals(22.2, response.receivedPhotos[0].receiverLon, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[0].receiverLat, EPSILON)
+			assertEquals(false, response.receivedPhotos[0].uploadedPhotoName == response.receivedPhotos[0].receivedPhotoName)
 
-		assertEquals(9, response.receivedPhotos[1].photoId)
-		assertEquals("photo4", response.receivedPhotos[1].uploadedPhotoName)
-		assertEquals("photo9", response.receivedPhotos[1].receivedPhotoName)
-		assertEquals(22.2, response.receivedPhotos[1].receiverLon, EPSILON)
-		assertEquals(22.2, response.receivedPhotos[1].receiverLat, EPSILON)
-		assertEquals(false, response.receivedPhotos[1].uploadedPhotoName == response.receivedPhotos[1].receivedPhotoName)
+			assertEquals(9, response.receivedPhotos[1].photoId)
+			assertEquals("photo4", response.receivedPhotos[1].uploadedPhotoName)
+			assertEquals("photo9", response.receivedPhotos[1].receivedPhotoName)
+			assertEquals(22.2, response.receivedPhotos[1].receiverLon, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[1].receiverLat, EPSILON)
+			assertEquals(false, response.receivedPhotos[1].uploadedPhotoName == response.receivedPhotos[1].receivedPhotoName)
 
-		assertEquals(8, response.receivedPhotos[2].photoId)
-		assertEquals("photo3", response.receivedPhotos[2].uploadedPhotoName)
-		assertEquals("photo8", response.receivedPhotos[2].receivedPhotoName)
-		assertEquals(22.2, response.receivedPhotos[2].receiverLon, EPSILON)
-		assertEquals(22.2, response.receivedPhotos[2].receiverLat, EPSILON)
-		assertEquals(false, response.receivedPhotos[2].uploadedPhotoName == response.receivedPhotos[2].receivedPhotoName)
+			assertEquals(8, response.receivedPhotos[2].photoId)
+			assertEquals("photo3", response.receivedPhotos[2].uploadedPhotoName)
+			assertEquals("photo8", response.receivedPhotos[2].receivedPhotoName)
+			assertEquals(22.2, response.receivedPhotos[2].receiverLon, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[2].receiverLat, EPSILON)
+			assertEquals(false, response.receivedPhotos[2].uploadedPhotoName == response.receivedPhotos[2].receivedPhotoName)
 
-		assertEquals(7, response.receivedPhotos[3].photoId)
-		assertEquals("photo2", response.receivedPhotos[3].uploadedPhotoName)
-		assertEquals("photo7", response.receivedPhotos[3].receivedPhotoName)
-		assertEquals(22.2, response.receivedPhotos[3].receiverLon, EPSILON)
-		assertEquals(22.2, response.receivedPhotos[3].receiverLat, EPSILON)
-		assertEquals(false, response.receivedPhotos[3].uploadedPhotoName == response.receivedPhotos[3].receivedPhotoName)
+			assertEquals(7, response.receivedPhotos[3].photoId)
+			assertEquals("photo2", response.receivedPhotos[3].uploadedPhotoName)
+			assertEquals("photo7", response.receivedPhotos[3].receivedPhotoName)
+			assertEquals(22.2, response.receivedPhotos[3].receiverLon, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[3].receiverLat, EPSILON)
+			assertEquals(false, response.receivedPhotos[3].uploadedPhotoName == response.receivedPhotos[3].receivedPhotoName)
 
-		assertEquals(6, response.receivedPhotos[4].photoId)
-		assertEquals("photo1", response.receivedPhotos[4].uploadedPhotoName)
-		assertEquals("photo6", response.receivedPhotos[4].receivedPhotoName)
-		assertEquals(22.2, response.receivedPhotos[4].receiverLon, EPSILON)
-		assertEquals(22.2, response.receivedPhotos[4].receiverLat, EPSILON)
-		assertEquals(false, response.receivedPhotos[4].uploadedPhotoName == response.receivedPhotos[4].receivedPhotoName)
+			assertEquals(6, response.receivedPhotos[4].photoId)
+			assertEquals("photo1", response.receivedPhotos[4].uploadedPhotoName)
+			assertEquals("photo6", response.receivedPhotos[4].receivedPhotoName)
+			assertEquals(22.2, response.receivedPhotos[4].receiverLon, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[4].receiverLat, EPSILON)
+			assertEquals(false, response.receivedPhotos[4].uploadedPhotoName == response.receivedPhotos[4].receivedPhotoName)
+		}
+
+		kotlin.run {
+			val content = webClient
+				.get()
+				.uri("v1/api/get_received_photos/222/6,7,8,9,10")
+				.exchange()
+				.expectStatus().is2xxSuccessful
+				.expectBody()
+
+			val response = fromBodyContent<GetReceivedPhotosResponse>(content)
+			assertEquals(ErrorCode.GetReceivedPhotosErrors.Ok.value, response.errorCode)
+			assertEquals(5, response.receivedPhotos.size)
+
+			assertEquals(5, response.receivedPhotos[0].photoId)
+			assertEquals("photo10", response.receivedPhotos[0].uploadedPhotoName)
+			assertEquals("photo5", response.receivedPhotos[0].receivedPhotoName)
+			assertEquals(11.1, response.receivedPhotos[0].receiverLon, EPSILON)
+			assertEquals(11.1, response.receivedPhotos[0].receiverLat, EPSILON)
+			assertEquals(false, response.receivedPhotos[0].uploadedPhotoName == response.receivedPhotos[0].receivedPhotoName)
+
+			assertEquals(4, response.receivedPhotos[1].photoId)
+			assertEquals("photo9", response.receivedPhotos[1].uploadedPhotoName)
+			assertEquals("photo4", response.receivedPhotos[1].receivedPhotoName)
+			assertEquals(11.1, response.receivedPhotos[1].receiverLon, EPSILON)
+			assertEquals(11.1, response.receivedPhotos[1].receiverLat, EPSILON)
+			assertEquals(false, response.receivedPhotos[1].uploadedPhotoName == response.receivedPhotos[1].receivedPhotoName)
+
+			assertEquals(3, response.receivedPhotos[2].photoId)
+			assertEquals("photo8", response.receivedPhotos[2].uploadedPhotoName)
+			assertEquals("photo3", response.receivedPhotos[2].receivedPhotoName)
+			assertEquals(11.1, response.receivedPhotos[2].receiverLon, EPSILON)
+			assertEquals(11.1, response.receivedPhotos[2].receiverLat, EPSILON)
+			assertEquals(false, response.receivedPhotos[2].uploadedPhotoName == response.receivedPhotos[2].receivedPhotoName)
+
+			assertEquals(2, response.receivedPhotos[3].photoId)
+			assertEquals("photo7", response.receivedPhotos[3].uploadedPhotoName)
+			assertEquals("photo2", response.receivedPhotos[3].receivedPhotoName)
+			assertEquals(11.1, response.receivedPhotos[3].receiverLon, EPSILON)
+			assertEquals(11.1, response.receivedPhotos[3].receiverLat, EPSILON)
+			assertEquals(false, response.receivedPhotos[3].uploadedPhotoName == response.receivedPhotos[3].receivedPhotoName)
+
+			assertEquals(1, response.receivedPhotos[4].photoId)
+			assertEquals("photo6", response.receivedPhotos[4].uploadedPhotoName)
+			assertEquals("photo1", response.receivedPhotos[4].receivedPhotoName)
+			assertEquals(11.1, response.receivedPhotos[4].receiverLon, EPSILON)
+			assertEquals(11.1, response.receivedPhotos[4].receiverLat, EPSILON)
+			assertEquals(false, response.receivedPhotos[4].uploadedPhotoName == response.receivedPhotos[4].receivedPhotoName)
+		}
 	}
 }
