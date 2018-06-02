@@ -5,19 +5,22 @@ import com.kirakishou.photoexchange.model.ErrorCode
 
 class UploadPhotoResponse(
 
+	@SerializedName("photo_id")
+	val photoId: Long,
+
 	@SerializedName("photo_name")
-	val photoName: String?,
+	val photoName: String,
 
 	errorCode: ErrorCode.UploadPhotoErrors
 ) : StatusResponse(errorCode.value) {
 
 	companion object {
-		fun success(photoName: String): UploadPhotoResponse {
-			return UploadPhotoResponse(photoName, ErrorCode.UploadPhotoErrors.Ok)
+		fun success(photoId: Long, photoName: String): UploadPhotoResponse {
+			return UploadPhotoResponse(photoId, photoName, ErrorCode.UploadPhotoErrors.Ok)
 		}
 
 		fun fail(errorCode: ErrorCode.UploadPhotoErrors): UploadPhotoResponse {
-			return UploadPhotoResponse(null, errorCode)
+			return UploadPhotoResponse(-1L, "", errorCode)
 		}
 	}
 }

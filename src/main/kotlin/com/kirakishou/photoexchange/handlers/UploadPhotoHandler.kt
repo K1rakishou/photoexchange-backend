@@ -123,7 +123,7 @@ class UploadPhotoHandler(
 
 				logger.debug("Photo has been successfully uploaded")
 				return@mono formatResponse(HttpStatus.OK,
-					UploadPhotoResponse.success(newUploadingPhoto.photoName))
+					UploadPhotoResponse.success(newUploadingPhoto.photoId, newUploadingPhoto.photoName))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
