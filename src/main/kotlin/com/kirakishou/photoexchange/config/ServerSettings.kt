@@ -23,15 +23,8 @@ object ServerSettings {
 	val PHOTO_SIZES = arrayOf("b", "s", "m")
 
 	object ThreadPool {
-		object Mongo {
-			const val MONGO_POOL_NAME = "mongoPool"
-			const val MONGO_THREADS_PERCENTAGE = 0.25
-		}
-
-		object Common {
-			const val COMMON_POOL_NAME = "commonPool"
-			const val COMMON_THREADS_PERCENTAGE = 0.75
-		}
+		const val MONGO_POOL_NAME = "mongoPool"
+		const val COMMON_POOL_NAME = "commonPool"
 	}
 
 	object DatabaseInfo {

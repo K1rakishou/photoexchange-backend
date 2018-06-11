@@ -1,6 +1,5 @@
 package com.kirakishou.photoexchange
 
-import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.config.myBeans
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.http.server.reactive.HttpHandler
@@ -38,14 +37,5 @@ class PhotoExchangeApplication(port: Int = 8080) {
 }
 
 fun main(args: Array<String>) {
-	checkThreadPoolsPercentageCorrectness()
-
 	PhotoExchangeApplication().startAndAwait()
-}
-
-private fun checkThreadPoolsPercentageCorrectness() {
-	if (ServerSettings.ThreadPool.Mongo.MONGO_THREADS_PERCENTAGE +
-		ServerSettings.ThreadPool.Common.COMMON_THREADS_PERCENTAGE > 1.0) {
-		throw IllegalStateException("Total threads percentage cannot be bigger than 1.0")
-	}
 }
