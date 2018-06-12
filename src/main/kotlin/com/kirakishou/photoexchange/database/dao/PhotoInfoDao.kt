@@ -42,21 +42,15 @@ open class PhotoInfoDao(
 			.onErrorReturn(PhotoInfo.empty())
 	}
 
-	fun find(userId: String, photoName: String): Mono<PhotoInfo> {
+	fun findOneByUserIdAndPhotoName(userId: String, photoName: String, isUploaderPhoto: Boolean = true): Mono<PhotoInfo> {
 		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
-		return template.findOne(query, PhotoInfo::class.java)
-			.defaultIfEmpty(PhotoInfo.empty())
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(PhotoInfo.empty())
-	}
-
-	fun findByExchangeIdAndUserId(userId: String, exchangeId: Long): Mono<PhotoInfo> {
-		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`is`(exchangeId))
+		if (isUploaderPhoto) {
+			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
+		} else {
+			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_USER_ID).`is`(userId))
+		}
 
 		return template.findOne(query, PhotoInfo::class.java)
 			.defaultIfEmpty(PhotoInfo.empty())
@@ -64,7 +58,11 @@ open class PhotoInfoDao(
 			.onErrorReturn(PhotoInfo.empty())
 	}
 
-	fun findManyByUserIdAndExchangeId(uploaderUserIdList: List<String>, exchangeIdList: List<Long>, isUploader: Boolean): Mono<List<PhotoInfo>> {
+	fun findManyByUserIdAndExchangeId(
+		uploaderUserIdList: List<String>,
+		exchangeIdList: List<Long>,
+		isUploader: Boolean = true
+	): Mono<List<PhotoInfo>> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`in`(exchangeIdList))
 
@@ -81,14 +79,10 @@ open class PhotoInfoDao(
 			.onErrorReturn(emptyList())
 	}
 
-	fun findMany(userId: String, photoNames: List<String>, includeEmptyReceiver: Boolean = true): Mono<List<PhotoInfo>> {
+	fun findManyByUserIdAndPhotoNamesWithReceiver(userId: String, photoNames: List<String>): Mono<List<PhotoInfo>> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`in`(photoNames))
-
-		if (!includeEmptyReceiver) {
-			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_USER_ID).ne(""))
-		}
 
 		return template.find(query, PhotoInfo::class.java)
 			.collectList()
@@ -97,7 +91,7 @@ open class PhotoInfoDao(
 			.onErrorReturn(emptyList())
 	}
 
-	fun findMany(photoIdList: List<Long>, sortOrder: SortOrder = SortOrder.Descending): Mono<List<PhotoInfo>> {
+	fun findManyByIds(photoIdList: List<Long>, sortOrder: SortOrder = SortOrder.Unsorted): Mono<List<PhotoInfo>> {
 		val query = when (sortOrder) {
 			PhotoInfoDao.SortOrder.Descending -> {
 				Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
@@ -119,7 +113,7 @@ open class PhotoInfoDao(
 			.onErrorReturn(emptyList())
 	}
 
-	fun findManyByIds(userId: String, photoIdList: List<Long>, searchForUploaded: Boolean): Mono<List<PhotoInfo>> {
+	fun findManyByUserIdAndPhotoIds(userId: String, photoIdList: List<Long>, searchForUploaded: Boolean): Mono<List<PhotoInfo>> {
 		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
 
@@ -150,7 +144,15 @@ open class PhotoInfoDao(
 			.onErrorReturn(emptyList())
 	}
 
-	fun findPaged(userId: String, lastId: Long, count: Int, searchForUploadedPhotos: Boolean): Mono<List<PhotoInfo>> {
+	fun findManyPagedFromUploader(userId: String, lastId: Long, count: Int): Mono<List<PhotoInfo>> {
+		return findPaged(userId, lastId, count, true)
+	}
+
+	fun findManyPagedFromReceiver(userId: String, lastId: Long, count: Int): Mono<List<PhotoInfo>> {
+		return findPaged(userId, lastId, count, false)
+	}
+
+	private fun findPaged(userId: String, lastId: Long, count: Int, searchForUploadedPhotos: Boolean): Mono<List<PhotoInfo>> {
 		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
 
 		if (searchForUploadedPhotos) {
@@ -161,23 +163,6 @@ open class PhotoInfoDao(
 
 		query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).lt(lastId))
 			.limit(count)
-
-		return template.find(query, PhotoInfo::class.java)
-			.collectList()
-			.defaultIfEmpty(emptyList())
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(emptyList())
-	}
-
-	fun findManyPhotosByUserIdAndExchangeIds(userId: String, exchangeIds: List<Long>, searchForUploaded: Boolean): Mono<List<PhotoInfo>> {
-		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGE_ID).`in`(exchangeIds))
-
-		if (searchForUploaded) {
-			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
-		} else {
-			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).ne(userId))
-		}
 
 		return template.find(query, PhotoInfo::class.java)
 			.collectList()

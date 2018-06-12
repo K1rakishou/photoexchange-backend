@@ -54,7 +54,7 @@ class GetUploadedPhotosHandler(
 						GetUploadedPhotosResponse.fail(ErrorCode.GetUploadedPhotosErrors.NoPhotosInRequest))
 				}
 
-				val uploadedPhotos = photoInfoRepository.findManyPhotos(userId, uploadedPhotoIds, true)
+				val uploadedPhotos = photoInfoRepository.findManyPhotosFromUploader(userId, uploadedPhotoIds)
 				val exchangeIdList = uploadedPhotos.map { it.photoInfo.exchangeId }
 				val photoExchangeMap = photoInfoExchangeRepository.findMany(exchangeIdList).awaitFirst()
 					.associateBy { it.id }
