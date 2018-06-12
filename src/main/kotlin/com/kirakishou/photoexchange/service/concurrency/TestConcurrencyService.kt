@@ -6,9 +6,9 @@ import kotlinx.coroutines.experimental.Unconfined
 import kotlinx.coroutines.experimental.async
 
 class TestConcurrencyService : AbstractConcurrencyService() {
-
 	override val mongoThreadPool = Unconfined
 	override val commonThreadPool = Unconfined
+	override val googleMapThreadPool = Unconfined
 
 	override fun <T> asyncMongo(func: suspend () -> T): Deferred<T> {
 		return async(CommonPool) { func() }
@@ -16,5 +16,9 @@ class TestConcurrencyService : AbstractConcurrencyService() {
 
 	override fun <T> asyncCommon(func: suspend () -> T): Deferred<T> {
 		return async(commonThreadPool) { func() }
+	}
+
+	override fun <T> asyncMap(func: suspend () -> T): Deferred<T> {
+		return async(googleMapThreadPool) { func() }
 	}
 }

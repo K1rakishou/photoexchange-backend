@@ -3,15 +3,18 @@ package com.kirakishou.photoexchange.handler
 import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.dao.*
+import com.kirakishou.photoexchange.database.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import com.kirakishou.photoexchange.service.concurrency.TestConcurrencyService
 import com.mongodb.ConnectionString
+import org.mockito.Mockito
 import org.springframework.core.io.ClassPathResource
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory
@@ -46,7 +49,10 @@ abstract class AbstractHandlerTest {
 	lateinit var favouritedPhotoDao: FavouritedPhotoDao
 	lateinit var reportedPhotoDao: ReportedPhotoDao
 	lateinit var userInfoDao: UserInfoDao
+	lateinit var locationMapDao: LocationMapDao
 
+	lateinit var staticMapDownloaderService: StaticMapDownloaderService
+	lateinit var locationMapRepository: LocationMapRepository
 	lateinit var photoInfoRepository: PhotoInfoRepository
 	lateinit var photoInfoExchangeRepository: PhotoInfoExchangeRepository
 
@@ -86,6 +92,10 @@ abstract class AbstractHandlerTest {
 			it.clear()
 			it.create()
 		}
+		locationMapDao = LocationMapDao(template).also {
+			it.clear()
+			it.create()
+		}
 
 		val generator = GeneratorService()
 
@@ -106,6 +116,14 @@ abstract class AbstractHandlerTest {
 			photoInfoExchangeDao,
 			concurrentService
 		)
+
+		locationMapRepository = LocationMapRepository(
+			mongoSequenceDao,
+			locationMapDao,
+			concurrentService
+		)
+
+		staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)
 	}
 
 	fun clear() {

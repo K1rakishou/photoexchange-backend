@@ -66,6 +66,12 @@ open class PhotoInfoRepository(
 		}.await()
 	}
 
+	suspend fun findOneById(photoId: Long): PhotoInfo {
+		return concurrentService.asyncMongo {
+			return@asyncMongo photoInfoDao.findById(photoId).awaitFirst()
+		}.await()
+	}
+
 	suspend fun findManyPhotosFromUploader(userId: String, photoIds: List<Long>): List<PhotoInfoWithLocation> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {

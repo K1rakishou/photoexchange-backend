@@ -17,6 +17,7 @@ open class MongoSequenceDao(
 	private val FAVOURITED_PHOTO_SEQUENCE_NAME = "favourited_photo_sequence"
 	private val REPORTED_PHOTO_SEQUENCE_NAME = "reported_photo_sequence"
 	private val USER_INFO_SEQUENCE_NAME = "user_info_sequence"
+	private val LOCATION_MAP_SEQUENCE_NAME = "location_map_sequence"
 
 	override fun create() {
 		if (!template.collectionExists(MongoSequence::class.java).block()) {
@@ -65,5 +66,9 @@ open class MongoSequenceDao(
 
 	fun getNextUserId(): Mono<Long> {
 		return getNextId(USER_INFO_SEQUENCE_NAME)
+	}
+
+	fun getNextLocationMapId(): Mono<Long> {
+		return getNextId(LOCATION_MAP_SEQUENCE_NAME)
 	}
 }

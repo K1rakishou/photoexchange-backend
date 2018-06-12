@@ -5,10 +5,7 @@ import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.DB_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.HOST
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
 import com.kirakishou.photoexchange.database.dao.*
-import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
-import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.database.repository.UserInfoRepository
+import com.kirakishou.photoexchange.database.repository.*
 import com.kirakishou.photoexchange.handlers.*
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoIdsHandler
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoHandler
@@ -20,6 +17,7 @@ import com.kirakishou.photoexchange.handlers.uploaded_photos.GetUploadedPhotosHa
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.mongodb.ConnectionString
 import com.samskivert.mustache.Mustache
@@ -49,16 +47,19 @@ fun myBeans() = beans {
 	bean { FavouritedPhotoDao(ref()).also { it.create() } }
 	bean { ReportedPhotoDao(ref()).also { it.create() } }
 	bean { UserInfoDao(ref()).also { it.create() } }
+	bean { LocationMapDao(ref()).also { it.create() } }
 
 	//repository
 	bean<PhotoInfoRepository>()
 	bean<PhotoInfoExchangeRepository>()
 	bean<GalleryPhotosRepository>()
 	bean<UserInfoRepository>()
+	bean<LocationMapRepository>()
 
 	//service
 	bean<GeneratorService>()
 	bean<ConcurrencyService>()
+	bean { StaticMapDownloaderService(ref(), ref(), ref()).also { it.init() } }
 
 	//handler
 	bean<UploadPhotoHandler>()

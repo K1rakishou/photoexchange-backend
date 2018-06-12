@@ -6,6 +6,7 @@ import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.experimental.reactive.awaitFirst
@@ -15,6 +16,7 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mockito
 import org.springframework.http.MediaType
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -26,8 +28,14 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
 								 photoInfoRepository: PhotoInfoRepository,
+								 staticMapDownloaderService: StaticMapDownloaderService,
 								 concurrencyService: AbstractConcurrencyService): WebTestClient {
-		val handler = UploadPhotoHandler(jsonConverterService, photoInfoRepository, concurrencyService)
+		val handler = UploadPhotoHandler(
+			jsonConverterService,
+			photoInfoRepository,
+			staticMapDownloaderService,
+			concurrencyService
+		)
 
 		return WebTestClient.bindToRouterFunction(router {
 			"/v1".nest {
@@ -53,7 +61,11 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `test should exchange two photos`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, staticMapDownloaderService, concurrentService)
+
+		runBlocking {
+			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
+		}
 
 		kotlin.run {
 			val packet = SendPhotoPacket(33.4, 55.2, "111", true)
@@ -143,7 +155,11 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `test should not exchange two photos with the same user id`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, staticMapDownloaderService, concurrentService)
+
+		runBlocking {
+			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
+		}
 
 		kotlin.run {
 			val packet = SendPhotoPacket(33.4, 55.2, "111", true)
@@ -242,7 +258,11 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `test should exchange 4 photos`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, staticMapDownloaderService, concurrentService)
+
+		runBlocking {
+			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
+		}
 
 		kotlin.run {
 			val packet = SendPhotoPacket(33.4, 55.2, "111", true)

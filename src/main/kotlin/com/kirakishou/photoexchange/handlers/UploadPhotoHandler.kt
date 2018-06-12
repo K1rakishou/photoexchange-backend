@@ -18,6 +18,7 @@ import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.ImageUtils
@@ -40,6 +41,7 @@ import java.io.IOException
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
+	private val staticMapDownloaderService: StaticMapDownloaderService,
 	private val concurrentService: AbstractConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
 
@@ -83,6 +85,13 @@ class UploadPhotoHandler(
 
 				if (newUploadingPhoto.isEmpty()) {
 					logger.debug("Could not save a photoInfo")
+					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
+				}
+
+				if (!staticMapDownloaderService.enqueue(newUploadingPhoto.photoId)) {
+					//TODO: probably should delete the photo from the DB here
+					logger.error("Could not enqueue photo in locationMapReceiverService")
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				}

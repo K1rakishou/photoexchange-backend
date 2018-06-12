@@ -1,6 +1,7 @@
 package com.kirakishou.photoexchange.service.concurrency
 
 import com.kirakishou.photoexchange.config.ServerSettings.ThreadPool.COMMON_POOL_NAME
+import com.kirakishou.photoexchange.config.ServerSettings.ThreadPool.GOOGLE_MAP_POOL_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.ThreadPool.MONGO_POOL_NAME
 import kotlinx.coroutines.experimental.CoroutineDispatcher
 import kotlinx.coroutines.experimental.Deferred
@@ -10,6 +11,7 @@ import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 class ConcurrencyService : AbstractConcurrencyService() {
 	override val mongoThreadPool: CoroutineDispatcher
 	override val commonThreadPool: CoroutineDispatcher
+	override val googleMapThreadPool: CoroutineDispatcher
 
 	init {
 		val mongoThreadsCount = (Runtime.getRuntime().availableProcessors() * 2).coerceAtLeast(4)
@@ -17,6 +19,8 @@ class ConcurrencyService : AbstractConcurrencyService() {
 
 		val commonThreadsCount = (Runtime.getRuntime().availableProcessors() * 2).coerceAtLeast(4)
 		commonThreadPool = newFixedThreadPoolContext(commonThreadsCount, COMMON_POOL_NAME)
+
+		googleMapThreadPool = newFixedThreadPoolContext(2, GOOGLE_MAP_POOL_NAME)
 	}
 
 	override fun <T> asyncMongo(func: suspend () -> T): Deferred<T> {
@@ -25,5 +29,9 @@ class ConcurrencyService : AbstractConcurrencyService() {
 
 	override fun <T> asyncCommon(func: suspend () -> T): Deferred<T> {
 		return async(commonThreadPool) { func() }
+	}
+
+	override fun <T> asyncMap(func: suspend () -> T): Deferred<T> {
+		return async(googleMapThreadPool) { func() }
 	}
 }

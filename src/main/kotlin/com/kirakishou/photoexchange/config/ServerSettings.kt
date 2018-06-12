@@ -1,8 +1,11 @@
 package com.kirakishou.photoexchange.config
 
-object ServerSettings {
-	const val FILE_DIR_PATH = "D:\\projects\\data\\photos"
+import org.springframework.core.io.ClassPathResource
 
+object ServerSettings {
+	val GOOGLE_MAPS_KEY by lazy { getGoogleMapsKey() }
+
+	const val FILE_DIR_PATH = "D:\\projects\\data\\photos"
 	const val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
 	const val OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL = 1000L * 60L * 60L // 1 hour
 	const val DELETE_PHOTOS_OLDER_THAN = 1000L * 60L * 60L * 24L * 30L //30 days
@@ -25,11 +28,27 @@ object ServerSettings {
 	object ThreadPool {
 		const val MONGO_POOL_NAME = "mongoPool"
 		const val COMMON_POOL_NAME = "commonPool"
+		const val GOOGLE_MAP_POOL_NAME = "mapPool"
 	}
 
 	object DatabaseInfo {
 		const val HOST = "192.168.99.100"
 		const val PORT = 27017
 		const val DB_NAME = "photoexchange"
+	}
+
+	private fun getGoogleMapsKey(): String {
+		val fileResource = ClassPathResource("keys.properties")
+		val googleMapsKeyName = "GOOGLE_MAPS_KEY"
+
+		val keysMap = fileResource.file
+			.readLines()
+			.map {
+				val splitted = it.split("=")
+				return@map Pair(splitted[0], splitted[1])
+			}
+			.toMap()
+
+		return keysMap[googleMapsKeyName]!!
 	}
 }
