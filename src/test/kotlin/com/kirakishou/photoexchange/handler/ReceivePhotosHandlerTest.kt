@@ -65,8 +65,8 @@ class ReceivePhotosHandlerTest  : AbstractHandlerTest() {
 			photoInfoDao.save(PhotoInfo(6, 1, "222", "111", "photo6", true, true, 22.2, 22.2, 6L)).awaitFirst()
 			photoInfoDao.save(PhotoInfo(7, 2, "222", "111", "photo7", true, true, 22.2, 22.2, 5L)).awaitFirst()
 			photoInfoDao.save(PhotoInfo(8, 3, "222", "111", "photo8", true, true, 22.2, 22.2, 6L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(9, 4, "222", "111", "photo9", true, false, 22.2, 22.2, 5L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(10, 5, "222", "111", "photo10", true, false, 22.2, 22.2, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(9, 4, "222", "111", "photo9", true, true, 22.2, 22.2, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(10, 5, "222", "111", "photo10", true, true, 22.2, 22.2, 6L)).awaitFirst()
 
 			photoInfoExchangeDao.save(PhotoInfoExchange(1, 1, 6, "111", "222", 5)).awaitFirst()
 			photoInfoExchangeDao.save(PhotoInfoExchange(2, 2, 7, "111", "222", 6)).awaitFirst()
@@ -85,25 +85,37 @@ class ReceivePhotosHandlerTest  : AbstractHandlerTest() {
 
 			val response = fromBodyContent<ReceivePhotosResponse>(content)
 			assertEquals(ErrorCode.ReceivePhotosErrors.Ok.value, response.errorCode)
-			assertEquals(3, response.receivedPhotos.size)
+			assertEquals(5, response.receivedPhotos.size)
 
-			assertEquals(8, response.receivedPhotos[0].photoId)
-			assertEquals("photo3", response.receivedPhotos[0].uploadedPhotoName)
-			assertEquals("photo8", response.receivedPhotos[0].receivedPhotoName)
+			assertEquals(6, response.receivedPhotos[0].photoId)
+			assertEquals("photo1", response.receivedPhotos[0].uploadedPhotoName)
+			assertEquals("photo6", response.receivedPhotos[0].receivedPhotoName)
 			assertEquals(22.2, response.receivedPhotos[0].lon, EPSILON)
 			assertEquals(22.2, response.receivedPhotos[0].lat, EPSILON)
 
-			assertEquals(9, response.receivedPhotos[1].photoId)
-			assertEquals("photo4", response.receivedPhotos[1].uploadedPhotoName)
-			assertEquals("photo9", response.receivedPhotos[1].receivedPhotoName)
+			assertEquals(7, response.receivedPhotos[1].photoId)
+			assertEquals("photo2", response.receivedPhotos[1].uploadedPhotoName)
+			assertEquals("photo7", response.receivedPhotos[1].receivedPhotoName)
 			assertEquals(22.2, response.receivedPhotos[1].lon, EPSILON)
 			assertEquals(22.2, response.receivedPhotos[1].lat, EPSILON)
 
-			assertEquals(10, response.receivedPhotos[2].photoId)
-			assertEquals("photo5", response.receivedPhotos[2].uploadedPhotoName)
-			assertEquals("photo10", response.receivedPhotos[2].receivedPhotoName)
+			assertEquals(8, response.receivedPhotos[2].photoId)
+			assertEquals("photo3", response.receivedPhotos[2].uploadedPhotoName)
+			assertEquals("photo8", response.receivedPhotos[2].receivedPhotoName)
 			assertEquals(22.2, response.receivedPhotos[2].lon, EPSILON)
 			assertEquals(22.2, response.receivedPhotos[2].lat, EPSILON)
+
+			assertEquals(9, response.receivedPhotos[3].photoId)
+			assertEquals("photo4", response.receivedPhotos[3].uploadedPhotoName)
+			assertEquals("photo9", response.receivedPhotos[3].receivedPhotoName)
+			assertEquals(22.2, response.receivedPhotos[3].lon, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[3].lat, EPSILON)
+
+			assertEquals(10, response.receivedPhotos[4].photoId)
+			assertEquals("photo5", response.receivedPhotos[4].uploadedPhotoName)
+			assertEquals("photo10", response.receivedPhotos[4].receivedPhotoName)
+			assertEquals(22.2, response.receivedPhotos[4].lon, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[4].lat, EPSILON)
 		}
 
 		kotlin.run {
@@ -116,7 +128,7 @@ class ReceivePhotosHandlerTest  : AbstractHandlerTest() {
 
 			val response = fromBodyContent<ReceivePhotosResponse>(content)
 			assertEquals(ErrorCode.ReceivePhotosErrors.Ok.value, response.errorCode)
-			assertEquals(3, response.receivedPhotos.size)
+			assertEquals(5, response.receivedPhotos.size)
 
 			assertEquals(1, response.receivedPhotos[0].photoId)
 			assertEquals("photo6", response.receivedPhotos[0].uploadedPhotoName)
@@ -135,6 +147,18 @@ class ReceivePhotosHandlerTest  : AbstractHandlerTest() {
 			assertEquals("photo3", response.receivedPhotos[2].receivedPhotoName)
 			assertEquals(11.1, response.receivedPhotos[2].lon, EPSILON)
 			assertEquals(11.1, response.receivedPhotos[2].lat, EPSILON)
+
+			assertEquals(4, response.receivedPhotos[3].photoId)
+			assertEquals("photo9", response.receivedPhotos[3].uploadedPhotoName)
+			assertEquals("photo4", response.receivedPhotos[3].receivedPhotoName)
+			assertEquals(11.1, response.receivedPhotos[3].lon, EPSILON)
+			assertEquals(11.1, response.receivedPhotos[3].lat, EPSILON)
+
+			assertEquals(5, response.receivedPhotos[4].photoId)
+			assertEquals("photo10", response.receivedPhotos[4].uploadedPhotoName)
+			assertEquals("photo5", response.receivedPhotos[4].receivedPhotoName)
+			assertEquals(11.1, response.receivedPhotos[4].lon, EPSILON)
+			assertEquals(11.1, response.receivedPhotos[4].lat, EPSILON)
 		}
 	}
 }
