@@ -57,16 +57,16 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
 
 		runBlocking {
-			photoInfoDao.save(PhotoInfo(1, 1, "111", "222", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(2, 2, "111", "222", "photo2", true, 11.1, 11.1, 6L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(3, 3, "111", "222", "photo3", true, 11.1, 11.1, 5L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(4, 4, "111", "222", "photo4", true, 11.1, 11.1, 6L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(5, 5, "111", "222", "photo5", true, 11.1, 11.1, 5L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(6, 1, "222", "111", "photo6", true, 22.2, 22.2, 6L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(7, 2, "222", "111", "photo7", true, 22.2, 22.2, 5L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(8, 3, "222", "111", "photo8", true, 22.2, 22.2, 6L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(9, 4, "222", "111", "photo9", true, 22.2, 22.2, 5L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(10, 5, "222", "111", "photo10", true, 22.2, 22.2, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(1, 1, "111", "222", "photo1", true, true, 11.1, 11.1, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(2, 2, "111", "222", "photo2", true, true, 11.1, 11.1, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(3, 3, "111", "222", "photo3", true, true, 11.1, 11.1, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(4, 4, "111", "222", "photo4", true, true, 11.1, 11.1, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(5, 5, "111", "222", "photo5", true, true, 11.1, 11.1, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(6, 1, "222", "111", "photo6", true, false, 22.2, 22.2, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(7, 2, "222", "111", "photo7", true, false, 22.2, 22.2, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(8, 3, "222", "111", "photo8", true, true, 22.2, 22.2, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(9, 4, "222", "111", "photo9", true, true, 22.2, 22.2, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(10, 5, "222", "111", "photo10", true, true, 22.2, 22.2, 6L)).awaitFirst()
 
 			photoInfoExchangeDao.save(PhotoInfoExchange(1, 1, 6, "111", "222", 5)).awaitFirst()
 			photoInfoExchangeDao.save(PhotoInfoExchange(2, 2, 7, "111", "222", 6)).awaitFirst()
@@ -85,7 +85,7 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 
 			val response = fromBodyContent<GetReceivedPhotosResponse>(content)
 			assertEquals(ErrorCode.GetReceivedPhotosErrors.Ok.value, response.errorCode)
-			assertEquals(5, response.receivedPhotos.size)
+			assertEquals(3, response.receivedPhotos.size)
 
 			assertEquals(10, response.receivedPhotos[0].photoId)
 			assertEquals("photo5", response.receivedPhotos[0].uploadedPhotoName)

@@ -83,6 +83,7 @@ open class PhotoInfoDao(
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`in`(photoNames))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.MAP_READY).`is`(true))
 
 		return template.find(query, PhotoInfo::class.java)
 			.collectList()

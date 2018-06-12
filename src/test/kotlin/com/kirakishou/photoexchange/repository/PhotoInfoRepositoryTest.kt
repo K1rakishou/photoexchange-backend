@@ -45,8 +45,8 @@ class PhotoInfoRepositoryTest : AbstractRepositoryTest() {
 	@Test
 	fun `delete photo info exchange record from the database when something happened in the second part of photo exchange`() {
 		runBlocking {
-			val photoInfo1 = PhotoInfo(1, 1, "111", "", "photo_name", true, 11.1, 11.1, 1500L)
-			val photoInfo2 = PhotoInfo(2, -1, "222", "", "photo_name2", true, 22.2, 22.2, 1505L)
+			val photoInfo1 = PhotoInfo(1, 1, "111", "", "photo_name", true, true, 11.1, 11.1, 1500L)
+			val photoInfo2 = PhotoInfo(2, -1, "222", "", "photo_name2", true, true, 22.2, 22.2, 1505L)
 			val photoInfoExchange = PhotoInfoExchange(1, 1, -1, "111", "", 1500L)
 
 			photoInfoDao.save(photoInfo1).awaitFirst()
