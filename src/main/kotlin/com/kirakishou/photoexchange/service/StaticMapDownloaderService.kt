@@ -43,13 +43,13 @@ open class StaticMapDownloaderService(
 	}
 
 	open suspend fun enqueue(photoId: Long): Boolean {
-		val result = locationMapRepository.save(LocationMap.create(photoId)).isEmpty()
+		val result = locationMapRepository.save(LocationMap.create(photoId))
 
 		//start the downloading process regardless of the save result because there might be old requests in the queue
 		//and we want to process them
 		startDownloadingMapFiles()
 
-		return result
+		return !result.isEmpty()
 	}
 
 	private fun startDownloadingMapFiles() {
