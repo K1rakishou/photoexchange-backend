@@ -49,12 +49,19 @@ class PhotoInfo(
 	}
 
 	companion object {
+
+		const val EMPTY_PHOTO_ID = -1L
+		const val EMPTY_EXCHANGE_ID = -1L
+		const val EMPTY_LOCATION_MAP_ID = -1L
+
 		fun empty(): PhotoInfo {
-			return PhotoInfo(-1L, -1L, -1L, "", "", "", false, 0.0, 0.0, 0L)
+			return PhotoInfo(EMPTY_PHOTO_ID, EMPTY_EXCHANGE_ID, EMPTY_LOCATION_MAP_ID,
+				"", "", "", false, 0.0, 0.0, 0L)
 		}
 
 		fun create(userId: String, photoName: String, isPublic: Boolean, lon: Double, lat: Double, time: Long): PhotoInfo {
-			return PhotoInfo(-1L, -1L, -1L, userId, "", photoName, isPublic, lon, lat, time)
+			return PhotoInfo(EMPTY_PHOTO_ID, EMPTY_EXCHANGE_ID, EMPTY_LOCATION_MAP_ID,
+				userId, "", photoName, isPublic, lon, lat, time)
 		}
 	}
 

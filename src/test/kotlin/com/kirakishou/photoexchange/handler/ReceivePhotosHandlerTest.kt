@@ -57,16 +57,16 @@ class ReceivePhotosHandlerTest  : AbstractHandlerTest() {
 		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
 
 		runBlocking {
-			photoInfoDao.save(PhotoInfo(1, 1, -1L, "111", "222", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(2, 2, -1L, "111", "222", "photo2", true, 11.1, 11.1, 6L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(3, 3, -1L, "111", "222", "photo3", true, 11.1, 11.1, 5L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(4, 4, -1L, "111", "222", "photo4", true, 11.1, 11.1, 6L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(5, 5, -1L, "111", "222", "photo5", true, 11.1, 11.1, 5L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(6, 1, -1L, "222", "111", "photo6", true, 22.2, 22.2, 6L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(7, 2, -1L, "222", "111", "photo7", true, 22.2, 22.2, 5L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(8, 3, -1L, "222", "111", "photo8", true, 22.2, 22.2, 6L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(9, 4, -1L, "222", "111", "photo9", true, 22.2, 22.2, 5L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(10, 5, -1L, "222", "111", "photo10", true, 22.2, 22.2, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(1, 1, 1, "111", "222", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(2, 2, 2, "111", "222", "photo2", true, 11.1, 11.1, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(3, 3, 3, "111", "222", "photo3", true, 11.1, 11.1, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(4, 4, 4, "111", "222", "photo4", true, 11.1, 11.1, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(5, 5, 5, "111", "222", "photo5", true, 11.1, 11.1, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(6, 1, 6, "222", "111", "photo6", true, 22.2, 22.2, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(7, 2, 7, "222", "111", "photo7", true, 22.2, 22.2, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(8, 3, 8, "222", "111", "photo8", true, 22.2, 22.2, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(9, 4, 9, "222", "111", "photo9", true, 22.2, 22.2, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(10, 5, 10, "222", "111", "photo10", true, 22.2, 22.2, 6L)).awaitFirst()
 
 			photoInfoExchangeDao.save(PhotoInfoExchange(1, 1, 6, "111", "222", 5)).awaitFirst()
 			photoInfoExchangeDao.save(PhotoInfoExchange(2, 2, 7, "111", "222", 6)).awaitFirst()
@@ -159,6 +159,32 @@ class ReceivePhotosHandlerTest  : AbstractHandlerTest() {
 			assertEquals("photo5", response.receivedPhotos[4].receivedPhotoName)
 			assertEquals(11.1, response.receivedPhotos[4].lon, EPSILON)
 			assertEquals(11.1, response.receivedPhotos[4].lat, EPSILON)
+		}
+	}
+
+	@Test
+	fun `should not return photo if it does not have location map`() {
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
+
+		runBlocking {
+			photoInfoDao.save(PhotoInfo(1, 1, -1, "111", "222", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(2, 2, -1, "111", "222", "photo2", true, 11.1, 11.1, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(3, 3, -1, "111", "222", "photo3", true, 11.1, 11.1, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(4, 4, -1, "111", "222", "photo4", true, 11.1, 11.1, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(5, 5, -1, "111", "222", "photo5", true, 11.1, 11.1, 5L)).awaitFirst()
+		}
+
+		kotlin.run {
+			val content = webClient
+				.get()
+				.uri("v1/api/receive_photos/photo1,photo2,photo3,photo4,photo5/111")
+				.exchange()
+				.expectStatus().is2xxSuccessful
+				.expectBody()
+
+			val response = fromBodyContent<ReceivePhotosResponse>(content)
+			assertEquals(ErrorCode.ReceivePhotosErrors.NoPhotosToSendBack.value, response.errorCode)
+			assertEquals(0, response.receivedPhotos.size)
 		}
 	}
 }

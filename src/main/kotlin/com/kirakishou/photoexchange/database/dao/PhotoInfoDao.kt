@@ -83,6 +83,7 @@ open class PhotoInfoDao(
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`in`(photoNames))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.LOCATION_MAP_ID).ne(PhotoInfo.EMPTY_LOCATION_MAP_ID))
 
 		return template.find(query, PhotoInfo::class.java)
 			.collectList()
@@ -163,6 +164,7 @@ open class PhotoInfoDao(
 
 		query
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).lt(lastId))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.LOCATION_MAP_ID).ne(PhotoInfo.EMPTY_LOCATION_MAP_ID))
 			.limit(count)
 
 		return template.find(query, PhotoInfo::class.java)
