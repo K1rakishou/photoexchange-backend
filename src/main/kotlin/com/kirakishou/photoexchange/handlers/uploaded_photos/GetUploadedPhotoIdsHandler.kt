@@ -7,7 +7,7 @@ import com.kirakishou.photoexchange.handlers.AbstractWebHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.uploaded_photos.GetUploadedPhotoIdsResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
+import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import kotlinx.coroutines.experimental.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono
 class GetUploadedPhotoIdsHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
-	private val concurrentService: ConcurrencyService
+	private val concurrentService: AbstractConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(GetUploadedPhotoIdsHandler::class.java)

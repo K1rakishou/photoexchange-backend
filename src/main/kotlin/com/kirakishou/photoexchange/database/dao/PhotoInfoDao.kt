@@ -160,11 +160,11 @@ open class PhotoInfoDao(
 			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
 		} else {
 			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_USER_ID).`is`(userId))
+			query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.LOCATION_MAP_ID).ne(PhotoInfo.EMPTY_LOCATION_MAP_ID))
 		}
 
 		query
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).lt(lastId))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.LOCATION_MAP_ID).ne(PhotoInfo.EMPTY_LOCATION_MAP_ID))
 			.limit(count)
 
 		return template.find(query, PhotoInfo::class.java)
