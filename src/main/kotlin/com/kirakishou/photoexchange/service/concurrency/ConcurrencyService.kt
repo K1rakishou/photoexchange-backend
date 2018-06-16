@@ -13,14 +13,16 @@ class ConcurrencyService : AbstractConcurrencyService() {
 	override val commonThreadPool: CoroutineDispatcher
 	override val googleMapThreadPool: CoroutineDispatcher
 
+	private val MINIMUM_THREADS_IN_POOL = 4
+
 	init {
-		val mongoThreadsCount = (Runtime.getRuntime().availableProcessors() * 2).coerceAtLeast(4)
+		val mongoThreadsCount = (Runtime.getRuntime().availableProcessors() * 2).coerceAtLeast(MINIMUM_THREADS_IN_POOL)
 		mongoThreadPool = newFixedThreadPoolContext(mongoThreadsCount, MONGO_POOL_NAME)
 
-		val commonThreadsCount = (Runtime.getRuntime().availableProcessors() * 2).coerceAtLeast(4)
+		val commonThreadsCount = (Runtime.getRuntime().availableProcessors() * 2).coerceAtLeast(MINIMUM_THREADS_IN_POOL)
 		commonThreadPool = newFixedThreadPoolContext(commonThreadsCount, COMMON_POOL_NAME)
 
-		googleMapThreadPool = newFixedThreadPoolContext(2, GOOGLE_MAP_POOL_NAME)
+		googleMapThreadPool = newFixedThreadPoolContext(MINIMUM_THREADS_IN_POOL, GOOGLE_MAP_POOL_NAME)
 	}
 
 	override fun <T> asyncMongo(func: suspend () -> T): Deferred<T> {

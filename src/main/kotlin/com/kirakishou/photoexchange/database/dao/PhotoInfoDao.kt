@@ -224,6 +224,19 @@ open class PhotoInfoDao(
 			.onErrorReturn(false)
 	}
 
+	fun updateSetLocationMapId(photoId: Long, locationMapId: Long): Mono<Boolean> {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		val update = Update()
+			.set(PhotoInfo.Mongo.Field.LOCATION_MAP_ID, locationMapId)
+
+		return template.updateFirst(query, update, PhotoInfo::class.java)
+			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
+	}
+
 	fun deleteById(photoId: Long): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))

@@ -65,7 +65,7 @@ class PhotoInfo(
 			const val UPLOADER_USER_ID = "uploader_user_id"
 			const val RECEIVER_USER_ID = "receiver_user_id"
 			const val PHOTO_NAME = "photo_name"
-			const val LOCATION_MAP_ID = "LOCATION_MAP_ID"
+			const val LOCATION_MAP_ID = "location_map_id"
 			const val IS_PUBLIC = "is_public"
 			const val LONGITUDE = "longitude"
 			const val LATITUDE = "latitude"

@@ -38,7 +38,7 @@ open class StaticMapDownloaderService(
 	private val inProgress = AtomicBoolean(false)
 
 	fun init() {
-		//check if there are not downloaded map files on every server start
+		//check if there are not yet downloaded map files on every server start
 		startDownloadingMapFiles()
 	}
 
@@ -83,11 +83,15 @@ open class StaticMapDownloaderService(
 		}
 	}
 
+	/**
+	 * If some kind of error has happened in this function we should not do anything with queued up request,
+	 * just retry it some time later
+	 * */
 	private suspend fun getLocationMap(locationMap: LocationMap): Boolean {
 		try {
 			val photoInfo = photoInfoRepository.findOneById(locationMap.photoId)
 			if (photoInfo.isEmpty()) {
-				return false
+				throw CouldNotFindPhotoInfo("Could not find photoInfo with photoId = ${locationMap.photoId}")
 			}
 
 			val lon = photoInfo.lon
@@ -95,7 +99,7 @@ open class StaticMapDownloaderService(
 			val photoMapName = "${photoInfo.photoName}_map"
 			val requestString = String.format(requestStringFormat, lon, lat, lon, lat)
 
-			logger.debug("Trying to get map from google services with request string = $requestString")
+			logger.debug("[$photoMapName], Trying to get map from google services with request string = $requestString")
 
 			val response = client.get()
 				.uri(requestString)
@@ -104,13 +108,11 @@ open class StaticMapDownloaderService(
 				.awaitFirstOrNull()
 
 			if (response == null) {
-				logger.error("Response is null")
-				return false
+				throw ResponseIsNull("[$photoMapName], Response is null")
 			}
 
 			if (!response.statusCode().is2xxSuccessful) {
-				logger.error("Response status code is not 2xxSuccessful (${response.statusCode()})")
-				return false
+				throw ResponseIsNot2xxSuccessful("[$photoMapName], Response status code is not 2xxSuccessful (${response.statusCode()})")
 			}
 
 			val filePath = "${ServerSettings.FILE_DIR_PATH}\\$photoMapName"
@@ -118,24 +120,32 @@ open class StaticMapDownloaderService(
 
 			try {
 				if (!saveFileToDisk(outFile, response)) {
-					logger.error("Could not save file to disk")
-					outFile.deleteIfExists()
-					return false
+					throw CouldNotSaveToDiskException("[$photoMapName], Could not save file to disk")
 				}
 
 				if (!locationMapRepository.setMapReady(locationMap.photoId)) {
-					logger.error("Could not set mapReady flag in the DB")
-					outFile.deleteIfExists()
+					throw CouldNotUpdateMapReadyFlag("[$photoMapName], Could not set mapReady flag in the DB")
 				}
+
+				if (!photoInfoRepository.updateSetLocationMapId(locationMap.photoId, locationMap.id)) {
+					throw CouldNotUpdateLocationId("[$photoMapName], Could not set locationMapId flag in the DB")
+				}
+
 			} catch (error: Throwable) {
-				outFile.deleteIfExists()
+				cleanup(outFile)
+				throw error
 			}
 
 		} catch (error: Throwable) {
 			logger.error("Unknown error", error)
+			return false
 		}
 
 		return true
+	}
+
+	private fun cleanup(outFile: File) {
+		outFile.deleteIfExists()
 	}
 
 	private suspend fun saveFileToDisk(outFile: File, response: ClientResponse): Boolean {
@@ -161,4 +171,11 @@ open class StaticMapDownloaderService(
 
 		return true
 	}
+
+	class CouldNotFindPhotoInfo(message: String) : Exception(message)
+	class ResponseIsNull(message: String) : Exception(message)
+	class ResponseIsNot2xxSuccessful(message: String) : Exception(message)
+	class CouldNotSaveToDiskException(message: String) : Exception(message)
+	class CouldNotUpdateMapReadyFlag(message: String) : Exception(message)
+	class CouldNotUpdateLocationId(message: String) : Exception(message)
 }

@@ -406,6 +406,14 @@ open class PhotoInfoRepository(
 		}.await()
 	}
 
+	suspend fun updateSetLocationMapId(photoId: Long, locationMapId: Long): Boolean {
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				return@withLock photoInfoDao.updateSetLocationMapId(photoId, locationMapId).awaitFirst()
+			}
+		}.await()
+	}
+
 	data class PhotoInfoWithLocation(
 		var photoInfo: PhotoInfo,
 		var lon: Double,
