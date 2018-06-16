@@ -39,7 +39,7 @@ class GetStaticMapHandler(
 
 				val file = File("${ServerSettings.FILE_DIR_PATH}\\${photoName}_map")
 				if (!file.exists()) {
-					logger.debug("Photo $photoName not found on the disk")
+					logger.debug("Static map $photoName not found on the disk")
 					return@mono ServerResponse.notFound().build()
 				}
 
