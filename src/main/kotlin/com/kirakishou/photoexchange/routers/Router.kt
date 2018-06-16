@@ -24,7 +24,8 @@ class Router(
 	private val getUploadedPhotoIdsHandler: GetUploadedPhotoIdsHandler,
 	private val getUploadedPhotosHandler: GetUploadedPhotosHandler,
 	private val getReceivedPhotoIdsHandler: GetReceivedPhotoIdsHandler,
-	private val getReceivedPhotosHandler: GetReceivedPhotosHandler
+	private val getReceivedPhotosHandler: GetReceivedPhotosHandler,
+	private val getStaticMapHandler: GetStaticMapHandler
 ) {
 	fun setUpRouter() = router {
 		"/v1".nest {
@@ -53,6 +54,7 @@ class Router(
 
 				accept(MediaType.parseMediaType("image/*")).nest {
 					GET("/get_photo/{photo_name}/{photo_size}", getPhotoHandler::handle)
+					GET("/get_static_map/{photo_name}", getStaticMapHandler::handle)
 				}
 			}
 		}
