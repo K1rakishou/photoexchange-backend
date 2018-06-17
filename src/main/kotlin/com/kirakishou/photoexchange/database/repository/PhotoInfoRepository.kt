@@ -367,6 +367,10 @@ open class PhotoInfoRepository(
 				val photoInfoMap = photoInfoList.associateBy { it.exchangeId }
 				val exchangedPhotoInfoMap = exchangedPhotoInfoList.associateBy { it.exchangeId }
 
+				if (photoInfoMap.isEmpty() || exchangedPhotoInfoMap.isEmpty()) {
+					return@withLock emptyList<Pair<PhotoInfo, PhotoInfo>>()
+				}
+
 				for (photoInfo in photoInfoList) {
 					resultList += Pair(
 						photoInfoMap[photoInfo.exchangeId]!!,
