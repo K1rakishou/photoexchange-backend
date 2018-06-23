@@ -35,6 +35,7 @@ open class StaticMapDownloaderService(
 	private val REQUESTS_PER_BATCH = 100
 	private val MAX_TIMEOUT_SECONDS = 15L
 	private val CHUNCKS_COUNT = 4
+	private val MAX_ATTEMPTS = 5
 	private val inProgress = AtomicBoolean(false)
 
 	fun init() {
@@ -138,10 +139,24 @@ open class StaticMapDownloaderService(
 
 		} catch (error: Throwable) {
 			logger.error("Unknown error", error)
+
+			increaseAttemptsCountOrSetStatusFailed(locationMap)
 			return false
 		}
 
 		return true
+	}
+
+	private suspend fun increaseAttemptsCountOrSetStatusFailed(locationMap: LocationMap) {
+		if (locationMap.attemptsCount > MAX_ATTEMPTS) {
+			if (!locationMapRepository.setMapFailed(locationMap.photoId)) {
+				logger.error("Could not set map status as Failed")
+			}
+		} else {
+			if (!locationMapRepository.increaseAttemptsCount(locationMap.photoId)) {
+				logger.error("Could not increase attempts count")
+			}
+		}
 	}
 
 	private fun cleanup(outFile: File) {

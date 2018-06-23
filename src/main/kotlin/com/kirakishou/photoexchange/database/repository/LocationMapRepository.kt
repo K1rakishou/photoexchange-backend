@@ -39,4 +39,20 @@ class LocationMapRepository(
 			}
 		}.await()
 	}
+
+	suspend fun setMapFailed(photoId: Long): Boolean {
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				return@withLock locationMapDao.updateSetMapFailed(photoId).awaitFirst()
+			}
+		}.await()
+	}
+
+	suspend fun increaseAttemptsCount(photoId: Long): Boolean {
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				return@withLock locationMapDao.increaseAttemptsCount(photoId).awaitFirst()
+			}
+		}.await()
+	}
 }
