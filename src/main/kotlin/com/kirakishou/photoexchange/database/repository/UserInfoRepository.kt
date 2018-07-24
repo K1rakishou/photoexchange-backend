@@ -50,4 +50,12 @@ class UserInfoRepository(
 			}
 		}.await()
 	}
+
+	suspend fun accountExists(userId: String): Boolean {
+		return concurrentService.asyncMongo {
+			return@asyncMongo mutex.withLock {
+				return@withLock userInfoDao.userIdExists(userId).awaitFirst()
+			}
+		}.await()
+	}
 }

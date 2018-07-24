@@ -67,4 +67,10 @@ class ErrorCode {
 		BadRequest(403),
 		NoPhotosInRequest(404);
 	}
+
+	enum class CheckAccountExistsErrors(val value: Int) {
+		UnknownError(450),
+		Ok(451),
+		BadRequest(452);
+	}
 }

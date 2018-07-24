@@ -25,7 +25,8 @@ class Router(
 	private val getUploadedPhotosHandler: GetUploadedPhotosHandler,
 	private val getReceivedPhotoIdsHandler: GetReceivedPhotoIdsHandler,
 	private val getReceivedPhotosHandler: GetReceivedPhotosHandler,
-	private val getStaticMapHandler: GetStaticMapHandler
+	private val getStaticMapHandler: GetStaticMapHandler,
+	private val checkAccountExistsHandler: CheckAccountExistsHandler
 ) {
 	fun setUpRouter() = router {
 		"/v1".nest {
@@ -47,6 +48,8 @@ class Router(
 
 					GET("/get_received_photo_ids/{user_id}/{last_id}/{count}", getReceivedPhotoIdsHandler::handle)
 					GET("/get_received_photos/{user_id}/{photo_ids}", getReceivedPhotosHandler::handle)
+
+					GET("/check_account_exists/{user_id}", checkAccountExistsHandler::handle)
 
 					PUT("/favourite", favouritePhotoHandler::handle)
 					PUT("/report", reportPhotoHandler::handle)

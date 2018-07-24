@@ -76,6 +76,7 @@ fun myBeans() = beans {
 	bean<GetReceivedPhotoIdsHandler>()
 	bean<GetReceivedPhotosHandler>()
 	bean<GetStaticMapHandler>()
+	bean<CheckAccountExistsHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }
