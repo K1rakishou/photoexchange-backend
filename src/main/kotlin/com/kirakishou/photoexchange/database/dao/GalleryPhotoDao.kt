@@ -45,7 +45,7 @@ open class GalleryPhotoDao(
 	}
 
 	fun findManyByIdList(photoIds: List<Long>): Mono<List<GalleryPhoto>> {
-		val query = Query()
+		val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
 			.addCriteria((Criteria.where(GalleryPhoto.Mongo.Field.ID).`in`(photoIds)))
 			.limit(photoIds.size)
 

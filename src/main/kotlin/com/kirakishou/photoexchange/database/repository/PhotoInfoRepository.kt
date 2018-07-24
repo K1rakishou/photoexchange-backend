@@ -314,10 +314,13 @@ open class PhotoInfoRepository(
 				val galleryPhotos = galleryPhotoDao.findManyByIdList(galleryPhotoIdList).awaitFirst()
 				val photoIds = galleryPhotos.map { it.photoId }
 
-				val photoInfos = photoInfoDao.findManyByIds(photoIds)
-				val favouritedPhotosMap = favouritedPhotoDao.findMany(photoIds).awaitFirst().groupBy { it.photoId }
+				val photoInfosDeferred = photoInfoDao.findManyByIds(photoIds, PhotoInfoDao.SortOrder.Descending)
+				val favouritedPhotosMapDeferred = favouritedPhotoDao.findMany(photoIds)
 
-				for (photo in photoInfos.awaitFirst()) {
+				val photoInfos = photoInfosDeferred.awaitFirst()
+				val favouritedPhotosMap = favouritedPhotosMapDeferred.awaitFirst().groupBy { it.photoId }
+
+				for (photo in photoInfos) {
 					val galleryPhoto = galleryPhotos.first { it.photoId == photo.photoId }
 					val favouritedPhotos = favouritedPhotosMap[photo.photoId] ?: emptyList()
 
