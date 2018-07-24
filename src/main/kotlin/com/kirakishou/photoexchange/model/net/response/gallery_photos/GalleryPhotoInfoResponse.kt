@@ -25,7 +25,7 @@ private constructor(
 
 	class GalleryPhotosInfoData(
 
-		@SerializedName("id")
+		@SerializedName("photoId")
 		val id: Long,
 
 		@SerializedName("is_favourited")

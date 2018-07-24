@@ -334,17 +334,20 @@ open class PhotoInfoRepository(
 			return@asyncMongo mutex.withLock {
 				val resultMap = linkedMapOf<Long, GalleryPhotoInfoDto>()
 
-				val userFavouritedPhotos = favouritedPhotoDao.findMany(userId, galleryPhotoIdList)
-				val userReportedPhotos = reportedPhotoDao.findMany(userId, galleryPhotoIdList)
+				val userFavouritedPhotosDeffered = favouritedPhotoDao.findMany(userId, galleryPhotoIdList)
+				val userReportedPhotosDeffered = reportedPhotoDao.findMany(userId, galleryPhotoIdList)
 
-				for (favouritedPhoto in userFavouritedPhotos.awaitFirst()) {
-					resultMap.putIfAbsent(favouritedPhoto.id, GalleryPhotoInfoDto(favouritedPhoto.photoId))
-					resultMap[favouritedPhoto.id]!!.isFavourited = true
+				val userFavouritedPhotos = userFavouritedPhotosDeffered.awaitFirst()
+				val userReportedPhotos = userReportedPhotosDeffered.awaitFirst()
+
+				for (favouritedPhoto in userFavouritedPhotos) {
+					resultMap.putIfAbsent(favouritedPhoto.photoId, GalleryPhotoInfoDto(favouritedPhoto.photoId))
+					resultMap[favouritedPhoto.photoId]!!.isFavourited = true
 				}
 
-				for (reportedPhoto in userReportedPhotos.awaitFirst()) {
-					resultMap.putIfAbsent(reportedPhoto.id, GalleryPhotoInfoDto(reportedPhoto.photoId))
-					resultMap[reportedPhoto.id]!!.isReported = true
+				for (reportedPhoto in userReportedPhotos) {
+					resultMap.putIfAbsent(reportedPhoto.photoId, GalleryPhotoInfoDto(reportedPhoto.photoId))
+					resultMap[reportedPhoto.photoId]!!.isReported = true
 				}
 
 				return@withLock resultMap
