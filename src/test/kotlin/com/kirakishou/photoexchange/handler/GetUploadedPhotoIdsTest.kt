@@ -76,4 +76,36 @@ class GetUploadedPhotoIdsTest : AbstractHandlerTest() {
 			assertEquals(5, response.uploadedPhotoIds.size)
 		}
 	}
+
+	@Test
+	fun `photos should be sorted by id in descending order`() {
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
+
+		runBlocking {
+			photoInfoDao.save(PhotoInfo(1, 1, 2L, "111", "222", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(2, 2, 3L, "111", "222", "photo2", true, 11.1, 11.1, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(3, 3, 4L, "111", "222", "photo3", true, 11.1, 11.1, 5L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(4, 4, 1L, "111", "222", "photo4", true, 11.1, 11.1, 6L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(5, 5, 5L, "111", "222", "photo5", true, 11.1, 11.1, 5L)).awaitFirst()
+		}
+
+		kotlin.run {
+			val content = webClient
+				.get()
+				.uri("v1/api/get_uploaded_photo_ids/111/10000/5")
+				.exchange()
+				.expectStatus().is2xxSuccessful
+				.expectBody()
+
+			val response = fromBodyContent<GetUploadedPhotoIdsResponse>(content)
+			assertEquals(ErrorCode.GetUploadedPhotosErrors.Ok.value, response.errorCode)
+			assertEquals(5, response.uploadedPhotoIds.size)
+
+			assertEquals(5, response.uploadedPhotoIds[0])
+			assertEquals(4, response.uploadedPhotoIds[1])
+			assertEquals(3, response.uploadedPhotoIds[2])
+			assertEquals(2, response.uploadedPhotoIds[3])
+			assertEquals(1, response.uploadedPhotoIds[4])
+		}
+	}
 }
