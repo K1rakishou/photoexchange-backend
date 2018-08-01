@@ -18,6 +18,7 @@ open class PhotoInfoRepository(
 	private val favouritedPhotoDao: FavouritedPhotoDao,
 	private val reportedPhotoDao: ReportedPhotoDao,
 	private val userInfoDao: UserInfoDao,
+	private val locationMapDao: LocationMapDao,
 	private val generator: GeneratorService,
 	private val concurrentService: AbstractConcurrencyService
 ) {
@@ -82,26 +83,10 @@ open class PhotoInfoRepository(
 		}.await()
 	}
 
-	suspend fun findOlderThan(time: Long, maxCount: Int): List<PhotoInfo> {
+	suspend fun findOlderThan(time: Long): List<PhotoInfo> {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
-				val photos = photoInfoDao.findOlderThan(time, maxCount).awaitFirst()
-				val userInfos = userInfoDao.findManyNotRegistered(
-					photos.map { it.uploaderUserId }
-				).awaitFirst()
-
-				val userIdsSet = userInfos.map { it.userId }.toSet()
-				val resultList = mutableListOf<PhotoInfo>()
-
-				for (photoInfo in photos) {
-					if (!userIdsSet.contains(photoInfo.uploaderUserId)) {
-						continue
-					}
-
-					resultList += photoInfo
-				}
-
-				return@withLock resultList
+				return@withLock photoInfoDao.findOlderThan(time).awaitFirst()
 			}
 		}.await()
 	}
@@ -174,6 +159,11 @@ open class PhotoInfoRepository(
 								return@run false
 							}
 
+							if (!photoInfoDao.updateSetUploadedOn(photoInfoExchange.uploaderPhotoId,
+									photos.last().uploadedOn).awaitFirst()) {
+								return@run false
+							}
+
 							return@run photoInfoDao.updateSetReceiverId(photoInfoExchange.receiverPhotoId,
 								photos.first().uploaderUserId).awaitFirst()
 						}
@@ -233,6 +223,7 @@ open class PhotoInfoRepository(
 		results += photoInfoExchangeDao.deleteById(photoInfo.exchangeId)
 		results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
 		results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+		results += locationMapDao.deleteById(photoInfo.photoId)
 
 		return results.map { it.awaitFirst() }
 			.any { !it }
@@ -252,6 +243,7 @@ open class PhotoInfoRepository(
 		results += photoInfoExchangeDao.deleteAll(exchangeIds)
 		results += favouritedPhotoDao.deleteAll(photoIds)
 		results += reportedPhotoDao.deleteAll(photoIds)
+		results += locationMapDao.deleteAll(photoIds)
 
 		return results.map { it.awaitFirst() }
 			.any { !it }

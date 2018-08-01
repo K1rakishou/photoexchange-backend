@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.handler
 
+import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.model.ErrorCode
@@ -28,11 +29,13 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
 								 photoInfoRepository: PhotoInfoRepository,
+								 photoInfoExchangeRepository: PhotoInfoExchangeRepository,
 								 staticMapDownloaderService: StaticMapDownloaderService,
 								 concurrencyService: AbstractConcurrencyService): WebTestClient {
 		val handler = UploadPhotoHandler(
 			jsonConverterService,
 			photoInfoRepository,
+			photoInfoExchangeRepository,
 			staticMapDownloaderService,
 			concurrencyService
 		)
@@ -61,7 +64,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `test should exchange two photos`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, staticMapDownloaderService, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository,
+			staticMapDownloaderService, concurrentService)
 
 		runBlocking {
 			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
@@ -155,7 +159,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `test should not exchange two photos with the same user id`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, staticMapDownloaderService, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository,
+			staticMapDownloaderService, concurrentService)
 
 		runBlocking {
 			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
@@ -258,7 +263,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `test should exchange 4 photos`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, staticMapDownloaderService, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository,
+			staticMapDownloaderService, concurrentService)
 
 		runBlocking {
 			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)

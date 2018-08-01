@@ -10,6 +10,7 @@ import com.kirakishou.photoexchange.model.repo.LocationMap
 import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.Deferred
+import kotlinx.coroutines.experimental.channels.actor
 import kotlinx.coroutines.experimental.reactive.awaitFirstOrNull
 import kotlinx.coroutines.experimental.reactive.awaitLast
 import org.slf4j.LoggerFactory
@@ -18,7 +19,6 @@ import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClient
 import java.io.File
 import java.time.Duration
-import java.util.concurrent.atomic.AtomicBoolean
 
 open class StaticMapDownloaderService(
 	private val client: WebClient,
@@ -48,11 +48,16 @@ open class StaticMapDownloaderService(
 	private val MAX_TIMEOUT_SECONDS = 15L
 	private val CHUNCKS_COUNT = 4
 	private val MAX_ATTEMPTS = 5
-	private val inProgress = AtomicBoolean(false)
+
+	private val requestActor = actor<Unit>(concurrencyService.googleMapThreadPool) {
+		for (event in channel) {
+			startDownloadingMapFiles()
+		}
+	}
 
 	fun init() {
 		//check if there are not yet downloaded map files on every server start
-		startDownloadingMapFiles()
+		requestActor.offer(Unit)
 	}
 
 	open suspend fun enqueue(photoId: Long): Boolean {
@@ -60,25 +65,15 @@ open class StaticMapDownloaderService(
 
 		//start the downloading process regardless of the save result because there might be old requests in the queue
 		//and we want to process them
-		startDownloadingMapFiles()
+		requestActor.offer(Unit)
 
 		return !result.isEmpty()
 	}
 
-	private fun startDownloadingMapFiles() {
-		if (!inProgress.compareAndSet(false, true)) {
-			return
-		}
-
-		concurrencyService.asyncCommon {
-			try {
-				val requestsBatch = locationMapRepository.getOldest(REQUESTS_PER_BATCH, TimeUtils.getTimeFast())
-				if (requestsBatch.isNotEmpty()) {
-					processBatch(requestsBatch.chunked(CHUNCKS_COUNT))
-				}
-			} finally {
-				inProgress.set(false)
-			}
+	private suspend fun startDownloadingMapFiles() {
+		val requestsBatch = locationMapRepository.getOldest(REQUESTS_PER_BATCH, TimeUtils.getTimeFast())
+		if (requestsBatch.isNotEmpty()) {
+			processBatch(requestsBatch.chunked(CHUNCKS_COUNT))
 		}
 	}
 
@@ -143,6 +138,8 @@ open class StaticMapDownloaderService(
 				if (!photoInfoRepository.updateSetLocationMapId(locationMap.photoId, locationMap.id)) {
 					throw CouldNotUpdateLocationId("[$photoMapName], Could not set locationMapId flag in the DB")
 				}
+
+				logger.debug("[$photoMapName], Map has been successfully downloaded")
 			} catch (error: Throwable) {
 				cleanup(outFile)
 				throw error

@@ -109,6 +109,7 @@ abstract class AbstractHandlerTest {
 			favouritedPhotoDao,
 			reportedPhotoDao,
 			userInfoDao,
+			locationMapDao,
 			generator,
 			concurrentService
 		)

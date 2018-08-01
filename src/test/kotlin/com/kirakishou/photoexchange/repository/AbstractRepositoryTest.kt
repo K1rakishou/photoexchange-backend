@@ -21,6 +21,7 @@ abstract class AbstractRepositoryTest {
 	lateinit var favouritedPhotoDao: FavouritedPhotoDao
 	lateinit var reportedPhotoDao: ReportedPhotoDao
 	lateinit var userInfoDao: UserInfoDao
+	lateinit var locationMapDao: LocationMapDao
 
 	lateinit var photoInfoRepository: PhotoInfoRepository
 
@@ -57,6 +58,11 @@ abstract class AbstractRepositoryTest {
 			it.clear()
 			it.create()
 		})
+		locationMapDao = Mockito.spy(LocationMapDao(template).also {
+			it.clear()
+			it.create()
+		})
+
 
 		val generator = Mockito.spy(GeneratorService())
 		val concurrentService = TestConcurrencyService()
@@ -69,6 +75,7 @@ abstract class AbstractRepositoryTest {
 			favouritedPhotoDao,
 			reportedPhotoDao,
 			userInfoDao,
+			locationMapDao,
 			generator,
 			concurrentService)
 		)

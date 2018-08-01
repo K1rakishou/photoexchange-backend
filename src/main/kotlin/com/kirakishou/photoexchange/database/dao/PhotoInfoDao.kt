@@ -133,10 +133,11 @@ open class PhotoInfoDao(
 			.onErrorReturn(emptyList())
 	}
 
-	fun findOlderThan(time: Long, maxCount: Int): Mono<List<PhotoInfo>> {
+	fun findOlderThan(time: Long): Mono<List<PhotoInfo>> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(time))
-			.limit(maxCount)
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).ne(""))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_USER_ID).ne(""))
 
 		return template.find(query, PhotoInfo::class.java)
 			.collectList()
@@ -193,6 +194,19 @@ open class PhotoInfoDao(
 
 		val update = Update()
 			.set(PhotoInfo.Mongo.Field.RECEIVER_USER_ID, receiverUserId)
+
+		return template.updateFirst(query, update, PhotoInfo::class.java)
+			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
+	}
+
+	open fun updateSetUploadedOn(photoId: Long, uploadedOn: Long): Mono<Boolean> {
+		val query = Query()
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		val update = Update()
+			.set(PhotoInfo.Mongo.Field.UPLOADED_ON, uploadedOn)
 
 		return template.updateFirst(query, update, PhotoInfo::class.java)
 			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }

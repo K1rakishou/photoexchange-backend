@@ -39,6 +39,14 @@ class PhotoInfoExchange(
 		return id == -1L
 	}
 
+	fun getOppositePhotoId(id: Long): Long {
+		if (id == uploaderPhotoId) {
+			return receiverPhotoId
+		}
+
+		return uploaderPhotoId
+	}
+
 	companion object {
 		fun empty(): PhotoInfoExchange {
 			return PhotoInfoExchange(-1L, -1L, -1L, "", "", 0L)

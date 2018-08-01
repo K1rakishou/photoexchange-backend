@@ -43,14 +43,6 @@ class UserInfoRepository(
 		}.await()
 	}
 
-	suspend fun findManyNotRegistered(userIdList: List<String>): List<UserInfo> {
-		return concurrentService.asyncMongo {
-			return@asyncMongo mutex.withLock {
-				return@withLock userInfoDao.findManyNotRegistered(userIdList).awaitFirst()
-			}
-		}.await()
-	}
-
 	suspend fun accountExists(userId: String): Boolean {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {

@@ -35,7 +35,7 @@ class LocationMapDao(
 	fun findOldest(count: Int, currentTime: Long): Mono<List<LocationMap>> {
 		val query = Query().with(Sort(Sort.Direction.ASC, LocationMap.Mongo.Field.ID))
 			.addCriteria(Criteria.where(LocationMap.Mongo.Field.NEXT_ATTEMPT_TIME).lt(currentTime))
-			.addCriteria(Criteria.where(LocationMap.Mongo.Field.MAP_STATUS).`is`(LocationMap.MapStatus.Empty))
+			.addCriteria(Criteria.where(LocationMap.Mongo.Field.MAP_STATUS).`is`(LocationMap.MapStatus.Empty.value))
 			.limit(count)
 
 		return template.find(query, LocationMap::class.java)
@@ -81,6 +81,27 @@ class LocationMapDao(
 
 		return template.updateFirst(query, update, LocationMap::class.java)
 			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
+	}
+
+	fun deleteById(photoId: Long): Mono<Boolean> {
+		val query = Query()
+			.addCriteria(Criteria.where(LocationMap.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		return template.remove(query, LocationMap::class.java)
+			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
+	}
+
+	fun deleteAll(photoIds: List<Long>): Mono<Boolean> {
+		val query = Query()
+			.addCriteria(Criteria.where(LocationMap.Mongo.Field.PHOTO_ID).`in`(photoIds))
+			.limit(photoIds.size)
+
+		return template.remove(query, LocationMap::class.java)
+			.map { deletionResult -> deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == photoIds.size }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}

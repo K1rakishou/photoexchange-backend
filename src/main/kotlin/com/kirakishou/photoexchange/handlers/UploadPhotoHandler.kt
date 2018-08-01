@@ -10,6 +10,7 @@ import com.kirakishou.photoexchange.config.ServerSettings.MEDIUM_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.config.ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL
 import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SIZE
 import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SUFFIX
+import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
 import com.kirakishou.photoexchange.model.ErrorCode
@@ -41,6 +42,7 @@ import java.io.IOException
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
+	private val photoInfoExchangeRepository: PhotoInfoExchangeRepository,
 	private val staticMapDownloaderService: StaticMapDownloaderService,
 	private val concurrentService: AbstractConcurrencyService
 ) : AbstractWebHandler(jsonConverter) {
@@ -49,8 +51,6 @@ class UploadPhotoHandler(
 	private val PACKET_PART_KEY = "packet"
 	private val PHOTO_PART_KEY = "photo"
 	private var lastTimeCheck = 0L
-	private val MAX_PHOTOS_TO_DELETE_PER_RUN = 1000
-	private val photoSizes = arrayOf(BIG_PHOTO_SUFFIX, MEDIUM_PHOTO_SUFFIX, SMALL_PHOTO_SUFFIX)
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		return mono(concurrentService.commonThreadPool) {
@@ -146,10 +146,10 @@ class UploadPhotoHandler(
 		}.flatMap { it }
 	}
 
-	private suspend fun cleanup(newUploadingPhoto: PhotoInfo) {
-		photoInfoRepo.deleteAll(listOf(newUploadingPhoto.photoId))
+	private suspend fun cleanup(photoInfo: PhotoInfo) {
+		photoInfoRepo.deleteAll(listOf(photoInfo.photoId))
 
-		val photoPath = "${ServerSettings.FILE_DIR_PATH}\\${newUploadingPhoto.photoName}"
+		val photoPath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
 		IOUtils.deleteAllPhotoFiles(photoPath)
 	}
 
@@ -185,7 +185,7 @@ class UploadPhotoHandler(
 	}
 
 	private suspend fun cleanDatabaseAndPhotos(time: Long) {
-		val photosToDelete = photoInfoRepo.findOlderThan(time, MAX_PHOTOS_TO_DELETE_PER_RUN)
+		val photosToDelete = photoInfoRepo.findOlderThan(time)
 		if (photosToDelete.isEmpty()) {
 			return
 		}
@@ -195,15 +195,10 @@ class UploadPhotoHandler(
 			return
 		}
 
-		for (photo in photosToDelete) {
-			for (size in photoSizes) {
-				val filePath = "${ServerSettings.FILE_DIR_PATH}\\${photo.photoName}$size"
-				val file = File(filePath)
+		logger.debug("Found ${ids.size} photo ids to delete")
 
-				if (file.exists() && file.isFile) {
-					file.delete()
-				}
-			}
+		for (photo in photosToDelete) {
+			cleanup(photo)
 		}
 	}
 

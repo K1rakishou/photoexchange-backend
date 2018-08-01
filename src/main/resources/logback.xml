@@ -31,4 +31,12 @@
     <logger name="org.springframework.http.server.reactive.ReactorServerHttpResponse" level="WARN"/>
     <logger name="reactor.ipc.netty.channel.ContextHandler" level="WARN"/>
     <logger name="org.springframework.http.server.reactive.ReactorHttpHandlerAdapter" level="WARN"/>
+    <logger name="org.springframework.web.reactive.function.client.ExchangeFunctions" level="WARN"/>
+    <logger name="reactor.ipc.netty.resources.DefaultPoolResources" level="WARN"/>
+    <logger name="reactor.ipc.netty.channel.PooledClientContextHandler" level="WARN"/>
+    <logger name="reactor.ipc.netty.resources.DefaultPoolResources" level="WARN"/>
+    <logger name="reactor.ipc.netty.channel.PooledClientContextHandler" level="WARN"/>
+    <logger name="io.netty.handler.ssl.SslHandler" level="WARN"/>
+    <logger name="reactor.ipc.netty.http.client.HttpClientOperations" level="WARN"/>
+    <logger name="org.springframework.web.reactive.function.client.ExchangeFunctions" level="WARN"/>
 </configuration>

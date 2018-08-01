@@ -40,19 +40,6 @@ open class UserInfoDao(
 			.onErrorReturn(UserInfo.empty())
 	}
 
-	fun findManyNotRegistered(userIdList: List<String>): Mono<List<UserInfo>> {
-		val query = Query()
-			.addCriteria(Criteria.where(UserInfo.Mongo.Field.USER_ID).`in`(userIdList)
-				.andOperator(Criteria.where(UserInfo.Mongo.Field.PASSWORD).ne(""))
-			)
-
-		return template.find(query, UserInfo::class.java)
-			.collectList()
-			.defaultIfEmpty(emptyList())
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(emptyList())
-	}
-
 	companion object {
 		const val COLLECTION_NAME = "user_info"
 	}
