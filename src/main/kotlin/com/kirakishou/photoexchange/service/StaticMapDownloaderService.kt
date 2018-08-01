@@ -13,6 +13,8 @@ import kotlinx.coroutines.experimental.Deferred
 import kotlinx.coroutines.experimental.channels.actor
 import kotlinx.coroutines.experimental.reactive.awaitFirstOrNull
 import kotlinx.coroutines.experimental.reactive.awaitLast
+import kotlinx.coroutines.experimental.sync.Mutex
+import kotlinx.coroutines.experimental.sync.withLock
 import org.slf4j.LoggerFactory
 import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.client.ClientResponse
@@ -27,6 +29,7 @@ open class StaticMapDownloaderService(
 	private val concurrencyService: AbstractConcurrencyService
 ) {
 	private val logger = LoggerFactory.getLogger(StaticMapDownloaderService::class.java)
+	private val mutex = Mutex()
 	private val requestStringFormat = "https://maps.googleapis.com/maps/api/staticmap?" +
 		"center=%9.7f,%9.7f&" +
 		"markers=color:red|%9.7f,%9.7f&" +
@@ -61,13 +64,15 @@ open class StaticMapDownloaderService(
 	}
 
 	open suspend fun enqueue(photoId: Long): Boolean {
-		val result = locationMapRepository.save(LocationMap.create(photoId))
+		return mutex.withLock {
+			val result = locationMapRepository.save(LocationMap.create(photoId))
 
-		//start the downloading process regardless of the save result because there might be old requests in the queue
-		//and we want to process them
-		requestActor.offer(Unit)
+			//start the downloading process regardless of the save result because there might be old requests in the queue
+			//and we want to process them
+			requestActor.offer(Unit)
 
-		return !result.isEmpty()
+			return@withLock !result.isEmpty()
+		}
 	}
 
 	private suspend fun startDownloadingMapFiles() {

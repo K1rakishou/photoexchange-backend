@@ -23,6 +23,11 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.server.router
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
+import reactor.core.scheduler.Schedulers
+import java.time.Duration
+import java.util.concurrent.Executors
 
 @RunWith(SpringJUnit4ClassRunner::class)
 class UploadPhotoHandlerTest : AbstractHandlerTest() {
@@ -49,6 +54,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				}
 			}
 		})
+			.configureClient().responseTimeout(Duration.ofMillis(1_000_000))
 			.build()
 	}
 
@@ -466,4 +472,72 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			assertEquals(true, photoInfoExchange4.isEmpty())
 		}
 	}
+
+	@Test
+	fun `test multiple uploadings at the same time`() {
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository,
+			staticMapDownloaderService, concurrentService)
+
+		runBlocking {
+			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
+		}
+
+		fun uploadPhoto(packet: SendPhotoPacket): Mono<Unit> {
+			return Mono.fromCallable {
+				val multipartData = createTestMultipartFile(PHOTO1, packet)
+
+				val content = webClient
+					.post()
+					.uri("v1/api/upload")
+					.contentType(MediaType.MULTIPART_FORM_DATA)
+					.body(BodyInserters.fromMultipartData(multipartData))
+					.exchange()
+					.expectStatus().is2xxSuccessful
+					.expectBody()
+
+				val response = fromBodyContent<UploadPhotoResponse>(content)
+				Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
+			}
+		}
+
+		val executor = Executors.newFixedThreadPool(10)
+
+		val results = Flux.range(0, 90)
+			.flatMap {
+				return@flatMap Flux.just(it)
+					.subscribeOn(Schedulers.fromExecutor(executor))
+					.flatMap { index ->
+						println("Sending packet #$index out of 1000")
+
+						if (index % 2 == 0) {
+							return@flatMap uploadPhoto(SendPhotoPacket(11.1, 22.2, "111", true))
+						} else {
+							return@flatMap uploadPhoto(SendPhotoPacket(33.3, 44.4, "222", true))
+						}
+					}
+			}
+			.collectList()
+			.block()
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

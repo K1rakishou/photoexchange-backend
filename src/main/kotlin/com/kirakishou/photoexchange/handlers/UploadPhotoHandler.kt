@@ -3,11 +3,9 @@ package com.kirakishou.photoexchange.handlers
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.config.ServerSettings.BIG_PHOTO_SIZE
 import com.kirakishou.photoexchange.config.ServerSettings.BIG_PHOTO_SUFFIX
-import com.kirakishou.photoexchange.config.ServerSettings.DELETE_PHOTOS_OLDER_THAN
 import com.kirakishou.photoexchange.config.ServerSettings.MAX_PHOTO_SIZE
 import com.kirakishou.photoexchange.config.ServerSettings.MEDIUM_PHOTO_SIZE
 import com.kirakishou.photoexchange.config.ServerSettings.MEDIUM_PHOTO_SUFFIX
-import com.kirakishou.photoexchange.config.ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL
 import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SIZE
 import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
@@ -26,6 +24,8 @@ import com.kirakishou.photoexchange.util.ImageUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.reactive.awaitSingle
 import kotlinx.coroutines.experimental.reactor.mono
+import kotlinx.coroutines.experimental.sync.Mutex
+import kotlinx.coroutines.experimental.sync.withLock
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
@@ -50,6 +50,7 @@ class UploadPhotoHandler(
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
 	private val PACKET_PART_KEY = "packet"
 	private val PHOTO_PART_KEY = "photo"
+	private val mutex = Mutex()
 	private var lastTimeCheck = 0L
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
@@ -59,7 +60,7 @@ class UploadPhotoHandler(
 			try {
 				val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitSingle()
 				if (!multiValueMap.containsAllParts(PACKET_PART_KEY, PHOTO_PART_KEY)) {
-					logger.debug("Request does not contain one of the required path variables")
+					logger.error("Request does not contain one of the required path variables")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest))
 				}
@@ -69,13 +70,13 @@ class UploadPhotoHandler(
 
 				val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
 				if (!packet.isPacketOk()) {
-					logger.debug("One or more of the packet's fields are incorrect")
+					logger.error("One or more of the packet's fields are incorrect")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest))
 				}
 
 				if (!checkPhotoTotalSize(photoParts)) {
-					logger.debug("Bad photo size")
+					logger.error("Bad photo size")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest))
 				}
@@ -84,7 +85,7 @@ class UploadPhotoHandler(
 				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(photoInfoName, packet))
 
 				if (newUploadingPhoto.isEmpty()) {
-					logger.debug("Could not save a photoInfo")
+					logger.error("Could not save a photoInfo")
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				}
@@ -99,7 +100,7 @@ class UploadPhotoHandler(
 
 				val tempFile = saveTempFile(photoParts, newUploadingPhoto)
 				if (tempFile == null) {
-					logger.debug("Could not save file to disk")
+					logger.error("Could not save file to disk")
 
 					cleanup(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -171,16 +172,18 @@ class UploadPhotoHandler(
 	}
 
 	private suspend fun deleteOldPhotos() {
-		val now = TimeUtils.getTimeFast()
+		mutex.withLock {
+			val now = TimeUtils.getTimeFast()
 
-		//execute every hour
-		if (now - lastTimeCheck > OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL) {
-			logger.debug("Start cleanDatabaseAndPhotos routine")
+			//execute every hour
+			if (now - lastTimeCheck > ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL) {
+				logger.debug("Start cleanDatabaseAndPhotos routine")
 
-			lastTimeCheck = now
-			cleanDatabaseAndPhotos(now - DELETE_PHOTOS_OLDER_THAN)
+				lastTimeCheck = now
+				cleanDatabaseAndPhotos(now - ServerSettings.DELETE_PHOTOS_OLDER_THAN)
 
-			logger.debug("End cleanDatabaseAndPhotos routine")
+				logger.debug("End cleanDatabaseAndPhotos routine")
+			}
 		}
 	}
 

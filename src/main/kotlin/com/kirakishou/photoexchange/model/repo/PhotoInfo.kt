@@ -8,7 +8,7 @@ import org.springframework.data.mongodb.core.mapping.Document
 import org.springframework.data.mongodb.core.mapping.Field
 
 @Document(collection = PhotoInfoDao.COLLECTION_NAME)
-class PhotoInfo(
+data class PhotoInfo(
 	@Id
 	@Field(Mongo.Field.PHOTO_ID)
 	var photoId: Long,

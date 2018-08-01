@@ -27,7 +27,7 @@ open class PhotoInfoRepository(
 
 	suspend fun generatePhotoInfoName(): String {
 		return concurrentService.asyncMongo {
-			return@asyncMongo mutex.withLock {
+			mutex.withLock {
 				var photoName = ""
 
 				while (true) {
@@ -117,6 +117,7 @@ open class PhotoInfoRepository(
 						val newPhotoExchangeResult = kotlin.run {
 							//there is no photo to do exchange with, create a new exchange request
 							val photoExchangeId = mongoSequenceDao.getNextPhotoExchangeId().awaitFirst()
+
 							newPhotoInfoExchange = photoInfoExchangeDao.save(PhotoInfoExchange.create(photoExchangeId,
 								newUploadingPhoto.photoId, newUploadingPhoto.uploaderUserId)
 							).awaitFirst()
@@ -150,22 +151,29 @@ open class PhotoInfoRepository(
 
 							val ids = arrayListOf(photoInfoExchange.uploaderPhotoId, photoInfoExchange.receiverPhotoId)
 							photos += photoInfoDao.findManyByIds(ids).awaitFirst()
+
 							if (photos.size != ids.size) {
 								return@run false
 							}
 
+							val uploaderPhotoInfo = if (photos.first().photoId == newUploadingPhoto.photoId) {
+								photos.first()
+							} else {
+								photos.last()
+							}
+
 							if (!photoInfoDao.updateSetReceiverId(photoInfoExchange.uploaderPhotoId,
-									photos.last().uploaderUserId).awaitFirst()) {
+									uploaderPhotoInfo.uploaderUserId).awaitFirst()) {
 								return@run false
 							}
 
 							if (!photoInfoDao.updateSetUploadedOn(photoInfoExchange.uploaderPhotoId,
-									photos.last().uploadedOn).awaitFirst()) {
+									uploaderPhotoInfo.uploadedOn).awaitFirst()) {
 								return@run false
 							}
 
 							return@run photoInfoDao.updateSetReceiverId(photoInfoExchange.receiverPhotoId,
-								photos.first().uploaderUserId).awaitFirst()
+								uploaderPhotoInfo.uploaderUserId).awaitFirst()
 						}
 
 						if (!existingPhotoExchangeResult) {

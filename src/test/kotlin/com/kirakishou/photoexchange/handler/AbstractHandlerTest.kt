@@ -143,6 +143,7 @@ abstract class AbstractHandlerTest {
 		favouritedPhotoDao.clear()
 		reportedPhotoDao.clear()
 		userInfoDao.clear()
+		locationMapDao.clear()
 	}
 
 	fun createTestMultipartFile(fileResourceName: String, packet: SendPhotoPacket): MultiValueMap<String, Any> {
