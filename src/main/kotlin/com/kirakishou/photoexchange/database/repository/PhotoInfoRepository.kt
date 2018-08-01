@@ -245,6 +245,7 @@ open class PhotoInfoRepository(
 		results += favouritedPhotoDao.deleteAll(photoIds)
 		results += reportedPhotoDao.deleteAll(photoIds)
 		results += locationMapDao.deleteAll(photoIds)
+		results += galleryPhotoDao.deleteAll(photoIds)
 
 		return results.map { it.awaitFirst() }
 			.any { !it }
