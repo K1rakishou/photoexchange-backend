@@ -20,7 +20,10 @@ class LocationMap(
 	var attemptsCount: Int,
 
 	@Field(Mongo.Field.MAP_STATUS)
-	var mapStatus: Int
+	var mapStatus: Int,
+
+	@Field(Mongo.Field.NEXT_ATTEMPT_TIME)
+	var nextAttemptTime: Long
 ) {
 
 	fun isEmpty(): Boolean {
@@ -29,11 +32,11 @@ class LocationMap(
 
 	companion object {
 		fun empty(): LocationMap {
-			return LocationMap(-1L, -1L, 0, MapStatus.Empty.value)
+			return LocationMap(-1L, -1L, 0, MapStatus.Empty.value, 0L)
 		}
 
 		fun create(photoId: Long): LocationMap {
-			return LocationMap(-1L, photoId, 0, MapStatus.Empty.value)
+			return LocationMap(-1L, photoId, 0, MapStatus.Empty.value, 0L)
 		}
 	}
 
@@ -49,6 +52,7 @@ class LocationMap(
 			const val PHOTO_ID = "photo_id"
 			const val ATTEMPTS_COUNT = "attemps_count"
 			const val MAP_STATUS = "map_status"
+			const val NEXT_ATTEMPT_TIME = "next_attempt_time"
 		}
 
 		object Index {

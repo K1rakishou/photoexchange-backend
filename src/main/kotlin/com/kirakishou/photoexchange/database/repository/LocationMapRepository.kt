@@ -26,9 +26,9 @@ class LocationMapRepository(
 		}.await()
 	}
 
-	suspend fun getOldest(count: Int): List<LocationMap> {
+	suspend fun getOldest(count: Int, currentTime: Long): List<LocationMap> {
 		return concurrentService.asyncMongo {
-			return@asyncMongo locationMapDao.findOldest(count).awaitFirst()
+			return@asyncMongo locationMapDao.findOldest(count, currentTime).awaitFirst()
 		}.await()
 	}
 
@@ -48,10 +48,10 @@ class LocationMapRepository(
 		}.await()
 	}
 
-	suspend fun increaseAttemptsCount(photoId: Long): Boolean {
+	suspend fun increaseAttemptsCountAndNextAttemptTime(photoId: Long, nextAttemptTime: Long): Boolean {
 		return concurrentService.asyncMongo {
 			return@asyncMongo mutex.withLock {
-				return@withLock locationMapDao.increaseAttemptsCount(photoId).awaitFirst()
+				return@withLock locationMapDao.increaseAttemptsCountAndNextAttemptTime(photoId, nextAttemptTime).awaitFirst()
 			}
 		}.await()
 	}

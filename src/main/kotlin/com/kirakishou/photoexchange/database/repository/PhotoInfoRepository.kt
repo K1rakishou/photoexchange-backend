@@ -378,6 +378,10 @@ open class PhotoInfoRepository(
 				}
 
 				for (photoInfo in photoInfoList) {
+					if (!photoInfoMap.containsKey(photoInfo.exchangeId) || !exchangedPhotoInfoMap.containsKey(photoInfo.exchangeId)) {
+						continue
+					}
+
 					resultList += Pair(
 						photoInfoMap[photoInfo.exchangeId]!!,
 						exchangedPhotoInfoMap[photoInfo.exchangeId]!!
@@ -405,6 +409,10 @@ open class PhotoInfoRepository(
 				val exchangedPhotoInfoMap = exchangedPhotoInfoList.associateBy { it.exchangeId }
 
 				for (photoInfo in photoInfoList) {
+					if (!photoInfoMap.containsKey(photoInfo.exchangeId) || !exchangedPhotoInfoMap.containsKey(photoInfo.exchangeId)) {
+						continue
+					}
+
 					resultList += Pair(
 						photoInfoMap[photoInfo.exchangeId]!!,
 						exchangedPhotoInfoMap[photoInfo.exchangeId]!!

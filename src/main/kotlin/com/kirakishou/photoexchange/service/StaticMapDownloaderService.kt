@@ -2,11 +2,13 @@ package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.config.ServerSettings.GOOGLE_MAPS_KEY
+import com.kirakishou.photoexchange.config.ServerSettings.PHOTO_MAP_SUFFIX
 import com.kirakishou.photoexchange.database.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.deleteIfExists
 import com.kirakishou.photoexchange.model.repo.LocationMap
 import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
+import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.experimental.Deferred
 import kotlinx.coroutines.experimental.reactive.awaitFirstOrNull
 import kotlinx.coroutines.experimental.reactive.awaitLast
@@ -19,12 +21,12 @@ import java.time.Duration
 import java.util.concurrent.atomic.AtomicBoolean
 
 open class StaticMapDownloaderService(
+	private val client: WebClient,
 	private val photoInfoRepository: PhotoInfoRepository,
 	private val locationMapRepository: LocationMapRepository,
 	private val concurrencyService: AbstractConcurrencyService
 ) {
 	private val logger = LoggerFactory.getLogger(StaticMapDownloaderService::class.java)
-	private val client = WebClient.builder().build()
 	private val requestStringFormat = "https://maps.googleapis.com/maps/api/staticmap?" +
 		"center=%9.7f,%9.7f&" +
 		"markers=color:red|%9.7f,%9.7f&" +
@@ -32,6 +34,16 @@ open class StaticMapDownloaderService(
 		"size=600x600&" +
 		"maptype=roadmap&" +
 		"key=$GOOGLE_MAPS_KEY"
+
+	private val repeatTimesList = listOf(
+		0L,
+		10L * 1000L, 			//10 seconds
+		60L * 1000L, 			//60 seconds
+		300L * 1000L, 			//300 seconds (5 minutes)
+		3600L * 1000L,  		//3600 seconds (one hour)
+		3600L * 24L * 1000L  	//86400 (24 hours)
+	)
+
 	private val REQUESTS_PER_BATCH = 100
 	private val MAX_TIMEOUT_SECONDS = 15L
 	private val CHUNCKS_COUNT = 4
@@ -60,7 +72,7 @@ open class StaticMapDownloaderService(
 
 		concurrencyService.asyncCommon {
 			try {
-				val requestsBatch = locationMapRepository.getOldest(REQUESTS_PER_BATCH)
+				val requestsBatch = locationMapRepository.getOldest(REQUESTS_PER_BATCH, TimeUtils.getTimeFast())
 				if (requestsBatch.isNotEmpty()) {
 					processBatch(requestsBatch.chunked(CHUNCKS_COUNT))
 				}
@@ -97,7 +109,7 @@ open class StaticMapDownloaderService(
 
 			val lon = photoInfo.lon
 			val lat = photoInfo.lat
-			val photoMapName = "${photoInfo.photoName}_map"
+			val photoMapName = "${photoInfo.photoName}$PHOTO_MAP_SUFFIX"
 			val requestString = String.format(requestStringFormat, lon, lat, lon, lat)
 
 			logger.debug("[$photoMapName], Trying to get map from google services with request string = $requestString")
@@ -131,12 +143,10 @@ open class StaticMapDownloaderService(
 				if (!photoInfoRepository.updateSetLocationMapId(locationMap.photoId, locationMap.id)) {
 					throw CouldNotUpdateLocationId("[$photoMapName], Could not set locationMapId flag in the DB")
 				}
-
 			} catch (error: Throwable) {
 				cleanup(outFile)
 				throw error
 			}
-
 		} catch (error: Throwable) {
 			logger.error("Unknown error", error)
 
@@ -153,7 +163,14 @@ open class StaticMapDownloaderService(
 				logger.error("Could not set map status as Failed")
 			}
 		} else {
-			if (!locationMapRepository.increaseAttemptsCount(locationMap.photoId)) {
+			val repeatTimeDelta = repeatTimesList.getOrElse(locationMap.attemptsCount + 1, { -1L })
+			val nextAttemptTime = if (repeatTimeDelta != -1L) {
+				TimeUtils.getTimeFast() + repeatTimeDelta
+			} else {
+				-1L
+			}
+
+			if (!locationMapRepository.increaseAttemptsCountAndNextAttemptTime(locationMap.photoId, nextAttemptTime)) {
 				logger.error("Could not increase attempts count")
 			}
 		}

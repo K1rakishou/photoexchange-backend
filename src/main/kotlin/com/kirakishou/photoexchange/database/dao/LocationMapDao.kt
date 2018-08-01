@@ -32,9 +32,10 @@ class LocationMapDao(
 			.onErrorReturn(LocationMap.empty())
 	}
 
-	fun findOldest(count: Int): Mono<List<LocationMap>> {
+	fun findOldest(count: Int, currentTime: Long): Mono<List<LocationMap>> {
 		val query = Query().with(Sort(Sort.Direction.ASC, LocationMap.Mongo.Field.ID))
-			.addCriteria(Criteria.where(LocationMap.Mongo.Field.MAP_STATUS).`is`(LocationMap.MapStatus.Empty.value))
+			.addCriteria(Criteria.where(LocationMap.Mongo.Field.NEXT_ATTEMPT_TIME).lt(currentTime))
+			.addCriteria(Criteria.where(LocationMap.Mongo.Field.MAP_STATUS).`is`(LocationMap.MapStatus.Empty))
 			.limit(count)
 
 		return template.find(query, LocationMap::class.java)
@@ -70,12 +71,13 @@ class LocationMapDao(
 			.onErrorReturn(false)
 	}
 
-	fun increaseAttemptsCount(photoId: Long): Mono<Boolean> {
+	fun increaseAttemptsCountAndNextAttemptTime(photoId: Long, nextAttemptTime: Long): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(LocationMap.Mongo.Field.PHOTO_ID).`is`(photoId))
 
 		val update = Update()
 			.inc(LocationMap.Mongo.Field.ATTEMPTS_COUNT, 1)
+			.set(LocationMap.Mongo.Field.NEXT_ATTEMPT_TIME, nextAttemptTime)
 
 		return template.updateFirst(query, update, LocationMap::class.java)
 			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }

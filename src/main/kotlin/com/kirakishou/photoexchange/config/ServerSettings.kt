@@ -22,6 +22,7 @@ object ServerSettings {
 	const val BIG_PHOTO_SUFFIX = "_b"
 	const val MEDIUM_PHOTO_SUFFIX = "_m"
 	const val SMALL_PHOTO_SUFFIX = "_s"
+	const val PHOTO_MAP_SUFFIX = "_map"
 
 	val PHOTO_SIZES = arrayOf("b", "s", "m")
 

@@ -27,6 +27,7 @@ import org.springframework.context.support.beans
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory
 import org.springframework.data.mongodb.repository.support.ReactiveMongoRepositoryFactory
+import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.server.HandlerStrategies
 import org.springframework.web.reactive.function.server.RouterFunctions
 
@@ -34,6 +35,7 @@ fun myBeans() = beans {
 	//router
 	bean<Router>()
 
+	bean { WebClient.builder().build() }
 	bean { GsonBuilder().create() }
 	bean { JsonConverterService(ref()) }
 	bean { ReactiveMongoRepositoryFactory(ref()) }
@@ -59,7 +61,7 @@ fun myBeans() = beans {
 	//service
 	bean<GeneratorService>()
 	bean<ConcurrencyService>()
-	bean { StaticMapDownloaderService(ref(), ref(), ref()).also { it.init() } }
+	bean { StaticMapDownloaderService(ref(), ref(), ref(), ref()).also { it.init() } }
 
 	//handler
 	bean<UploadPhotoHandler>()

@@ -90,8 +90,9 @@ class UploadPhotoHandler(
 				}
 
 				if (!staticMapDownloaderService.enqueue(newUploadingPhoto.photoId)) {
-					//TODO: probably should delete the photo from the DB here
 					logger.error("Could not enqueue photo in locationMapReceiverService")
+
+					cleanup(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				}
@@ -99,6 +100,8 @@ class UploadPhotoHandler(
 				val tempFile = saveTempFile(photoParts, newUploadingPhoto)
 				if (tempFile == null) {
 					logger.debug("Could not save file to disk")
+
+					cleanup(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				}
@@ -126,6 +129,8 @@ class UploadPhotoHandler(
 					photoInfoRepo.tryDoExchange(newUploadingPhoto)
 				} catch (error: Throwable) {
 					logger.error("Unknown error while trying to do photo exchange", error)
+
+					cleanup(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				}
@@ -139,6 +144,13 @@ class UploadPhotoHandler(
 					UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.UnknownError))
 			}
 		}.flatMap { it }
+	}
+
+	private suspend fun cleanup(newUploadingPhoto: PhotoInfo) {
+		photoInfoRepo.deleteAll(listOf(newUploadingPhoto.photoId))
+
+		val photoPath = "${ServerSettings.FILE_DIR_PATH}\\${newUploadingPhoto.photoName}"
+		IOUtils.deleteAllPhotoFiles(photoPath)
 	}
 
 	private fun resizeAndSavePhotos(tempFile: File, newUploadingPhoto: PhotoInfo) {
