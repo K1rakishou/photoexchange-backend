@@ -56,6 +56,27 @@ open class GalleryPhotoDao(
 			.onErrorReturn(emptyList())
 	}
 
+	fun deleteById(photoId: Long): Mono<Boolean> {
+		val query = Query()
+			.addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		return template.remove(query, GalleryPhoto::class.java)
+			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
+	}
+
+	fun deleteAll(photoIds: List<Long>): Mono<Boolean> {
+		val query = Query()
+			.addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_ID).`in`(photoIds))
+			.limit(photoIds.size)
+
+		return template.remove(query, GalleryPhoto::class.java)
+			.map { deletionResult -> deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == photoIds.size }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
+	}
+
 	companion object {
 		const val COLLECTION_NAME = "gallery_photo"
 	}
