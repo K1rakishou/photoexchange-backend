@@ -175,6 +175,17 @@ open class PhotoInfoDao(
 			.onErrorReturn(emptyList())
 	}
 
+	/**
+	 * For test purposes
+	 * */
+	fun findAll(): Mono<List<PhotoInfo>> {
+		return template.findAll(PhotoInfo::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
+	}
+
 	open fun updateSetExchangeId(photoId: Long, exchangeId: Long): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))

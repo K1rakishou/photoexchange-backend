@@ -6,6 +6,7 @@ import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
+import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
@@ -502,7 +503,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 		val executor = Executors.newFixedThreadPool(10)
 
-		val results = Flux.range(0, 90)
+		Flux.range(0, 90)
 			.flatMap {
 				return@flatMap Flux.just(it)
 					.subscribeOn(Schedulers.fromExecutor(executor))
@@ -518,6 +519,35 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			}
 			.collectList()
 			.block()
+
+		val allPhotoInfo = runBlocking {
+			photoInfoDao.findAll().awaitFirst()
+		}
+
+		assertEquals(90, allPhotoInfo.size)
+
+		for (photoInfo in allPhotoInfo) {
+			val userIdsOk = (photoInfo.uploaderUserId == "111" || photoInfo.uploaderUserId == "222") &&
+							(photoInfo.receiverUserId == "111" || photoInfo.receiverUserId == "222")
+
+			assertEquals(true, userIdsOk)
+			assertEquals(false, photoInfo.exchangeId == -1L)
+		}
+
+		val allPhotoInfoExchange = runBlocking {
+			val photoInfoExchangeList = mutableListOf<PhotoInfoExchange>()
+
+			for (photoInfo in allPhotoInfo) {
+				val photoInfoExchange = photoInfoExchangeDao.findById(photoInfo.exchangeId).awaitFirst()
+				assertEquals(false, photoInfoExchange.isEmpty())
+
+				photoInfoExchangeList += photoInfoExchange
+			}
+
+			return@runBlocking photoInfoExchangeList.distinctBy { it.id }
+		}
+
+		assertEquals(45, allPhotoInfoExchange.size)
 	}
 }
 
