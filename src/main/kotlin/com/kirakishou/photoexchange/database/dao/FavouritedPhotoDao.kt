@@ -37,7 +37,7 @@ open class FavouritedPhotoDao(
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
 
 		return template.remove(query, FavouritedPhoto::class.java)
-			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.map { deletionResult -> deletionResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -83,7 +83,7 @@ open class FavouritedPhotoDao(
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
 
 		return template.remove(query, FavouritedPhoto::class.java)
-			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.map { deletionResult -> deletionResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -94,7 +94,7 @@ open class FavouritedPhotoDao(
 			.limit(photoIds.size)
 
 		return template.remove(query, FavouritedPhoto::class.java)
-			.map { deletionResult -> deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == photoIds.size }
+			.map { deletionResult -> deletionResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}

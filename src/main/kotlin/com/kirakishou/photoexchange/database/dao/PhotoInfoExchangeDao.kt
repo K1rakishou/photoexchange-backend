@@ -87,7 +87,7 @@ open class PhotoInfoExchangeDao(
 			.set(PhotoInfoExchange.Mongo.Field.RECEIVER_USER_ID, "")
 
 		return template.updateFirst(query, update, PhotoInfoExchange::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -97,7 +97,7 @@ open class PhotoInfoExchangeDao(
 			.addCriteria(Criteria.where(PhotoInfoExchange.Mongo.Field.ID).`is`(exchangeId))
 
 		return template.remove(query, PhotoInfoExchange::class.java)
-			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.map { deletionResult -> deletionResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -108,7 +108,7 @@ open class PhotoInfoExchangeDao(
 			.limit(exchangeIds.size)
 
 		return template.remove(query, PhotoInfoExchange::class.java)
-			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.map { deletionResult -> deletionResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}

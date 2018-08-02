@@ -194,7 +194,7 @@ open class PhotoInfoDao(
 			.set(PhotoInfo.Mongo.Field.EXCHANGE_ID, exchangeId)
 
 		return template.updateFirst(query, update, PhotoInfo::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -207,7 +207,7 @@ open class PhotoInfoDao(
 			.set(PhotoInfo.Mongo.Field.RECEIVER_USER_ID, receiverUserId)
 
 		return template.updateFirst(query, update, PhotoInfo::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -220,7 +220,7 @@ open class PhotoInfoDao(
 			.set(PhotoInfo.Mongo.Field.UPLOADED_ON, uploadedOn)
 
 		return template.updateFirst(query, update, PhotoInfo::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -233,7 +233,7 @@ open class PhotoInfoDao(
 			.set(PhotoInfo.Mongo.Field.RECEIVER_USER_ID, "")
 
 		return template.updateFirst(query, update, PhotoInfo::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -246,7 +246,7 @@ open class PhotoInfoDao(
 			.set(PhotoInfo.Mongo.Field.EXCHANGE_ID, -1L)
 
 		return template.updateFirst(query, update, PhotoInfo::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -259,7 +259,7 @@ open class PhotoInfoDao(
 			.set(PhotoInfo.Mongo.Field.LOCATION_MAP_ID, locationMapId)
 
 		return template.updateFirst(query, update, PhotoInfo::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -269,7 +269,7 @@ open class PhotoInfoDao(
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
 
 		return template.remove(query, PhotoInfo::class.java)
-			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.map { deletionResult -> deletionResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -280,7 +280,7 @@ open class PhotoInfoDao(
 			.limit(ids.size)
 
 		return template.remove(query, PhotoInfo::class.java)
-			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.map { deletionResult -> deletionResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}

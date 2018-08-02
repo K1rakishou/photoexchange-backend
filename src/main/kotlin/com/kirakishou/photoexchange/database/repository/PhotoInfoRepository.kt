@@ -110,6 +110,11 @@ open class PhotoInfoRepository(
 					newUploadingPhoto.photoId, newUploadingPhoto.uploaderUserId
 				).awaitFirst()
 
+				println()
+				println()
+				println()
+				println()
+
 				return@withLock photoInfoExchange.isEmpty().let { isPhotoInfoExchangeEmpty ->
 					if (isPhotoInfoExchangeEmpty) {
 						var newPhotoInfoExchange = PhotoInfoExchange.empty()
@@ -146,6 +151,9 @@ open class PhotoInfoRepository(
 							//there is a photo, update exchange request with info about our photo
 							if (!photoInfoDao.updateSetExchangeId(newUploadingPhoto.photoId,
 									photoInfoExchange.id).awaitFirst()) {
+								logger.warn("photoInfoDao.updateSetExchangeId fail, " +
+									"newUploadingPhoto.photoId = ${newUploadingPhoto.photoId}, " +
+									"photoInfoExchange.id = ${photoInfoExchange.id}")
 								return@run false
 							}
 
@@ -153,27 +161,41 @@ open class PhotoInfoRepository(
 							photos += photoInfoDao.findManyByIds(ids).awaitFirst()
 
 							if (photos.size != ids.size) {
+								logger.warn("photos.size != ids.size")
 								return@run false
 							}
 
-							val uploaderPhotoInfo = if (photos.first().photoId == newUploadingPhoto.photoId) {
-								photos.first()
+							val (uploaderPhotoInfo, receiverPhotoInfo) = if (photos.first().photoId == newUploadingPhoto.photoId) {
+								Pair(photos.first(), photos.last())
 							} else {
-								photos.last()
+								Pair(photos.last(), photos.first())
 							}
 
 							if (!photoInfoDao.updateSetReceiverId(photoInfoExchange.uploaderPhotoId,
 									uploaderPhotoInfo.uploaderUserId).awaitFirst()) {
+								logger.warn("photoInfoDao.updateSetReceiverId1 fail, " +
+									"photoInfoExchange.uploaderPhotoId = ${photoInfoExchange.uploaderPhotoId}, " +
+									"uploaderPhotoInfo.uploaderUserId = ${uploaderPhotoInfo.uploaderUserId}")
+								return@run false
+							}
+
+							if (!photoInfoDao.updateSetReceiverId(photoInfoExchange.receiverPhotoId,
+									receiverPhotoInfo.uploaderUserId).awaitFirst()) {
+								logger.warn("photoInfoDao.updateSetReceiverId2 fail, " +
+									"photoInfoExchange.receiverPhotoId = ${photoInfoExchange.receiverPhotoId}, " +
+									"receiverPhotoInfo.uploaderUserId = ${receiverPhotoInfo.uploaderUserId}")
 								return@run false
 							}
 
 							if (!photoInfoDao.updateSetUploadedOn(photoInfoExchange.uploaderPhotoId,
 									uploaderPhotoInfo.uploadedOn).awaitFirst()) {
+								logger.warn("photoInfoDao.updateSetUploadedOn fail, " +
+									"photoInfoExchange.uploaderPhotoId = ${photoInfoExchange.uploaderPhotoId}, " +
+									"uploaderPhotoInfo.uploadedOn = ${uploaderPhotoInfo.uploadedOn}")
 								return@run false
 							}
 
-							return@run photoInfoDao.updateSetReceiverId(photoInfoExchange.receiverPhotoId,
-								uploaderPhotoInfo.uploaderUserId).awaitFirst()
+							return@run true
 						}
 
 						if (!existingPhotoExchangeResult) {

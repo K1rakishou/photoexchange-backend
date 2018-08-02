@@ -475,7 +475,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 	}
 
 	@Test
-	fun `test multiple uploadings at the same time`() {
+	fun `test 300 concurrent uploadings at the same time`() {
 		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository,
 			staticMapDownloaderService, concurrentService)
 
@@ -503,7 +503,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 		val executor = Executors.newFixedThreadPool(10)
 
-		Flux.range(0, 90)
+		Flux.range(0, 300)
 			.flatMap {
 				return@flatMap Flux.just(it)
 					.subscribeOn(Schedulers.fromExecutor(executor))
@@ -520,23 +520,16 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			.collectList()
 			.block()
 
-		val allPhotoInfo = runBlocking {
-			photoInfoDao.findAll().awaitFirst()
-		}
+		runBlocking {
+			val allPhotoInfo = photoInfoDao.findAll().awaitFirst()
+			assertEquals(300, allPhotoInfo.size)
 
-		assertEquals(90, allPhotoInfo.size)
+			for (photoInfo in allPhotoInfo) {
+				assertEquals(true, photoInfo.uploaderUserId != photoInfo.receiverUserId)
+				assertEquals(false, photoInfo.exchangeId == -1L)
+			}
 
-		for (photoInfo in allPhotoInfo) {
-			val userIdsOk = (photoInfo.uploaderUserId == "111" || photoInfo.uploaderUserId == "222") &&
-							(photoInfo.receiverUserId == "111" || photoInfo.receiverUserId == "222")
-
-			assertEquals(true, userIdsOk)
-			assertEquals(false, photoInfo.exchangeId == -1L)
-		}
-
-		val allPhotoInfoExchange = runBlocking {
 			val photoInfoExchangeList = mutableListOf<PhotoInfoExchange>()
-
 			for (photoInfo in allPhotoInfo) {
 				val photoInfoExchange = photoInfoExchangeDao.findById(photoInfo.exchangeId).awaitFirst()
 				assertEquals(false, photoInfoExchange.isEmpty())
@@ -544,10 +537,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				photoInfoExchangeList += photoInfoExchange
 			}
 
-			return@runBlocking photoInfoExchangeList.distinctBy { it.id }
+			assertEquals(150, photoInfoExchangeList.distinctBy { it.id }.size)
 		}
-
-		assertEquals(45, allPhotoInfoExchange.size)
 	}
 }
 

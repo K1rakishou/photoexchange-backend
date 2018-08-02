@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 import reactor.core.publisher.Mono
 
-class LocationMapDao(
+open class LocationMapDao(
 	private val template: ReactiveMongoTemplate
 ) : BaseDao {
 	private val logger = LoggerFactory.getLogger(LocationMapDao::class.java)
@@ -53,7 +53,7 @@ class LocationMapDao(
 			.set(LocationMap.Mongo.Field.MAP_STATUS, LocationMap.MapStatus.Ready.value)
 
 		return template.updateFirst(query, update, LocationMap::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -66,7 +66,7 @@ class LocationMapDao(
 			.set(LocationMap.Mongo.Field.MAP_STATUS, LocationMap.MapStatus.Ready.value)
 
 		return template.updateFirst(query, update, LocationMap::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -80,7 +80,7 @@ class LocationMapDao(
 			.set(LocationMap.Mongo.Field.NEXT_ATTEMPT_TIME, nextAttemptTime)
 
 		return template.updateFirst(query, update, LocationMap::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() && updateResult.modifiedCount == 1L }
+			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -90,7 +90,7 @@ class LocationMapDao(
 			.addCriteria(Criteria.where(LocationMap.Mongo.Field.PHOTO_ID).`is`(photoId))
 
 		return template.remove(query, LocationMap::class.java)
-			.map { deletionResult -> deletionResult.deletedCount == 1L && deletionResult.wasAcknowledged() }
+			.map { deletionResult -> deletionResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
@@ -101,7 +101,7 @@ class LocationMapDao(
 			.limit(photoIds.size)
 
 		return template.remove(query, LocationMap::class.java)
-			.map { deletionResult -> deletionResult.wasAcknowledged() && deletionResult.deletedCount.toInt() == photoIds.size }
+			.map { deletionResult -> deletionResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
