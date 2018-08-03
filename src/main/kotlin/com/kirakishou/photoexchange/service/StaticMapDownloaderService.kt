@@ -112,7 +112,7 @@ open class StaticMapDownloaderService(
 			val photoMapName = "${photoInfo.photoName}$PHOTO_MAP_SUFFIX"
 			val requestString = String.format(requestStringFormat, lon, lat, lon, lat)
 
-			logger.debug("[$photoMapName], Trying to get map from google services with request string = $requestString")
+			logger.debug("[$photoMapName], Trying to get map from google services")
 
 			val response = client.get()
 				.uri(requestString)

@@ -16,10 +16,10 @@ class ConcurrencyService : AbstractConcurrencyService() {
 	private val MINIMUM_THREADS_IN_POOL = 4
 
 	init {
-		val mongoThreadsCount = (Runtime.getRuntime().availableProcessors() * 2).coerceAtLeast(MINIMUM_THREADS_IN_POOL)
+		val mongoThreadsCount = (Runtime.getRuntime().availableProcessors()).coerceAtLeast(MINIMUM_THREADS_IN_POOL)
 		mongoThreadPool = newFixedThreadPoolContext(mongoThreadsCount, MONGO_POOL_NAME)
 
-		val commonThreadsCount = (Runtime.getRuntime().availableProcessors() * 2).coerceAtLeast(MINIMUM_THREADS_IN_POOL)
+		val commonThreadsCount = (Runtime.getRuntime().availableProcessors()).coerceAtLeast(MINIMUM_THREADS_IN_POOL)
 		commonThreadPool = newFixedThreadPoolContext(commonThreadsCount, COMMON_POOL_NAME)
 
 		googleMapThreadPool = newFixedThreadPoolContext(MINIMUM_THREADS_IN_POOL, GOOGLE_MAP_POOL_NAME)
