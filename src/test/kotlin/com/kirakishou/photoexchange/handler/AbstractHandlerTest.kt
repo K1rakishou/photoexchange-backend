@@ -3,7 +3,6 @@ package com.kirakishou.photoexchange.handler
 import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.dao.*
-import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
 import com.kirakishou.photoexchange.database.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
@@ -53,7 +52,6 @@ abstract class AbstractHandlerTest {
 	lateinit var locationMapRepository: LocationMapRepository
 	lateinit var photoInfoRepository: PhotoInfoRepository
 	lateinit var photoInfoExchangeRepository: PhotoInfoExchangeRepository
-	lateinit var galleryPhotosRepository: GalleryPhotosRepository
 
 	fun init() {
 		jsonConverterService = JsonConverterService(gson)
@@ -117,11 +115,6 @@ abstract class AbstractHandlerTest {
 		locationMapRepository = LocationMapRepository(
 			mongoSequenceDao,
 			locationMapDao
-		)
-
-		galleryPhotosRepository = GalleryPhotosRepository(
-			photoInfoDao,
-			galleryPhotoDao
 		)
 
 		staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)

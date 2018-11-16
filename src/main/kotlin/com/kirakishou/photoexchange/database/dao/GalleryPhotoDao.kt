@@ -28,22 +28,10 @@ open class GalleryPhotoDao(
 			.onErrorReturn(false)
 	}
 
-	fun findPaged(lastId: Long, count: Int): Mono<List<GalleryPhoto>> {
+	fun findPaged(lastUploadedOn: Long, count: Int): Mono<List<GalleryPhoto>> {
 		val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
-			.addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.ID).lt(lastId))
+			.addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).lt(lastUploadedOn))
 			.limit(count)
-
-		return template.find(query, GalleryPhoto::class.java)
-			.collectList()
-			.defaultIfEmpty(emptyList())
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(emptyList())
-	}
-
-	fun findManyByIdList(photoIds: List<Long>): Mono<List<GalleryPhoto>> {
-		val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
-			.addCriteria((Criteria.where(GalleryPhoto.Mongo.Field.ID).`in`(photoIds)))
-			.limit(photoIds.size)
 
 		return template.find(query, GalleryPhoto::class.java)
 			.collectList()

@@ -7,7 +7,6 @@ import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.*
 import com.kirakishou.photoexchange.handlers.*
-import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoIdsHandler
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoHandler
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotoIdsHandler
@@ -53,7 +52,6 @@ fun myBeans() = beans {
 	//repository
 	bean<PhotoInfoRepository>()
 	bean<PhotoInfoExchangeRepository>()
-	bean<GalleryPhotosRepository>()
 	bean<UserInfoRepository>()
 	bean<LocationMapRepository>()
 
@@ -65,7 +63,6 @@ fun myBeans() = beans {
 	bean<UploadPhotoHandler>()
 	bean<ReceivePhotosHandler>()
 	bean<GetPhotoHandler>()
-	bean<GetGalleryPhotoIdsHandler>()
 	bean<GetGalleryPhotosHandler>()
 	bean<GetGalleryPhotoInfoHandler>()
 	bean<FavouritePhotoHandler>()

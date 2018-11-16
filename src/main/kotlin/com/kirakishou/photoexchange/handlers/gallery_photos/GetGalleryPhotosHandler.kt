@@ -21,31 +21,43 @@ class GetGalleryPhotosHandler(
 ) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(GetGalleryPhotosHandler::class.java)
-	private val PHOTO_IDS_VARIABLE = "photo_ids"
+	private val LAST_UPLOADED_ON = "last_uploaded_on"
+	private val COUNT = "count"
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		return mono {
 			logger.debug("New GetGalleryPhotos request")
 
 			try {
-				if (!request.containsAllPathVars(PHOTO_IDS_VARIABLE)) {
+				if (!request.containsAllPathVars(LAST_UPLOADED_ON, COUNT)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest))
 				}
 
-				val photoIdsString = request.pathVariable(PHOTO_IDS_VARIABLE)
-				val galleryPhotoIds = Utils.parsePhotoIds(photoIdsString,
-					ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT,
-					ServerSettings.PHOTOS_DELIMITER)
+				val lastUploadedOn = try {
+          request.pathVariable(LAST_UPLOADED_ON).toLong()
+				} catch (error: Throwable) {
+          error.printStackTrace()
 
-				if (galleryPhotoIds.isEmpty()) {
-					logger.debug("galleryPhotoIds is empty")
-					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.NoPhotosInRequest))
-				}
+          logger.debug("Bad param last_uploaded_on (${request.pathVariable(LAST_UPLOADED_ON)})")
+          return@mono formatResponse(HttpStatus.BAD_REQUEST,
+            GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest))
+        }
 
-				val resultMap = photoInfoRepository.findGalleryPhotosByIds(galleryPhotoIds)
+        val count = try {
+          request.pathVariable(COUNT)
+            .toInt()
+            .coerceIn(ServerSettings.MIN_GALLERY_PHOTOS_PER_REQUEST_COUNT, ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT)
+        } catch (error: Throwable) {
+          error.printStackTrace()
+
+          logger.debug("Bad param count (${request.pathVariable(COUNT)})")
+          return@mono formatResponse(HttpStatus.BAD_REQUEST,
+            GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest))
+        }
+
+				val resultMap = photoInfoRepository.findGalleryPhotos(lastUploadedOn, count)
 				val galleryPhotosResponse = resultMap.values.map { (photoInfo, galleryPhoto, favouritesCount) ->
 					GalleryPhotosResponse.GalleryPhotoResponseData(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat,
 						photoInfo.uploadedOn, favouritesCount)

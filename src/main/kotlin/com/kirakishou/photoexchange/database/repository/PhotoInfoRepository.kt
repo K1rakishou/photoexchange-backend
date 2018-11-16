@@ -324,31 +324,31 @@ open class PhotoInfoRepository(
 		}
 	}
 
-	suspend fun findGalleryPhotosByIds(galleryPhotoIdList: List<Long>): LinkedHashMap<Long, GalleryPhotoDto> {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
+	suspend fun findGalleryPhotos(lastUploadedOn: Long, count: Int): LinkedHashMap<Long, GalleryPhotoDto> {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
 
-				val galleryPhotos = galleryPhotoDao.findManyByIdList(galleryPhotoIdList).awaitFirst()
-				val photoIds = galleryPhotos.map { it.photoId }
+        val pageOfGalleryPhotos = galleryPhotoDao.findPaged(lastUploadedOn, count).awaitFirst()
+        val photoIds = pageOfGalleryPhotos.map { it.photoId }
 
-				val photoInfosDeferred = photoInfoDao.findManyByIds(photoIds, PhotoInfoDao.SortOrder.Descending)
-				val favouritedPhotosMapDeferred = favouritedPhotoDao.findMany(photoIds)
+        val photoInfosDeferred = photoInfoDao.findManyByIds(photoIds, PhotoInfoDao.SortOrder.Descending)
+        val favouritedPhotosMapDeferred = favouritedPhotoDao.findMany(photoIds)
 
-				val photoInfos = photoInfosDeferred.awaitFirst()
-				val favouritedPhotosMap = favouritedPhotosMapDeferred.awaitFirst().groupBy { it.photoId }
+        val photoInfos = photoInfosDeferred.awaitFirst()
+        val favouritedPhotosMap = favouritedPhotosMapDeferred.awaitFirst().groupBy { it.photoId }
 
-				for (photo in photoInfos) {
-					val galleryPhoto = galleryPhotos.first { it.photoId == photo.photoId }
-					val favouritedPhotos = favouritedPhotosMap[photo.photoId] ?: emptyList()
+        for (photo in photoInfos) {
+          val galleryPhoto = pageOfGalleryPhotos.first { it.photoId == photo.photoId }
+          val favouritedPhotos = favouritedPhotosMap[photo.photoId] ?: emptyList()
 
-					resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto, favouritedPhotos.size.toLong())
-				}
+          resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto, favouritedPhotos.size.toLong())
+        }
 
-				return@withLock resultMap
-			}
-		}
-	}
+        return@withLock resultMap
+      }
+    }
+  }
 
 	suspend fun findGalleryPhotosInfo(userId: String, galleryPhotoIdList: List<Long>): LinkedHashMap<Long, GalleryPhotoInfoDto> {
 		return withContext(coroutineContext) {
