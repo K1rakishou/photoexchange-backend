@@ -7,29 +7,36 @@ import com.kirakishou.photoexchange.database.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.deleteIfExists
 import com.kirakishou.photoexchange.model.repo.LocationMap
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import com.kirakishou.photoexchange.util.TimeUtils
-import kotlinx.coroutines.experimental.Deferred
-import kotlinx.coroutines.experimental.channels.actor
-import kotlinx.coroutines.experimental.reactive.awaitFirstOrNull
-import kotlinx.coroutines.experimental.reactive.awaitLast
-import kotlinx.coroutines.experimental.sync.Mutex
-import kotlinx.coroutines.experimental.sync.withLock
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.actor
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.reactive.awaitLast
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClient
 import java.io.File
 import java.time.Duration
+import kotlin.coroutines.CoroutineContext
 
 open class StaticMapDownloaderService(
 	private val client: WebClient,
 	private val photoInfoRepository: PhotoInfoRepository,
-	private val locationMapRepository: LocationMapRepository,
-	private val concurrencyService: AbstractConcurrencyService
-) {
+	private val locationMapRepository: LocationMapRepository
+) : CoroutineScope {
 	private val logger = LoggerFactory.getLogger(StaticMapDownloaderService::class.java)
 	private val mutex = Mutex()
+  private val job = Job()
+	private val REQUESTS_PER_BATCH = 100
+	private val MAX_TIMEOUT_SECONDS = 15L
+	private val CHUNCKS_COUNT = 4
+	private val MAX_ATTEMPTS = 5
+  private val dispatcher = newFixedThreadPoolContext(CHUNCKS_COUNT, "map-downloader")
+
 	private val requestStringFormat = "https://maps.googleapis.com/maps/api/staticmap?" +
 		"center=%9.7f,%9.7f&" +
 		"markers=color:red|%9.7f,%9.7f&" +
@@ -47,15 +54,13 @@ open class StaticMapDownloaderService(
 		3600L * 24L * 1000L  	//86400 (24 hours)
 	)
 
-	private val REQUESTS_PER_BATCH = 100
-	private val MAX_TIMEOUT_SECONDS = 15L
-	private val CHUNCKS_COUNT = 4
-	private val MAX_ATTEMPTS = 5
+  override val coroutineContext: CoroutineContext
+    get() = job + dispatcher
 
-	private val requestActor = actor<Unit>(concurrencyService.googleMapThreadPool) {
-		for (event in channel) {
-			startDownloadingMapFiles()
-		}
+  private val requestActor = actor<Unit>(capacity = 1) {
+    consumeEach {
+      startDownloadingMapFiles()
+    }
 	}
 
 	fun init() {
@@ -67,7 +72,7 @@ open class StaticMapDownloaderService(
 		return mutex.withLock {
 			val result = locationMapRepository.save(LocationMap.create(photoId))
 
-			//start the downloading process regardless of the save result because there might be old requests in the queue
+			//try to start the downloading process regardless of the save result because there might be old requests in the queue
 			//and we want to process them
 			requestActor.offer(Unit)
 
@@ -88,7 +93,7 @@ open class StaticMapDownloaderService(
 
 			//send concurrent requests (CHUNCKS_COUNT max) to the google servers
 			for (locationMap in chunk) {
-				resultList += concurrencyService.asyncMap { getLocationMap(locationMap) }
+				resultList += async { getLocationMap(locationMap) }
 			}
 
 			//all errors are being handled inside of the coroutine so we shouldn't get any exceptions here

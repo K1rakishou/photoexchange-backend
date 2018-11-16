@@ -3,7 +3,6 @@ package com.kirakishou.photoexchange.handler
 import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.dao.*
-import com.kirakishou.photoexchange.database.repository.GalleryPhotosRepository
 import com.kirakishou.photoexchange.database.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
@@ -12,8 +11,6 @@ import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
-import com.kirakishou.photoexchange.service.concurrency.TestConcurrencyService
 import com.mongodb.ConnectionString
 import org.mockito.Mockito
 import org.springframework.core.io.ClassPathResource
@@ -40,7 +37,6 @@ abstract class AbstractHandlerTest {
 
 	lateinit var template: ReactiveMongoTemplate
 
-	lateinit var concurrentService: AbstractConcurrencyService
 	lateinit var jsonConverterService: JsonConverterService
 
 	lateinit var mongoSequenceDao: MongoSequenceDao
@@ -56,10 +52,8 @@ abstract class AbstractHandlerTest {
 	lateinit var locationMapRepository: LocationMapRepository
 	lateinit var photoInfoRepository: PhotoInfoRepository
 	lateinit var photoInfoExchangeRepository: PhotoInfoExchangeRepository
-	lateinit var galleryPhotosRepository: GalleryPhotosRepository
 
 	fun init() {
-		concurrentService = TestConcurrencyService()
 		jsonConverterService = JsonConverterService(gson)
 
 		template = ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(
@@ -110,26 +104,17 @@ abstract class AbstractHandlerTest {
 			reportedPhotoDao,
 			userInfoDao,
 			locationMapDao,
-			generator,
-			concurrentService
+			generator
 		)
 
 		photoInfoExchangeRepository = PhotoInfoExchangeRepository(
 			mongoSequenceDao,
-			photoInfoExchangeDao,
-			concurrentService
+			photoInfoExchangeDao
 		)
 
 		locationMapRepository = LocationMapRepository(
 			mongoSequenceDao,
-			locationMapDao,
-			concurrentService
-		)
-
-		galleryPhotosRepository = GalleryPhotosRepository(
-			photoInfoDao,
-			galleryPhotoDao,
-			concurrentService
+			locationMapDao
 		)
 
 		staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)

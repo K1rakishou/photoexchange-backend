@@ -9,10 +9,9 @@ import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.experimental.reactive.awaitFirst
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -36,14 +35,12 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
 								 photoInfoRepository: PhotoInfoRepository,
 								 photoInfoExchangeRepository: PhotoInfoExchangeRepository,
-								 staticMapDownloaderService: StaticMapDownloaderService,
-								 concurrencyService: AbstractConcurrencyService): WebTestClient {
+								 staticMapDownloaderService: StaticMapDownloaderService): WebTestClient {
 		val handler = UploadPhotoHandler(
 			jsonConverterService,
 			photoInfoRepository,
 			photoInfoExchangeRepository,
-			staticMapDownloaderService,
-			concurrencyService
+			staticMapDownloaderService
 		)
 
 		return WebTestClient.bindToRouterFunction(router {
@@ -72,7 +69,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 	@Test
 	fun `test should exchange two photos`() {
 		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository,
-			staticMapDownloaderService, concurrentService)
+			staticMapDownloaderService)
 
 		runBlocking {
 			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
@@ -84,7 +81,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
@@ -121,7 +118,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
@@ -167,7 +164,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 	@Test
 	fun `test should not exchange two photos with the same user id`() {
 		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository,
-			staticMapDownloaderService, concurrentService)
+			staticMapDownloaderService)
 
 		runBlocking {
 			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
@@ -179,7 +176,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
@@ -216,7 +213,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
@@ -271,7 +268,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 	@Test
 	fun `test should exchange 4 photos`() {
 		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository,
-			staticMapDownloaderService, concurrentService)
+			staticMapDownloaderService)
 
 		runBlocking {
 			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
@@ -283,7 +280,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
@@ -320,7 +317,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
@@ -377,7 +374,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content1 = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData3))
 				.exchange()
@@ -389,7 +386,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content2 = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData4))
 				.exchange()
@@ -477,7 +474,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 	@Test
 	fun `test 300 concurrent uploadings at the same time`() {
 		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository,
-			staticMapDownloaderService, concurrentService)
+			staticMapDownloaderService)
 
 		runBlocking {
 			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
@@ -489,7 +486,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 				val content = webClient
 					.post()
-					.uri("v1/api/upload")
+					.uri("/v1/api/upload")
 					.contentType(MediaType.MULTIPART_FORM_DATA)
 					.body(BodyInserters.fromMultipartData(multipartData))
 					.exchange()
@@ -501,14 +498,14 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			}
 		}
 
-		val executor = Executors.newFixedThreadPool(10)
+		val executor = Executors.newFixedThreadPool(40)
 
 		Flux.range(0, 300)
 			.flatMap {
 				return@flatMap Flux.just(it)
 					.subscribeOn(Schedulers.fromExecutor(executor))
 					.flatMap { index ->
-						println("Sending packet #$index out of 1000")
+						println("Sending packet #$index out of 300")
 
 						if (index % 2 == 0) {
 							return@flatMap uploadPhoto(SendPhotoPacket(11.1, 22.2, "111", true))

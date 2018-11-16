@@ -10,20 +10,16 @@ import org.springframework.data.mongodb.core.query.Update
 import reactor.core.publisher.Mono
 
 open class PhotoInfoDao(
-	private val template: ReactiveMongoTemplate
-) : BaseDao {
+	template: ReactiveMongoTemplate
+) : BaseDao(template) {
 	private val logger = LoggerFactory.getLogger(PhotoInfoDao::class.java)
 
 	override fun create() {
-		if (!template.collectionExists(PhotoInfo::class.java).block()) {
-			template.createCollection(PhotoInfo::class.java).block()
-		}
+		createCollectionIfNotExists(COLLECTION_NAME)
 	}
 
 	override fun clear() {
-		if (template.collectionExists(PhotoInfo::class.java).block()) {
-			template.dropCollection(PhotoInfo::class.java).block()
-		}
+		dropCollectionIfExists(COLLECTION_NAME)
 	}
 
 	fun save(photoInfo: PhotoInfo): Mono<PhotoInfo> {

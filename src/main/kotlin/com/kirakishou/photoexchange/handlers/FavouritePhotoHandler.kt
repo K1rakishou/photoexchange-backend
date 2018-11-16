@@ -4,10 +4,9 @@ import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.request.FavouritePhotoPacket
 import com.kirakishou.photoexchange.model.net.response.FavouritePhotoResponse
-import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.kirakishou.photoexchange.service.JsonConverterService
-import kotlinx.coroutines.experimental.reactive.awaitSingle
-import kotlinx.coroutines.experimental.reactor.mono
+import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.BodyExtractors
@@ -17,13 +16,12 @@ import reactor.core.publisher.Mono
 
 class FavouritePhotoHandler(
 	jsonConverter: JsonConverterService,
-	private val photoInfoRepository: PhotoInfoRepository,
-	private val concurrentService: ConcurrencyService
+	private val photoInfoRepository: PhotoInfoRepository
 ) : AbstractWebHandler(jsonConverter) {
 	private val logger = LoggerFactory.getLogger(FavouritePhotoHandler::class.java)
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		return mono(concurrentService.commonThreadPool) {
+		return mono {
 			logger.debug("New FavouritePhoto request")
 
 			try {

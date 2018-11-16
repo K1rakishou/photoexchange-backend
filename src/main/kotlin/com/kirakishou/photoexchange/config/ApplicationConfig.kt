@@ -7,7 +7,6 @@ import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.*
 import com.kirakishou.photoexchange.handlers.*
-import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoIdsHandler
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoHandler
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotoIdsHandler
@@ -18,7 +17,6 @@ import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
-import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.mongodb.ConnectionString
 import com.samskivert.mustache.Mustache
 import org.springframework.boot.autoconfigure.mustache.MustacheResourceTemplateLoader
@@ -54,20 +52,17 @@ fun myBeans() = beans {
 	//repository
 	bean<PhotoInfoRepository>()
 	bean<PhotoInfoExchangeRepository>()
-	bean<GalleryPhotosRepository>()
 	bean<UserInfoRepository>()
 	bean<LocationMapRepository>()
 
 	//service
 	bean<GeneratorService>()
-	bean<ConcurrencyService>()
-	bean { StaticMapDownloaderService(ref(), ref(), ref(), ref()).also { it.init() } }
+	bean { StaticMapDownloaderService(ref(), ref(), ref()).also { it.init() } }
 
 	//handler
 	bean<UploadPhotoHandler>()
 	bean<ReceivePhotosHandler>()
 	bean<GetPhotoHandler>()
-	bean<GetGalleryPhotoIdsHandler>()
 	bean<GetGalleryPhotosHandler>()
 	bean<GetGalleryPhotoInfoHandler>()
 	bean<FavouritePhotoHandler>()

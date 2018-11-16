@@ -1,7 +1,6 @@
 package com.kirakishou.photoexchange.routers
 
 import com.kirakishou.photoexchange.handlers.*
-import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoIdsHandler
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoHandler
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotoIdsHandler
@@ -15,7 +14,6 @@ class Router(
 	private val uploadPhotoHandler: UploadPhotoHandler,
 	private val receivePhotosHandler: ReceivePhotosHandler,
 	private val getPhotoHandler: GetPhotoHandler,
-	private val getGalleryPhotoIdsHandler: GetGalleryPhotoIdsHandler,
 	private val getGalleryPhotosHandler: GetGalleryPhotosHandler,
 	private val favouritePhotoHandler: FavouritePhotoHandler,
 	private val reportPhotoHandler: ReportPhotoHandler,
@@ -39,8 +37,7 @@ class Router(
 					GET("/get_user_id", getUserIdHandler::handle)
 					GET("/receive_photos/{photo_names}/{user_id}", receivePhotosHandler::handle)
 
-					GET("/get_gallery_photo_ids/{last_id}/{count}", getGalleryPhotoIdsHandler::handle)
-					GET("/get_gallery_photos/{photo_ids}", getGalleryPhotosHandler::handle)
+					GET("/get_gallery_photos/{last_uploaded_on}/{count}", getGalleryPhotosHandler::handle)
 					GET("/get_gallery_photo_info/{user_id}/{photo_ids}", getGalleryPhotoInfoHandler::handle)
 
 					GET("/get_uploaded_photo_ids/{user_id}/{last_id}/{count}", getUploadedPhotoIdsHandler::handle)

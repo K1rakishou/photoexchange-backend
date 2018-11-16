@@ -9,8 +9,8 @@ import org.springframework.data.mongodb.core.query.Update
 import reactor.core.publisher.Mono
 
 open class MongoSequenceDao(
-	private val template: ReactiveMongoTemplate
-) : BaseDao {
+	template: ReactiveMongoTemplate
+) : BaseDao(template) {
 	private val PHOTO_INFO_SEQUENCE_NAME = "photo_info_sequence"
 	private val PHOTO_EXCHANGE_INFO_SEQUENCE_NAME = "photo_exchange_info_sequence"
 	private val GALLERY_PHOTO_SEQUENCE_NAME = "gallery_photo_sequence"
@@ -20,15 +20,11 @@ open class MongoSequenceDao(
 	private val LOCATION_MAP_SEQUENCE_NAME = "location_map_sequence"
 
 	override fun create() {
-		if (!template.collectionExists(MongoSequence::class.java).block()) {
-			template.createCollection(MongoSequence::class.java).block()
-		}
+		createCollectionIfNotExists(COLLECTION_NAME)
 	}
 
 	override fun clear() {
-		if (template.collectionExists(MongoSequence::class.java).block()) {
-			template.dropCollection(MongoSequence::class.java).block()
-		}
+		dropCollectionIfExists(COLLECTION_NAME)
 	}
 
 	private fun getNextId(sequenceName: String): Mono<Long> {
@@ -70,5 +66,9 @@ open class MongoSequenceDao(
 
 	fun getNextLocationMapId(): Mono<Long> {
 		return getNextId(LOCATION_MAP_SEQUENCE_NAME)
+	}
+
+	companion object {
+	  const val COLLECTION_NAME = "mongo_sequence"
 	}
 }

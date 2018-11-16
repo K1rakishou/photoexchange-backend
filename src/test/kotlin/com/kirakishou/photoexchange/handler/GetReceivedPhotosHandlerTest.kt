@@ -7,10 +7,9 @@ import com.kirakishou.photoexchange.model.net.response.received_photos.GetReceiv
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.experimental.reactive.awaitFirst
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -25,9 +24,8 @@ import java.time.Duration
 class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
-								 photoInfoRepository: PhotoInfoRepository,
-								 concurrencyService: AbstractConcurrencyService): WebTestClient {
-		val handler = GetReceivedPhotosHandler(jsonConverterService, photoInfoRepository, concurrencyService)
+								 photoInfoRepository: PhotoInfoRepository): WebTestClient {
+		val handler = GetReceivedPhotosHandler(jsonConverterService, photoInfoRepository)
 
 		return WebTestClient.bindToRouterFunction(router {
 			"/v1".nest {
@@ -54,7 +52,7 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `should return received photos with receiver coordinates`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
 
 		runBlocking {
 			photoInfoDao.save(PhotoInfo(1, 1, -1L, "111", "222", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()
@@ -78,7 +76,7 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 		kotlin.run {
 			val content = webClient
 				.get()
-				.uri("v1/api/get_received_photos/111/6,7,8,9,10")
+				.uri("/v1/api/get_received_photos/111/6,7,8,9,10")
 				.exchange()
 				.expectStatus().is2xxSuccessful
 				.expectBody()
@@ -126,7 +124,7 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 		kotlin.run {
 			val content = webClient
 				.get()
-				.uri("v1/api/get_received_photos/222/1,2,3,4,5")
+				.uri("/v1/api/get_received_photos/222/1,2,3,4,5")
 				.exchange()
 				.expectStatus().is2xxSuccessful
 				.expectBody()

@@ -4,7 +4,6 @@ import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.GeneratorService
-import com.kirakishou.photoexchange.service.concurrency.TestConcurrencyService
 import com.mongodb.ConnectionString
 import org.mockito.Mockito
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
@@ -65,7 +64,6 @@ abstract class AbstractRepositoryTest {
 
 
 		val generator = Mockito.spy(GeneratorService())
-		val concurrentService = TestConcurrencyService()
 
 		photoInfoRepository = Mockito.spy(PhotoInfoRepository(
 			mongoSequenceDao,
@@ -76,8 +74,7 @@ abstract class AbstractRepositoryTest {
 			reportedPhotoDao,
 			userInfoDao,
 			locationMapDao,
-			generator,
-			concurrentService)
+			generator)
 		)
 	}
 

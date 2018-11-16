@@ -8,14 +8,15 @@ object ServerSettings {
 	const val FILE_DIR_PATH = "D:\\projects\\data\\photos"
 	const val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
 	//TODO: change in production
-//	const val OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL = 1000L * 60L * 60L 	//1 hour
-	const val OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL = 1000L * 60L * 5L 	//5 minutes
+	const val OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL = 1000L * 60L * 60L 	//1 hour
+//	const val OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL = 1000L * 60L * 5L 	//5 minutes
 	//TODO: change in production
-//	const val DELETE_PHOTOS_OLDER_THAN = 1000L * 60L * 60L * 24L * 30L 	//30 days
-	const val DELETE_PHOTOS_OLDER_THAN = 1000L * 60L * 5L				//5 minutes
+	const val DELETE_PHOTOS_OLDER_THAN = 1000L * 60L * 60L * 24L * 30L 	//30 days
+//	const val DELETE_PHOTOS_OLDER_THAN = 1000L * 60L * 60L				//60 minutes
 
 	const val PHOTOS_DELIMITER = ','
 
+  const val MIN_GALLERY_PHOTOS_PER_REQUEST_COUNT = 5
 	const val MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT = 100
 	const val MAX_UPLOADED_PHOTOS_PER_REQUEST_COUNT = 50
 	const val MAX_RECEIVED_PHOTOS_PER_REQUEST_COUNT = 50
@@ -29,12 +30,6 @@ object ServerSettings {
 	const val PHOTO_MAP_SUFFIX = "_map"
 
 	val PHOTO_SIZES = arrayOf("b", "s", "m")
-
-	object ThreadPool {
-		const val MONGO_POOL_NAME = "mongoPool"
-		const val COMMON_POOL_NAME = "commonPool"
-		const val GOOGLE_MAP_POOL_NAME = "mapPool"
-	}
 
 	object DatabaseInfo {
 		const val HOST = "192.168.99.100"

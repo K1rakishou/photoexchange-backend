@@ -6,9 +6,8 @@ import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.received_photos.GetReceivedPhotoIdsResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
-import kotlinx.coroutines.experimental.reactive.awaitFirst
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -24,9 +23,8 @@ import java.time.Duration
 class GetReceivedPhotoIdsHandlerTest : AbstractHandlerTest() {
 
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
-								 photoInfoRepository: PhotoInfoRepository,
-								 concurrencyService: AbstractConcurrencyService): WebTestClient {
-		val handler = GetReceivedPhotoIdsHandler(jsonConverterService, photoInfoRepository, concurrencyService)
+								 photoInfoRepository: PhotoInfoRepository): WebTestClient {
+		val handler = GetReceivedPhotoIdsHandler(jsonConverterService, photoInfoRepository)
 
 		return WebTestClient.bindToRouterFunction(router {
 			"/v1".nest {
@@ -53,7 +51,7 @@ class GetReceivedPhotoIdsHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `should only return photos that have location map`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
 
 		runBlocking {
 			photoInfoDao.save(PhotoInfo(1, 1, -1L, "111", "222", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()
@@ -66,7 +64,7 @@ class GetReceivedPhotoIdsHandlerTest : AbstractHandlerTest() {
 		kotlin.run {
 			val content = webClient
 				.get()
-				.uri("v1/api/get_received_photo_ids/222/10000/5")
+				.uri("/v1/api/get_received_photo_ids/222/10000/5")
 				.exchange()
 				.expectStatus().is2xxSuccessful
 				.expectBody()
@@ -81,7 +79,7 @@ class GetReceivedPhotoIdsHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `photo ids should be sorted by photo id in descending order`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
 
 		runBlocking {
 			photoInfoDao.save(PhotoInfo(1, 1, 2L, "111", "222", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()
@@ -94,7 +92,7 @@ class GetReceivedPhotoIdsHandlerTest : AbstractHandlerTest() {
 		kotlin.run {
 			val content = webClient
 				.get()
-				.uri("v1/api/get_received_photo_ids/222/10000/5")
+				.uri("/v1/api/get_received_photo_ids/222/10000/5")
 				.exchange()
 				.expectStatus().is2xxSuccessful
 				.expectBody()
