@@ -37,7 +37,6 @@ class Router(
 					GET("/get_user_id", getUserIdHandler::handle)
 					GET("/receive_photos/{photo_names}/{user_id}", receivePhotosHandler::handle)
 
-//					GET("/get_gallery_photo_ids/{last_id}/{count}", getGalleryPhotoIdsHandler::handle)
 					GET("/get_gallery_photos/{last_uploaded_on}/{count}", getGalleryPhotosHandler::handle)
 					GET("/get_gallery_photo_info/{user_id}/{photo_ids}", getGalleryPhotoInfoHandler::handle)
 

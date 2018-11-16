@@ -30,7 +30,7 @@ open class GalleryPhotoDao(
 
 	fun findPaged(lastUploadedOn: Long, count: Int): Mono<List<GalleryPhoto>> {
 		val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
-			.addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).lt(lastUploadedOn))
+			.addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).lte(lastUploadedOn))
 			.limit(count)
 
 		return template.find(query, GalleryPhoto::class.java)
