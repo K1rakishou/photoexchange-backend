@@ -64,7 +64,7 @@ class GetReceivedPhotoIdsHandlerTest : AbstractHandlerTest() {
 		kotlin.run {
 			val content = webClient
 				.get()
-				.uri("v1/api/get_received_photo_ids/222/10000/5")
+				.uri("/v1/api/get_received_photo_ids/222/10000/5")
 				.exchange()
 				.expectStatus().is2xxSuccessful
 				.expectBody()
@@ -92,7 +92,7 @@ class GetReceivedPhotoIdsHandlerTest : AbstractHandlerTest() {
 		kotlin.run {
 			val content = webClient
 				.get()
-				.uri("v1/api/get_received_photo_ids/222/10000/5")
+				.uri("/v1/api/get_received_photo_ids/222/10000/5")
 				.exchange()
 				.expectStatus().is2xxSuccessful
 				.expectBody()

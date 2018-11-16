@@ -81,7 +81,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
@@ -118,7 +118,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
@@ -176,7 +176,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
@@ -213,7 +213,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
@@ -280,7 +280,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
@@ -317,7 +317,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData))
 				.exchange()
@@ -374,7 +374,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content1 = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData3))
 				.exchange()
@@ -386,7 +386,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val content2 = webClient
 				.post()
-				.uri("v1/api/upload")
+				.uri("/v1/api/upload")
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(BodyInserters.fromMultipartData(multipartData4))
 				.exchange()
@@ -486,7 +486,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 				val content = webClient
 					.post()
-					.uri("v1/api/upload")
+					.uri("/v1/api/upload")
 					.contentType(MediaType.MULTIPART_FORM_DATA)
 					.body(BodyInserters.fromMultipartData(multipartData))
 					.exchange()
@@ -498,14 +498,14 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			}
 		}
 
-		val executor = Executors.newFixedThreadPool(10)
+		val executor = Executors.newFixedThreadPool(40)
 
 		Flux.range(0, 300)
 			.flatMap {
 				return@flatMap Flux.just(it)
 					.subscribeOn(Schedulers.fromExecutor(executor))
 					.flatMap { index ->
-						println("Sending packet #$index out of 1000")
+						println("Sending packet #$index out of 300")
 
 						if (index % 2 == 0) {
 							return@flatMap uploadPhoto(SendPhotoPacket(11.1, 22.2, "111", true))

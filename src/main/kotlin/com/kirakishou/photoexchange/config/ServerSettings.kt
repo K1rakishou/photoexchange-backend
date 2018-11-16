@@ -30,12 +30,6 @@ object ServerSettings {
 
 	val PHOTO_SIZES = arrayOf("b", "s", "m")
 
-	object ThreadPool {
-		const val MONGO_POOL_NAME = "mongoPool"
-		const val COMMON_POOL_NAME = "commonPool"
-		const val GOOGLE_MAP_POOL_NAME = "mapPool"
-	}
-
 	object DatabaseInfo {
 		const val HOST = "192.168.99.100"
 		const val PORT = 27017

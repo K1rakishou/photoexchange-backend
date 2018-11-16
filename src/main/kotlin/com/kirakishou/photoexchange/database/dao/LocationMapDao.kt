@@ -10,20 +10,16 @@ import org.springframework.data.mongodb.core.query.Update
 import reactor.core.publisher.Mono
 
 open class LocationMapDao(
-	private val template: ReactiveMongoTemplate
-) : BaseDao {
+	template: ReactiveMongoTemplate
+) : BaseDao(template) {
 	private val logger = LoggerFactory.getLogger(LocationMapDao::class.java)
 
 	override fun create() {
-		if (!template.collectionExists(LocationMap::class.java).block()) {
-			template.createCollection(LocationMap::class.java).block()
-		}
+		createCollectionIfNotExists(COLLECTION_NAME)
 	}
 
 	override fun clear() {
-		if (template.collectionExists(LocationMap::class.java).block()) {
-			template.dropCollection(LocationMap::class.java).block()
-		}
+		dropCollectionIfExists(COLLECTION_NAME)
 	}
 
 	fun save(locationMap: LocationMap): Mono<LocationMap> {

@@ -8,20 +8,16 @@ import org.springframework.data.mongodb.core.query.Query
 import reactor.core.publisher.Mono
 
 open class FavouritedPhotoDao(
-	private val template: ReactiveMongoTemplate
-) : BaseDao {
+	template: ReactiveMongoTemplate
+) : BaseDao(template) {
 	private val logger = LoggerFactory.getLogger(FavouritedPhotoDao::class.java)
 
 	override fun create() {
-		if (!template.collectionExists(FavouritedPhoto::class.java).block()) {
-			template.createCollection(FavouritedPhoto::class.java).block()
-		}
+		createCollectionIfNotExists(COLLECTION_NAME)
 	}
 
 	override fun clear() {
-		if (template.collectionExists(FavouritedPhoto::class.java).block()) {
-			template.dropCollection(FavouritedPhoto::class.java).block()
-		}
+		dropCollectionIfExists(COLLECTION_NAME)
 	}
 
 	fun favouritePhoto(favouritedPhoto: FavouritedPhoto): Mono<Boolean> {

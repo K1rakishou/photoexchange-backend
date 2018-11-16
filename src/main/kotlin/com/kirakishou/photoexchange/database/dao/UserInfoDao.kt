@@ -8,20 +8,16 @@ import org.springframework.data.mongodb.core.query.Query
 import reactor.core.publisher.Mono
 
 open class UserInfoDao(
-	private val template: ReactiveMongoTemplate
-) : BaseDao {
+	template: ReactiveMongoTemplate
+) : BaseDao(template) {
 	private val logger = LoggerFactory.getLogger(UserInfoDao::class.java)
 
 	override fun create() {
-		if (!template.collectionExists(UserInfo::class.java).block()) {
-			template.createCollection(UserInfo::class.java).block()
-		}
+		createCollectionIfNotExists(COLLECTION_NAME)
 	}
 
 	override fun clear() {
-		if (template.collectionExists(UserInfo::class.java).block()) {
-			template.dropCollection(UserInfo::class.java).block()
-		}
+		dropCollectionIfExists(COLLECTION_NAME)
 	}
 
 	fun userIdExists(userId: String): Mono<Boolean> {

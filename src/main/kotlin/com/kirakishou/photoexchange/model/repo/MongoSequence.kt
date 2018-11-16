@@ -1,10 +1,11 @@
 package com.kirakishou.photoexchange.model.repo
 
+import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
 import org.springframework.data.mongodb.core.mapping.Field
 
-@Document(collection = "mongo_sequence")
+@Document(collection = MongoSequenceDao.COLLECTION_NAME)
 class MongoSequence(
 	@Id
 	@Field(MongoSequence.Mongo.Field.SEQUENCE_NAME)

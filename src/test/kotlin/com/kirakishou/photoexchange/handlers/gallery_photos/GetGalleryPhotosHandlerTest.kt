@@ -68,7 +68,7 @@ class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 		kotlin.run {
 			val content = webClient
 				.get()
-				.uri("v1/api/get_gallery_photos/5,2,3,4,1")
+				.uri("/v1/api/get_gallery_photos/5,2,3,4,1")
 				.exchange()
 				.expectStatus().is2xxSuccessful
 				.expectBody()
