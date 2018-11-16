@@ -4,17 +4,16 @@ import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.UserInfoDao
 import com.kirakishou.photoexchange.model.repo.UserInfo
 import com.kirakishou.photoexchange.service.GeneratorService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
-import kotlinx.coroutines.experimental.reactive.awaitFirst
-import kotlinx.coroutines.experimental.sync.Mutex
-import kotlinx.coroutines.experimental.sync.withLock
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 class UserInfoRepository(
 	private val mongoSequenceDao: MongoSequenceDao,
 	private val userInfoDao: UserInfoDao,
-	private val generator: GeneratorService,
-	private val concurrentService: AbstractConcurrencyService
-) {
+	private val generator: GeneratorService
+) : AbstractRepository() {
 	private val mutex = Mutex()
 
 	private suspend fun generateUserId(): String {
@@ -32,22 +31,22 @@ class UserInfoRepository(
 	}
 
 	suspend fun createNew(): UserInfo {
-		return concurrentService.asyncMongo {
-			return@asyncMongo mutex.withLock {
+		return withContext(coroutineContext) {
+			return@withContext mutex.withLock {
 				val userInfo = UserInfo.empty()
 				userInfo.userId = generateUserId()
 				userInfo.id = mongoSequenceDao.getNextUserId().awaitFirst()
 
 				return@withLock userInfoDao.save(userInfo).awaitFirst()
 			}
-		}.await()
+		}
 	}
 
 	suspend fun accountExists(userId: String): Boolean {
-		return concurrentService.asyncMongo {
-			return@asyncMongo mutex.withLock {
+		return withContext(coroutineContext) {
+			return@withContext mutex.withLock {
 				return@withLock userInfoDao.userIdExists(userId).awaitFirst()
 			}
-		}.await()
+		}
 	}
 }

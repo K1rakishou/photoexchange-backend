@@ -3,8 +3,8 @@ package com.kirakishou.photoexchange.repository
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.experimental.reactive.awaitFirst
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test

@@ -12,8 +12,6 @@ import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
-import com.kirakishou.photoexchange.service.concurrency.TestConcurrencyService
 import com.mongodb.ConnectionString
 import org.mockito.Mockito
 import org.springframework.core.io.ClassPathResource
@@ -40,7 +38,6 @@ abstract class AbstractHandlerTest {
 
 	lateinit var template: ReactiveMongoTemplate
 
-	lateinit var concurrentService: AbstractConcurrencyService
 	lateinit var jsonConverterService: JsonConverterService
 
 	lateinit var mongoSequenceDao: MongoSequenceDao
@@ -59,7 +56,6 @@ abstract class AbstractHandlerTest {
 	lateinit var galleryPhotosRepository: GalleryPhotosRepository
 
 	fun init() {
-		concurrentService = TestConcurrencyService()
 		jsonConverterService = JsonConverterService(gson)
 
 		template = ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(
@@ -110,26 +106,22 @@ abstract class AbstractHandlerTest {
 			reportedPhotoDao,
 			userInfoDao,
 			locationMapDao,
-			generator,
-			concurrentService
+			generator
 		)
 
 		photoInfoExchangeRepository = PhotoInfoExchangeRepository(
 			mongoSequenceDao,
-			photoInfoExchangeDao,
-			concurrentService
+			photoInfoExchangeDao
 		)
 
 		locationMapRepository = LocationMapRepository(
 			mongoSequenceDao,
-			locationMapDao,
-			concurrentService
+			locationMapDao
 		)
 
 		galleryPhotosRepository = GalleryPhotosRepository(
 			photoInfoDao,
-			galleryPhotoDao,
-			concurrentService
+			galleryPhotoDao
 		)
 
 		staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)

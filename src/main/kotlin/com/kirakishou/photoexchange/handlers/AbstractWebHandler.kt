@@ -1,17 +1,25 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.service.JsonConverterService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Mono
+import kotlin.coroutines.CoroutineContext
 
 abstract class AbstractWebHandler(
 	protected val jsonConverter: JsonConverterService
-) {
-	abstract fun handle(request: ServerRequest): Mono<ServerResponse>
+) : CoroutineScope {
+  private val job = Job()
+
+  override val coroutineContext: CoroutineContext
+    get() = job
+
+  abstract fun handle(request: ServerRequest): Mono<ServerResponse>
 
 	protected fun <T> formatResponse(httpStatus: HttpStatus, response: T): Mono<ServerResponse> {
 		val photoAnswerJson = jsonConverter.toJson(response)

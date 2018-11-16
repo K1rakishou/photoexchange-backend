@@ -18,7 +18,6 @@ import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
-import com.kirakishou.photoexchange.service.concurrency.ConcurrencyService
 import com.mongodb.ConnectionString
 import com.samskivert.mustache.Mustache
 import org.springframework.boot.autoconfigure.mustache.MustacheResourceTemplateLoader
@@ -60,8 +59,7 @@ fun myBeans() = beans {
 
 	//service
 	bean<GeneratorService>()
-	bean<ConcurrencyService>()
-	bean { StaticMapDownloaderService(ref(), ref(), ref(), ref()).also { it.init() } }
+	bean { StaticMapDownloaderService(ref(), ref(), ref()).also { it.init() } }
 
 	//handler
 	bean<UploadPhotoHandler>()

@@ -5,13 +5,12 @@ import org.springframework.context.support.GenericApplicationContext
 import org.springframework.http.server.reactive.HttpHandler
 import org.springframework.http.server.reactive.ReactorHttpHandlerAdapter
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder
-import reactor.ipc.netty.http.server.HttpServer
-import reactor.ipc.netty.tcp.BlockingNettyContext
+import reactor.netty.DisposableServer
+import reactor.netty.http.server.HttpServer
 
-class PhotoExchangeApplication(port: Int = 8080) {
+class PhotoExchangeApplication(val port: Int = 8080) {
+	private lateinit var server: DisposableServer
 	private val httpHandler: HttpHandler
-	private val server: HttpServer
-	private lateinit var nettyContext: BlockingNettyContext
 
 	init {
 		val context = GenericApplicationContext().apply {
@@ -19,20 +18,19 @@ class PhotoExchangeApplication(port: Int = 8080) {
 			refresh()
 		}
 
-		server = HttpServer.create(port)
 		httpHandler = WebHttpHandlerBuilder.applicationContext(context).build()
 	}
 
-	fun start() {
-		nettyContext = server.start(ReactorHttpHandlerAdapter(httpHandler))
-	}
-
 	fun startAndAwait() {
-		server.startAndAwait(ReactorHttpHandlerAdapter(httpHandler), { nettyContext = it })
+		server = HttpServer.create()
+			.port(port)
+			.handle(ReactorHttpHandlerAdapter(httpHandler))
+			.bind()
+			.block()!!
 	}
 
 	fun stop() {
-		nettyContext.shutdown()
+		server.disposeNow()
 	}
 }
 

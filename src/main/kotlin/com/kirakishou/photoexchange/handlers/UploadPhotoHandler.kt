@@ -18,14 +18,13 @@ import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.ImageUtils
 import com.kirakishou.photoexchange.util.TimeUtils
-import kotlinx.coroutines.experimental.reactive.awaitSingle
-import kotlinx.coroutines.experimental.reactor.mono
-import kotlinx.coroutines.experimental.sync.Mutex
-import kotlinx.coroutines.experimental.sync.withLock
+import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.reactor.mono
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
@@ -43,8 +42,7 @@ class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
 	private val photoInfoExchangeRepository: PhotoInfoExchangeRepository,
-	private val staticMapDownloaderService: StaticMapDownloaderService,
-	private val concurrentService: AbstractConcurrencyService
+	private val staticMapDownloaderService: StaticMapDownloaderService
 ) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
@@ -54,7 +52,7 @@ class UploadPhotoHandler(
 	private var lastTimeCheck = 0L
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		return mono(concurrentService.commonThreadPool) {
+		return mono {
 			logger.debug("New UploadPhoto request")
 
 			try {

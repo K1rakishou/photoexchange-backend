@@ -6,9 +6,8 @@ import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.ReceivePhotosResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import com.kirakishou.photoexchange.util.TimeUtils
-import kotlinx.coroutines.experimental.reactor.mono
+import kotlinx.coroutines.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -18,8 +17,7 @@ import java.util.concurrent.TimeUnit
 
 class ReceivePhotosHandler(
 	jsonConverter: JsonConverterService,
-	private val photoInfoRepo: PhotoInfoRepository,
-	private val concurrentService: AbstractConcurrencyService
+	private val photoInfoRepo: PhotoInfoRepository
 ) : AbstractWebHandler(jsonConverter) {
 	private val logger = LoggerFactory.getLogger(ReceivePhotosHandler::class.java)
 	private val USER_ID_PATH_VARIABLE = "user_id"
@@ -28,7 +26,7 @@ class ReceivePhotosHandler(
 	private val FIVE_MINUTES = TimeUnit.MINUTES.toMillis(5)
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		return mono(concurrentService.commonThreadPool) {
+		return mono {
 			logger.debug("New ReceivePhotos request")
 
 			try {

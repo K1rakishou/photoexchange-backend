@@ -8,10 +8,9 @@ import com.kirakishou.photoexchange.model.net.response.uploaded_photos.GetUpload
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.experimental.reactive.awaitFirst
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -26,10 +25,9 @@ class GetUploadedPhotosHandlerTest : AbstractHandlerTest() {
 
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
 								 photoInfoRepository: PhotoInfoRepository,
-								 photoInfoExchangeRepository: PhotoInfoExchangeRepository,
-								 concurrencyService: AbstractConcurrencyService): WebTestClient {
+								 photoInfoExchangeRepository: PhotoInfoExchangeRepository): WebTestClient {
 		val handler = GetUploadedPhotosHandler(jsonConverterService, photoInfoRepository,
-			photoInfoExchangeRepository, concurrencyService)
+			photoInfoExchangeRepository)
 
 		return WebTestClient.bindToRouterFunction(router {
 			"/v1".nest {
@@ -55,7 +53,7 @@ class GetUploadedPhotosHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `should return uploaded photos with uploader coordinates`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository)
 
 		runBlocking {
 			photoInfoDao.save(PhotoInfo(1, 1, -1L, "111", "222", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()

@@ -6,10 +6,9 @@ import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.gallery_photos.GalleryPhotoIdsResponse
 import com.kirakishou.photoexchange.model.repo.GalleryPhoto
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.experimental.reactive.awaitFirst
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -21,9 +20,8 @@ import java.time.Duration
 class GetGalleryPhotoIdsHandlerTest : AbstractHandlerTest() {
 
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
-								 galleryPhotosRepository: GalleryPhotosRepository,
-								 concurrencyService: AbstractConcurrencyService): WebTestClient {
-		val handler = GetGalleryPhotoIdsHandler(jsonConverterService, galleryPhotosRepository, concurrencyService)
+								 galleryPhotosRepository: GalleryPhotosRepository): WebTestClient {
+		val handler = GetGalleryPhotoIdsHandler(jsonConverterService, galleryPhotosRepository)
 
 		return WebTestClient.bindToRouterFunction(router {
 			"/v1".nest {
@@ -50,7 +48,7 @@ class GetGalleryPhotoIdsHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `photos should be sorted by id in descending order`() {
-		val webClient = getWebTestClient(jsonConverterService, galleryPhotosRepository, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, galleryPhotosRepository)
 
 		runBlocking {
 			galleryPhotoDao.save(GalleryPhoto(1, 1, 111L)).awaitFirst()

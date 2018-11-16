@@ -9,10 +9,9 @@ import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.uploaded_photos.GetUploadedPhotosResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import com.kirakishou.photoexchange.util.Utils
-import kotlinx.coroutines.experimental.reactive.awaitFirst
-import kotlinx.coroutines.experimental.reactor.mono
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -22,8 +21,7 @@ import reactor.core.publisher.Mono
 class GetUploadedPhotosHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepository: PhotoInfoRepository,
-	private val photoInfoExchangeRepository: PhotoInfoExchangeRepository,
-	private val concurrentService: AbstractConcurrencyService
+	private val photoInfoExchangeRepository: PhotoInfoExchangeRepository
 ) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(GetUploadedPhotosHandler::class.java)
@@ -31,7 +29,7 @@ class GetUploadedPhotosHandler(
 	private val PHOTO_IDS_PATH_VARIABLE = "photo_ids"
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		return mono(concurrentService.commonThreadPool) {
+		return mono {
 			logger.debug("New GetUploadedPhotos request")
 
 			try {

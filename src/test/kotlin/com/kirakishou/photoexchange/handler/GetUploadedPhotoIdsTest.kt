@@ -6,9 +6,8 @@ import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.uploaded_photos.GetUploadedPhotoIdsResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
-import kotlinx.coroutines.experimental.reactive.awaitFirst
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -24,9 +23,8 @@ import java.time.Duration
 class GetUploadedPhotoIdsTest : AbstractHandlerTest() {
 
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
-								 photoInfoRepository: PhotoInfoRepository,
-								 concurrencyService: AbstractConcurrencyService): WebTestClient {
-		val handler = GetUploadedPhotoIdsHandler(jsonConverterService, photoInfoRepository, concurrencyService)
+								 photoInfoRepository: PhotoInfoRepository): WebTestClient {
+		val handler = GetUploadedPhotoIdsHandler(jsonConverterService, photoInfoRepository)
 
 		return WebTestClient.bindToRouterFunction(router {
 			"/v1".nest {
@@ -53,7 +51,7 @@ class GetUploadedPhotoIdsTest : AbstractHandlerTest() {
 
 	@Test
 	fun `should return photos with and without location map`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
 
 		runBlocking {
 			photoInfoDao.save(PhotoInfo(1, 1, -1L, "111", "222", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()
@@ -79,7 +77,7 @@ class GetUploadedPhotoIdsTest : AbstractHandlerTest() {
 
 	@Test
 	fun `photos should be sorted by id in descending order`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
 
 		runBlocking {
 			photoInfoDao.save(PhotoInfo(1, 1, 2L, "111", "222", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()

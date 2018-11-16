@@ -7,10 +7,9 @@ import com.kirakishou.photoexchange.model.net.response.gallery_photos.GalleryPho
 import com.kirakishou.photoexchange.model.repo.GalleryPhoto
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.experimental.reactive.awaitFirst
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -22,9 +21,8 @@ import java.time.Duration
 class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
-								 photoInfoRepository: PhotoInfoRepository,
-								 concurrencyService: AbstractConcurrencyService): WebTestClient {
-		val handler = GetGalleryPhotosHandler(jsonConverterService, photoInfoRepository, concurrencyService)
+								 photoInfoRepository: PhotoInfoRepository): WebTestClient {
+		val handler = GetGalleryPhotosHandler(jsonConverterService, photoInfoRepository)
 
 		return WebTestClient.bindToRouterFunction(router {
 			"/v1".nest {
@@ -51,7 +49,7 @@ class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `photos should be sorted by id in descending order`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, concurrentService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
 
 		runBlocking {
 			photoInfoDao.save(PhotoInfo(1, 1, 3L, "111", "222", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()

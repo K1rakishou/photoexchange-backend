@@ -7,8 +7,7 @@ import com.kirakishou.photoexchange.handlers.AbstractWebHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.gallery_photos.GalleryPhotoIdsResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.concurrency.AbstractConcurrencyService
-import kotlinx.coroutines.experimental.reactor.mono
+import kotlinx.coroutines.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -17,8 +16,7 @@ import reactor.core.publisher.Mono
 
 class GetGalleryPhotoIdsHandler(
 	jsonConverter: JsonConverterService,
-	private val galleryPhotosRepository: GalleryPhotosRepository,
-	private val concurrentService: AbstractConcurrencyService
+	private val galleryPhotosRepository: GalleryPhotosRepository
 ) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(GetGalleryPhotoIdsHandler::class.java)
@@ -26,7 +24,7 @@ class GetGalleryPhotoIdsHandler(
 	private val COUNT_VARIABLE = "count"
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		return mono(concurrentService.commonThreadPool) {
+		return mono {
 			logger.debug("New GetGalleryPhotoIds request")
 
 			try {
