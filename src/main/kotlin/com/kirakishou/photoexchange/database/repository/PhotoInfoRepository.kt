@@ -3,6 +3,8 @@ package com.kirakishou.photoexchange.database.repository
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.model.exception.ExchangeException
 import com.kirakishou.photoexchange.model.net.response.ReceivePhotosResponse
+import com.kirakishou.photoexchange.model.net.response.gallery_photos.GalleryPhotoInfoResponse
+import com.kirakishou.photoexchange.model.net.response.gallery_photos.GalleryPhotosResponse
 import com.kirakishou.photoexchange.model.net.response.received_photos.GetReceivedPhotosResponse
 import com.kirakishou.photoexchange.model.net.response.uploaded_photos.GetUploadedPhotosResponse
 import com.kirakishou.photoexchange.model.repo.*
@@ -277,7 +279,7 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun findGalleryPhotos(lastUploadedOn: Long, count: Int): LinkedHashMap<Long, GalleryPhotoDto> {
+  suspend fun findGalleryPhotos(lastUploadedOn: Long, count: Int): List<GalleryPhotosResponse.GalleryPhotoResponseData> {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
@@ -298,12 +300,15 @@ open class PhotoInfoRepository(
           resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto, favouritedPhotos.size.toLong())
         }
 
-        return@withLock resultMap
+        return@withLock resultMap.values.map { (photoInfo, galleryPhoto, favouritesCount) ->
+          GalleryPhotosResponse.GalleryPhotoResponseData(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat,
+            photoInfo.uploadedOn, favouritesCount)
+        }
       }
     }
   }
 
-  suspend fun findGalleryPhotosInfo(userId: String, galleryPhotoIdList: List<Long>): LinkedHashMap<Long, GalleryPhotoInfoDto> {
+  suspend fun findGalleryPhotosInfo(userId: String, galleryPhotoIdList: List<Long>): List<GalleryPhotoInfoResponse.GalleryPhotosInfoData> {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val resultMap = linkedMapOf<Long, GalleryPhotoInfoDto>()
@@ -324,7 +329,9 @@ open class PhotoInfoRepository(
           resultMap[reportedPhoto.photoId]!!.isReported = true
         }
 
-        return@withLock resultMap
+        return@withLock resultMap.values.map { (galleryPhotoId, isFavourited, isReported) ->
+          GalleryPhotoInfoResponse.GalleryPhotosInfoData(galleryPhotoId, isFavourited, isReported)
+        }
       }
     }
   }
