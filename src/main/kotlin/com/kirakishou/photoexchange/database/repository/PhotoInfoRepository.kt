@@ -1,6 +1,7 @@
 package com.kirakishou.photoexchange.database.repository
 
 import com.kirakishou.photoexchange.database.dao.*
+import com.kirakishou.photoexchange.model.net.response.uploaded_photos.GetUploadedPhotosResponse
 import com.kirakishou.photoexchange.model.repo.*
 import com.kirakishou.photoexchange.service.GeneratorService
 import kotlinx.coroutines.reactive.awaitFirst
@@ -11,320 +12,339 @@ import org.slf4j.LoggerFactory
 import reactor.core.publisher.Mono
 
 open class PhotoInfoRepository(
-	private val mongoSequenceDao: MongoSequenceDao,
-	private val photoInfoDao: PhotoInfoDao,
-	private val photoInfoExchangeDao: PhotoInfoExchangeDao,
-	private val galleryPhotoDao: GalleryPhotoDao,
-	private val favouritedPhotoDao: FavouritedPhotoDao,
-	private val reportedPhotoDao: ReportedPhotoDao,
-	private val userInfoDao: UserInfoDao,
-	private val locationMapDao: LocationMapDao,
-	private val generator: GeneratorService
+  private val mongoSequenceDao: MongoSequenceDao,
+  private val photoInfoDao: PhotoInfoDao,
+  private val photoInfoExchangeDao: PhotoInfoExchangeDao,
+  private val galleryPhotoDao: GalleryPhotoDao,
+  private val favouritedPhotoDao: FavouritedPhotoDao,
+  private val reportedPhotoDao: ReportedPhotoDao,
+  private val userInfoDao: UserInfoDao,
+  private val locationMapDao: LocationMapDao,
+  private val generator: GeneratorService
 ) : AbstractRepository() {
-	private val mutex = Mutex()
-	private val logger = LoggerFactory.getLogger(PhotoInfoRepository::class.java)
+  private val mutex = Mutex()
+  private val logger = LoggerFactory.getLogger(PhotoInfoRepository::class.java)
 
-	suspend fun generatePhotoInfoName(): String {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				var photoName = ""
+  suspend fun generatePhotoInfoName(): String {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        var photoName = ""
 
-				while (true) {
-					val generatedName = generator.generateNewPhotoName()
-					if (!photoInfoDao.photoNameExists(generatedName).awaitFirst()) {
-						photoName = generatedName
-						break
-					}
-				}
+        while (true) {
+          val generatedName = generator.generateNewPhotoName()
+          if (!photoInfoDao.photoNameExists(generatedName).awaitFirst()) {
+            photoName = generatedName
+            break
+          }
+        }
 
-				return@withLock photoName
-			}
-		}
-	}
+        return@withLock photoName
+      }
+    }
+  }
 
-	suspend fun save(photoInfo: PhotoInfo): PhotoInfo {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				photoInfo.photoId = mongoSequenceDao.getNextPhotoId().awaitFirst()
+  suspend fun save(photoInfo: PhotoInfo): PhotoInfo {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        photoInfo.photoId = mongoSequenceDao.getNextPhotoId().awaitFirst()
 
-				val savedPhotoInfo = photoInfoDao.save(photoInfo).awaitFirst()
-				if (savedPhotoInfo.isEmpty()) {
-					return@withLock savedPhotoInfo
-				}
+        val savedPhotoInfo = photoInfoDao.save(photoInfo).awaitFirst()
+        if (savedPhotoInfo.isEmpty()) {
+          return@withLock savedPhotoInfo
+        }
 
-				val galleryPhotoId = mongoSequenceDao.getNextGalleryPhotoId().awaitFirst()
-				val result = galleryPhotoDao.save(GalleryPhoto.create(galleryPhotoId, photoInfo.photoId,
-					savedPhotoInfo.uploadedOn)).awaitFirst()
+        val galleryPhotoId = mongoSequenceDao.getNextGalleryPhotoId().awaitFirst()
+        val result = galleryPhotoDao.save(GalleryPhoto.create(galleryPhotoId, photoInfo.photoId,
+          savedPhotoInfo.uploadedOn)).awaitFirst()
 
-				if (!result) {
-					photoInfoDao.deleteById(photoInfo.photoId).awaitFirst()
-					return@withLock PhotoInfo.empty()
-				}
+        if (!result) {
+          photoInfoDao.deleteById(photoInfo.photoId).awaitFirst()
+          return@withLock PhotoInfo.empty()
+        }
 
-				return@withLock savedPhotoInfo
-			}
-		}
-	}
+        return@withLock savedPhotoInfo
+      }
+    }
+  }
 
-	suspend fun findOneById(photoId: Long): PhotoInfo {
-		return withContext(coroutineContext) {
-			return@withContext photoInfoDao.findById(photoId).awaitFirst()
-		}
-	}
+  suspend fun findOneById(photoId: Long): PhotoInfo {
+    return withContext(coroutineContext) {
+      return@withContext photoInfoDao.findById(photoId).awaitFirst()
+    }
+  }
 
-	suspend fun findManyPhotosFromUploader(userId: String, photoIds: List<Long>): List<PhotoInfoWithLocation> {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				val photoInfos = photoInfoDao.findManyByUserIdAndPhotoIds(userId, photoIds, true).awaitFirst()
-				return@withLock photoInfos
-					.map { PhotoInfoWithLocation(it, it.lon, it.lat) }
-			}
-		}
-	}
+  suspend fun findPageOfUploadedPhotos(
+    userId: String,
+    lastUploadedOn: Long,
+    count: Int
+  ): List<GetUploadedPhotosResponse.UploadedPhoto> {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        val uploadedPhotos = photoInfoDao.findPageOfUploadedPhotos(userId, lastUploadedOn, count).awaitFirst()
+        val exchangeIdList = uploadedPhotos.map { it.exchangeId }
+        val photoExchangeMap = photoInfoExchangeDao.findManyByIdList(exchangeIdList).awaitFirst()
+          .associateBy { it.id }
 
-	suspend fun findOlderThan(time: Long): List<PhotoInfo> {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				return@withLock photoInfoDao.findOlderThan(time).awaitFirst()
-			}
-		}
-	}
+        return@withLock uploadedPhotos.map { uploadedPhoto ->
+          val photoInfoExchange = photoExchangeMap.getOrElse(uploadedPhoto.exchangeId, { PhotoInfoExchange.empty() })
+          val hasReceiverInfo = photoInfoExchange
+            .takeIf { !it.isEmpty() }?.receiverUserId?.isNotEmpty() ?: false
 
-	suspend fun findUploadedPhotosPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
-		return withContext(coroutineContext) {
-			return@withContext photoInfoDao.findManyPagedFromUploader(userId, lastId, count).awaitFirst()
-		}
-	}
+          GetUploadedPhotosResponse.UploadedPhoto(
+            uploadedPhoto.photoId,
+            uploadedPhoto.photoName,
+            uploadedPhoto.lon,
+            uploadedPhoto.lat,
+            hasReceiverInfo,
+            uploadedPhoto.uploadedOn)
+        }
+      }
+    }
+  }
 
-	suspend fun findReceivedPhotosPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
-		return withContext(coroutineContext) {
-			return@withContext photoInfoDao.findManyPagedFromReceiver(userId, lastId, count).awaitFirst()
-		}
-	}
+  suspend fun findOlderThan(time: Long): List<PhotoInfo> {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        return@withLock photoInfoDao.findOlderThan(time).awaitFirst()
+      }
+    }
+  }
 
-	suspend fun tryDoExchange(newUploadingPhoto: PhotoInfo): Boolean {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				val photoInfoExchange = photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(
-					newUploadingPhoto.photoId, newUploadingPhoto.uploaderUserId
-				).awaitFirst()
+  suspend fun findUploadedPhotosPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
+    return withContext(coroutineContext) {
+      return@withContext photoInfoDao.findManyPagedFromUploader(userId, lastId, count).awaitFirst()
+    }
+  }
 
-				return@withLock photoInfoExchange.isEmpty().let { isPhotoInfoExchangeEmpty ->
-					if (isPhotoInfoExchangeEmpty) {
-						var newPhotoInfoExchange = PhotoInfoExchange.empty()
+  suspend fun findReceivedPhotosPaged(userId: String, lastId: Long, count: Int): List<PhotoInfo> {
+    return withContext(coroutineContext) {
+      return@withContext photoInfoDao.findManyPagedFromReceiver(userId, lastId, count).awaitFirst()
+    }
+  }
 
-						val newPhotoExchangeResult = kotlin.run {
-							//there is no photo to do exchange with, create a new exchange request
-							val photoExchangeId = mongoSequenceDao.getNextPhotoExchangeId().awaitFirst()
+  suspend fun tryDoExchange(newUploadingPhoto: PhotoInfo): Boolean {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        val photoInfoExchange = photoInfoExchangeDao.tryDoExchangeWithOldestPhoto(
+          newUploadingPhoto.photoId, newUploadingPhoto.uploaderUserId
+        ).awaitFirst()
 
-							newPhotoInfoExchange = photoInfoExchangeDao.save(PhotoInfoExchange.create(photoExchangeId,
-								newUploadingPhoto.photoId, newUploadingPhoto.uploaderUserId)
-							).awaitFirst()
+        return@withLock photoInfoExchange.isEmpty().let { isPhotoInfoExchangeEmpty ->
+          if (isPhotoInfoExchangeEmpty) {
+            var newPhotoInfoExchange = PhotoInfoExchange.empty()
 
-							if (newPhotoInfoExchange.isEmpty()) {
-								return@run false
-							}
+            val newPhotoExchangeResult = kotlin.run {
+              //there is no photo to do exchange with, create a new exchange request
+              val photoExchangeId = mongoSequenceDao.getNextPhotoExchangeId().awaitFirst()
 
-							return@run photoInfoDao.updateSetExchangeId(newUploadingPhoto.photoId,
-								newPhotoInfoExchange.id).awaitFirst()
-						}
+              newPhotoInfoExchange = photoInfoExchangeDao.save(PhotoInfoExchange.create(photoExchangeId,
+                newUploadingPhoto.photoId, newUploadingPhoto.uploaderUserId)
+              ).awaitFirst()
 
-						if (!newPhotoExchangeResult) {
-							if (!newPhotoInfoExchange.isEmpty()) {
-								if (!photoInfoExchangeDao.deleteById(newPhotoInfoExchange.id).awaitFirst()) {
-									logger.error("ERROR! Could not delete photoInfoExchange with id " +
-										"${newPhotoInfoExchange.id} after a failure to do photos exchange")
-								}
-							}
-						}
+              if (newPhotoInfoExchange.isEmpty()) {
+                return@run false
+              }
 
-						return@let newPhotoExchangeResult
-					} else {
-						val photos = mutableListOf<PhotoInfo>()
-						val existingPhotoExchangeResult = kotlin.run {
-							//there is a photo, update exchange request with info about our photo
-							if (!photoInfoDao.updateSetExchangeId(newUploadingPhoto.photoId,
-									photoInfoExchange.id).awaitFirst()) {
-								logger.warn("photoInfoDao.updateSetExchangeId fail, " +
-									"newUploadingPhoto.photoId = ${newUploadingPhoto.photoId}, " +
-									"photoInfoExchange.id = ${photoInfoExchange.id}")
-								return@run false
-							}
+              return@run photoInfoDao.updateSetExchangeId(newUploadingPhoto.photoId,
+                newPhotoInfoExchange.id).awaitFirst()
+            }
 
-							val ids = arrayListOf(photoInfoExchange.uploaderPhotoId, photoInfoExchange.receiverPhotoId)
-							photos += photoInfoDao.findManyByIds(ids).awaitFirst()
+            if (!newPhotoExchangeResult) {
+              if (!newPhotoInfoExchange.isEmpty()) {
+                if (!photoInfoExchangeDao.deleteById(newPhotoInfoExchange.id).awaitFirst()) {
+                  logger.error("ERROR! Could not delete photoInfoExchange with id " +
+                    "${newPhotoInfoExchange.id} after a failure to do photos exchange")
+                }
+              }
+            }
 
-							if (photos.size != ids.size) {
-								logger.warn("photos.size != ids.size")
-								return@run false
-							}
+            return@let newPhotoExchangeResult
+          } else {
+            val photos = mutableListOf<PhotoInfo>()
+            val existingPhotoExchangeResult = kotlin.run {
+              //there is a photo, update exchange request with info about our photo
+              if (!photoInfoDao.updateSetExchangeId(newUploadingPhoto.photoId,
+                  photoInfoExchange.id).awaitFirst()) {
+                logger.warn("photoInfoDao.updateSetExchangeId fail, " +
+                  "newUploadingPhoto.photoId = ${newUploadingPhoto.photoId}, " +
+                  "photoInfoExchange.id = ${photoInfoExchange.id}")
+                return@run false
+              }
 
-							val (uploaderPhotoInfo, receiverPhotoInfo) = if (photos.first().photoId == newUploadingPhoto.photoId) {
-								Pair(photos.first(), photos.last())
-							} else {
-								Pair(photos.last(), photos.first())
-							}
+              val ids = arrayListOf(photoInfoExchange.uploaderPhotoId, photoInfoExchange.receiverPhotoId)
+              photos += photoInfoDao.findManyByIds(ids).awaitFirst()
 
-							if (!photoInfoDao.updateSetReceiverId(photoInfoExchange.uploaderPhotoId,
-									uploaderPhotoInfo.uploaderUserId).awaitFirst()) {
-								logger.warn("photoInfoDao.updateSetReceiverId1 fail, " +
-									"photoInfoExchange.uploaderPhotoId = ${photoInfoExchange.uploaderPhotoId}, " +
-									"uploaderPhotoInfo.uploaderUserId = ${uploaderPhotoInfo.uploaderUserId}")
-								return@run false
-							}
+              if (photos.size != ids.size) {
+                logger.warn("photos.size != ids.size")
+                return@run false
+              }
 
-							if (!photoInfoDao.updateSetReceiverId(photoInfoExchange.receiverPhotoId,
-									receiverPhotoInfo.uploaderUserId).awaitFirst()) {
-								logger.warn("photoInfoDao.updateSetReceiverId2 fail, " +
-									"photoInfoExchange.receiverPhotoId = ${photoInfoExchange.receiverPhotoId}, " +
-									"receiverPhotoInfo.uploaderUserId = ${receiverPhotoInfo.uploaderUserId}")
-								return@run false
-							}
+              val (uploaderPhotoInfo, receiverPhotoInfo) = if (photos.first().photoId == newUploadingPhoto.photoId) {
+                Pair(photos.first(), photos.last())
+              } else {
+                Pair(photos.last(), photos.first())
+              }
 
-							if (!photoInfoDao.updateSetUploadedOn(photoInfoExchange.uploaderPhotoId,
-									uploaderPhotoInfo.uploadedOn).awaitFirst()) {
-								logger.warn("photoInfoDao.updateSetUploadedOn fail, " +
-									"photoInfoExchange.uploaderPhotoId = ${photoInfoExchange.uploaderPhotoId}, " +
-									"uploaderPhotoInfo.uploadedOn = ${uploaderPhotoInfo.uploadedOn}")
-								return@run false
-							}
+              if (!photoInfoDao.updateSetReceiverId(photoInfoExchange.uploaderPhotoId,
+                  uploaderPhotoInfo.uploaderUserId).awaitFirst()) {
+                logger.warn("photoInfoDao.updateSetReceiverId1 fail, " +
+                  "photoInfoExchange.uploaderPhotoId = ${photoInfoExchange.uploaderPhotoId}, " +
+                  "uploaderPhotoInfo.uploaderUserId = ${uploaderPhotoInfo.uploaderUserId}")
+                return@run false
+              }
 
-							return@run true
-						}
+              if (!photoInfoDao.updateSetReceiverId(photoInfoExchange.receiverPhotoId,
+                  receiverPhotoInfo.uploaderUserId).awaitFirst()) {
+                logger.warn("photoInfoDao.updateSetReceiverId2 fail, " +
+                  "photoInfoExchange.receiverPhotoId = ${photoInfoExchange.receiverPhotoId}, " +
+                  "receiverPhotoInfo.uploaderUserId = ${receiverPhotoInfo.uploaderUserId}")
+                return@run false
+              }
 
-						if (!existingPhotoExchangeResult) {
-							val photoInfo1 = photos.first()
-							val photoInfo2 = photos.last()
+              if (!photoInfoDao.updateSetUploadedOn(photoInfoExchange.uploaderPhotoId,
+                  uploaderPhotoInfo.uploadedOn).awaitFirst()) {
+                logger.warn("photoInfoDao.updateSetUploadedOn fail, " +
+                  "photoInfoExchange.uploaderPhotoId = ${photoInfoExchange.uploaderPhotoId}, " +
+                  "uploaderPhotoInfo.uploadedOn = ${uploaderPhotoInfo.uploadedOn}")
+                return@run false
+              }
 
-							val updateResults = mutableListOf<Mono<Boolean>>()
+              return@run true
+            }
 
-							updateResults += photoInfoDao.updateResetReceivedUserId(photoInfo1.photoId)
-							updateResults += photoInfoDao.updateResetExchangeId(photoInfo2.photoId)
-							updateResults += photoInfoExchangeDao.updateResetReceiverInfo(photoInfoExchange.id)
+            if (!existingPhotoExchangeResult) {
+              val photoInfo1 = photos.first()
+              val photoInfo2 = photos.last()
 
-							val isAllResultsOk = updateResults
-								.map { it.awaitFirst() }
-								.any { !it }
+              val updateResults = mutableListOf<Mono<Boolean>>()
 
-							if (!isAllResultsOk) {
-								logger.error("Could not restore receiver info after unsuccessful attempt in photos exchange")
-							}
-						}
+              updateResults += photoInfoDao.updateResetReceivedUserId(photoInfo1.photoId)
+              updateResults += photoInfoDao.updateResetExchangeId(photoInfo2.photoId)
+              updateResults += photoInfoExchangeDao.updateResetReceiverInfo(photoInfoExchange.id)
 
-						return@let existingPhotoExchangeResult
-					}
+              val isAllResultsOk = updateResults
+                .map { it.awaitFirst() }
+                .any { !it }
 
-				}
-			}
-		}
-	}
+              if (!isAllResultsOk) {
+                logger.error("Could not restore receiver info after unsuccessful attempt in photos exchange")
+              }
+            }
 
-	suspend fun delete(userId: String, photoName: String, isUploader: Boolean = true): Boolean {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				val photoInfo = photoInfoDao.findOneByUserIdAndPhotoName(userId, photoName, isUploader).awaitFirst()
-				return@withLock deletePhotoInternal(photoInfo)
-			}
-		}
-	}
+            return@let existingPhotoExchangeResult
+          }
 
-	suspend fun deleteAll(ids: List<Long>): Boolean {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				val photoInfoList = photoInfoDao.findManyByIds(ids).awaitFirst()
-				return@withLock deletePhotosInternal(photoInfoList)
-			}
-		}
-	}
+        }
+      }
+    }
+  }
 
-	private suspend fun deletePhotoInternal(photoInfo: PhotoInfo): Boolean {
-		if (photoInfo.isEmpty()) {
-			return false
-		}
+  suspend fun delete(userId: String, photoName: String, isUploader: Boolean = true): Boolean {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        val photoInfo = photoInfoDao.findOneByUserIdAndPhotoName(userId, photoName, isUploader).awaitFirst()
+        return@withLock deletePhotoInternal(photoInfo)
+      }
+    }
+  }
 
-		val results = mutableListOf<Mono<Boolean>>()
-		results += photoInfoDao.deleteById(photoInfo.photoId)
-		results += photoInfoExchangeDao.deleteById(photoInfo.exchangeId)
-		results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
-		results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
-		results += locationMapDao.deleteById(photoInfo.photoId)
-		results += galleryPhotoDao.deleteById(photoInfo.photoId)
+  suspend fun deleteAll(ids: List<Long>): Boolean {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        val photoInfoList = photoInfoDao.findManyByIds(ids).awaitFirst()
+        return@withLock deletePhotosInternal(photoInfoList)
+      }
+    }
+  }
 
-		return results.map { it.awaitFirst() }
-			.any { !it }
-	}
+  private suspend fun deletePhotoInternal(photoInfo: PhotoInfo): Boolean {
+    if (photoInfo.isEmpty()) {
+      return false
+    }
 
-	private suspend fun deletePhotosInternal(photoInfoList: List<PhotoInfo>): Boolean {
-		val filteredPhotoInfoList = photoInfoList.filter { !it.isEmpty() }
-		if (filteredPhotoInfoList.isEmpty()) {
-			return false
-		}
+    val results = mutableListOf<Mono<Boolean>>()
+    results += photoInfoDao.deleteById(photoInfo.photoId)
+    results += photoInfoExchangeDao.deleteById(photoInfo.exchangeId)
+    results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+    results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+    results += locationMapDao.deleteById(photoInfo.photoId)
+    results += galleryPhotoDao.deleteById(photoInfo.photoId)
 
-		val photoIds = filteredPhotoInfoList.map { it.photoId }
-		val exchangeIds = filteredPhotoInfoList.map { it.exchangeId }
-		val results = mutableListOf<Mono<Boolean>>()
+    return results.map { it.awaitFirst() }
+      .any { !it }
+  }
 
-		results += photoInfoDao.deleteAll(photoIds)
-		results += photoInfoExchangeDao.deleteAll(exchangeIds)
-		results += favouritedPhotoDao.deleteAll(photoIds)
-		results += reportedPhotoDao.deleteAll(photoIds)
-		results += locationMapDao.deleteAll(photoIds)
-		results += galleryPhotoDao.deleteAll(photoIds)
+  private suspend fun deletePhotosInternal(photoInfoList: List<PhotoInfo>): Boolean {
+    val filteredPhotoInfoList = photoInfoList.filter { !it.isEmpty() }
+    if (filteredPhotoInfoList.isEmpty()) {
+      return false
+    }
 
-		return results.map { it.awaitFirst() }
-			.any { !it }
-	}
+    val photoIds = filteredPhotoInfoList.map { it.photoId }
+    val exchangeIds = filteredPhotoInfoList.map { it.exchangeId }
+    val results = mutableListOf<Mono<Boolean>>()
 
-	suspend fun favouritePhoto(userId: String, photoName: String): FavouritePhotoResult {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				val photoId = photoInfoDao.getPhotoIdByName(photoName).awaitFirst()
+    results += photoInfoDao.deleteAll(photoIds)
+    results += photoInfoExchangeDao.deleteAll(exchangeIds)
+    results += favouritedPhotoDao.deleteAll(photoIds)
+    results += reportedPhotoDao.deleteAll(photoIds)
+    results += locationMapDao.deleteAll(photoIds)
+    results += galleryPhotoDao.deleteAll(photoIds)
 
-				return@withLock if (favouritedPhotoDao.isPhotoFavourited(userId, photoId).awaitFirst()) {
-					if (!favouritedPhotoDao.unfavouritePhoto(userId, photoId).awaitFirst()) {
-						return@withLock FavouritePhotoResult.Error()
-					}
+    return results.map { it.awaitFirst() }
+      .any { !it }
+  }
 
-					val favouritesCount = favouritedPhotoDao.countByPhotoId(photoId).awaitFirst()
-					FavouritePhotoResult.Unfavourited(favouritesCount)
-				} else {
-					val id = mongoSequenceDao.getNextFavouritedPhotoId().awaitFirst()
-					if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, userId, photoId)).awaitFirst()) {
-						return@withLock FavouritePhotoResult.Error()
-					}
+  suspend fun favouritePhoto(userId: String, photoName: String): FavouritePhotoResult {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        val photoId = photoInfoDao.getPhotoIdByName(photoName).awaitFirst()
 
-					val favouritesCount = favouritedPhotoDao.countByPhotoId(photoId).awaitFirst()
-					FavouritePhotoResult.Favourited(favouritesCount)
-				}
-			}
-		}
-	}
+        return@withLock if (favouritedPhotoDao.isPhotoFavourited(userId, photoId).awaitFirst()) {
+          if (!favouritedPhotoDao.unfavouritePhoto(userId, photoId).awaitFirst()) {
+            return@withLock FavouritePhotoResult.Error()
+          }
 
-	suspend fun reportPhoto(userId: String, photoName: String): ReportPhotoResult {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				val photoId = photoInfoDao.getPhotoIdByName(photoName).awaitFirst()
+          val favouritesCount = favouritedPhotoDao.countByPhotoId(photoId).awaitFirst()
+          FavouritePhotoResult.Unfavourited(favouritesCount)
+        } else {
+          val id = mongoSequenceDao.getNextFavouritedPhotoId().awaitFirst()
+          if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, userId, photoId)).awaitFirst()) {
+            return@withLock FavouritePhotoResult.Error()
+          }
 
-				return@withLock if (reportedPhotoDao.isPhotoReported(userId, photoId).awaitFirst()) {
-					if (!reportedPhotoDao.unreportPhoto(userId, photoId).awaitFirst()) {
-						return@withLock ReportPhotoResult.Error()
-					}
+          val favouritesCount = favouritedPhotoDao.countByPhotoId(photoId).awaitFirst()
+          FavouritePhotoResult.Favourited(favouritesCount)
+        }
+      }
+    }
+  }
 
-					ReportPhotoResult.Unreported()
-				} else {
+  suspend fun reportPhoto(userId: String, photoName: String): ReportPhotoResult {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        val photoId = photoInfoDao.getPhotoIdByName(photoName).awaitFirst()
 
-					val id = mongoSequenceDao.getNextReportedPhotoId().awaitFirst()
-					if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, userId, photoId)).awaitFirst()) {
-						return@withLock ReportPhotoResult.Error()
-					}
+        return@withLock if (reportedPhotoDao.isPhotoReported(userId, photoId).awaitFirst()) {
+          if (!reportedPhotoDao.unreportPhoto(userId, photoId).awaitFirst()) {
+            return@withLock ReportPhotoResult.Error()
+          }
 
-					ReportPhotoResult.Reported()
-				}
-			}
-		}
-	}
+          ReportPhotoResult.Unreported()
+        } else {
 
-	suspend fun findGalleryPhotos(lastUploadedOn: Long, count: Int): LinkedHashMap<Long, GalleryPhotoDto> {
+          val id = mongoSequenceDao.getNextReportedPhotoId().awaitFirst()
+          if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, userId, photoId)).awaitFirst()) {
+            return@withLock ReportPhotoResult.Error()
+          }
+
+          ReportPhotoResult.Reported()
+        }
+      }
+    }
+  }
+
+  suspend fun findGalleryPhotos(lastUploadedOn: Long, count: Int): LinkedHashMap<Long, GalleryPhotoDto> {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
@@ -350,135 +370,135 @@ open class PhotoInfoRepository(
     }
   }
 
-	suspend fun findGalleryPhotosInfo(userId: String, galleryPhotoIdList: List<Long>): LinkedHashMap<Long, GalleryPhotoInfoDto> {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				val resultMap = linkedMapOf<Long, GalleryPhotoInfoDto>()
+  suspend fun findGalleryPhotosInfo(userId: String, galleryPhotoIdList: List<Long>): LinkedHashMap<Long, GalleryPhotoInfoDto> {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        val resultMap = linkedMapOf<Long, GalleryPhotoInfoDto>()
 
-				val userFavouritedPhotosDeffered = favouritedPhotoDao.findMany(userId, galleryPhotoIdList)
-				val userReportedPhotosDeffered = reportedPhotoDao.findMany(userId, galleryPhotoIdList)
+        val userFavouritedPhotosDeffered = favouritedPhotoDao.findMany(userId, galleryPhotoIdList)
+        val userReportedPhotosDeffered = reportedPhotoDao.findMany(userId, galleryPhotoIdList)
 
-				val userFavouritedPhotos = userFavouritedPhotosDeffered.awaitFirst()
-				val userReportedPhotos = userReportedPhotosDeffered.awaitFirst()
+        val userFavouritedPhotos = userFavouritedPhotosDeffered.awaitFirst()
+        val userReportedPhotos = userReportedPhotosDeffered.awaitFirst()
 
-				for (favouritedPhoto in userFavouritedPhotos) {
-					resultMap.putIfAbsent(favouritedPhoto.photoId, GalleryPhotoInfoDto(favouritedPhoto.photoId))
-					resultMap[favouritedPhoto.photoId]!!.isFavourited = true
-				}
+        for (favouritedPhoto in userFavouritedPhotos) {
+          resultMap.putIfAbsent(favouritedPhoto.photoId, GalleryPhotoInfoDto(favouritedPhoto.photoId))
+          resultMap[favouritedPhoto.photoId]!!.isFavourited = true
+        }
 
-				for (reportedPhoto in userReportedPhotos) {
-					resultMap.putIfAbsent(reportedPhoto.photoId, GalleryPhotoInfoDto(reportedPhoto.photoId))
-					resultMap[reportedPhoto.photoId]!!.isReported = true
-				}
+        for (reportedPhoto in userReportedPhotos) {
+          resultMap.putIfAbsent(reportedPhoto.photoId, GalleryPhotoInfoDto(reportedPhoto.photoId))
+          resultMap[reportedPhoto.photoId]!!.isReported = true
+        }
 
-				return@withLock resultMap
-			}
-		}
-	}
+        return@withLock resultMap
+      }
+    }
+  }
 
-	suspend fun findPhotosWithReceiverByPhotoNamesList(userId: String, photoNameList: List<String>): List<Pair<PhotoInfo, PhotoInfo>> {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				val photoInfoList = photoInfoDao.findManyByUserIdAndPhotoNamesWithReceiver(userId, photoNameList).awaitFirst()
+  suspend fun findPhotosWithReceiverByPhotoNamesList(userId: String, photoNameList: List<String>): List<Pair<PhotoInfo, PhotoInfo>> {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        val photoInfoList = photoInfoDao.findManyByUserIdAndPhotoNamesWithReceiver(userId, photoNameList).awaitFirst()
 
-				val resultList = mutableListOf<Pair<PhotoInfo, PhotoInfo>>()
-				val uploaderUserIdList = photoInfoList.map { it.receiverUserId }
-				val exchangeIdList = photoInfoList.map { it.exchangeId }
+        val resultList = mutableListOf<Pair<PhotoInfo, PhotoInfo>>()
+        val uploaderUserIdList = photoInfoList.map { it.receiverUserId }
+        val exchangeIdList = photoInfoList.map { it.exchangeId }
 
-				val exchangedPhotoInfoList = photoInfoDao.findManyByUserIdAndExchangeId(uploaderUserIdList, exchangeIdList)
-					.awaitFirst()
+        val exchangedPhotoInfoList = photoInfoDao.findManyByUserIdAndExchangeId(uploaderUserIdList, exchangeIdList)
+          .awaitFirst()
 
-				val photoInfoMap = photoInfoList.associateBy { it.exchangeId }
-				val exchangedPhotoInfoMap = exchangedPhotoInfoList.associateBy { it.exchangeId }
+        val photoInfoMap = photoInfoList.associateBy { it.exchangeId }
+        val exchangedPhotoInfoMap = exchangedPhotoInfoList.associateBy { it.exchangeId }
 
-				if (photoInfoMap.isEmpty() || exchangedPhotoInfoMap.isEmpty()) {
-					return@withLock emptyList<Pair<PhotoInfo, PhotoInfo>>()
-				}
+        if (photoInfoMap.isEmpty() || exchangedPhotoInfoMap.isEmpty()) {
+          return@withLock emptyList<Pair<PhotoInfo, PhotoInfo>>()
+        }
 
-				for (photoInfo in photoInfoList) {
-					if (!photoInfoMap.containsKey(photoInfo.exchangeId) || !exchangedPhotoInfoMap.containsKey(photoInfo.exchangeId)) {
-						continue
-					}
+        for (photoInfo in photoInfoList) {
+          if (!photoInfoMap.containsKey(photoInfo.exchangeId) || !exchangedPhotoInfoMap.containsKey(photoInfo.exchangeId)) {
+            continue
+          }
 
-					resultList += Pair(
-						photoInfoMap[photoInfo.exchangeId]!!,
-						exchangedPhotoInfoMap[photoInfo.exchangeId]!!
-					)
-				}
+          resultList += Pair(
+            photoInfoMap[photoInfo.exchangeId]!!,
+            exchangedPhotoInfoMap[photoInfo.exchangeId]!!
+          )
+        }
 
-				return@withLock resultList
-			}
-		}
-	}
+        return@withLock resultList
+      }
+    }
+  }
 
-	suspend fun findPhotosWithReceiverByPhotoIdsList(userId: String, photoIdList: List<Long>): List<Pair<PhotoInfo, PhotoInfo>> {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				val photoInfoList = photoInfoDao.findManyByUserIdAndPhotoIds(userId, photoIdList, false).awaitFirst()
-				val resultList = mutableListOf<Pair<PhotoInfo, PhotoInfo>>()
+  suspend fun findPhotosWithReceiverByPhotoIdsList(userId: String, photoIdList: List<Long>): List<Pair<PhotoInfo, PhotoInfo>> {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        val photoInfoList = photoInfoDao.findManyByUserIdAndPhotoIds(userId, photoIdList, false).awaitFirst()
+        val resultList = mutableListOf<Pair<PhotoInfo, PhotoInfo>>()
 
-				val uploaderUserIdList = photoInfoList.map { it.receiverUserId }
-				val exchangeIdList = photoInfoList.map { it.exchangeId }
+        val uploaderUserIdList = photoInfoList.map { it.receiverUserId }
+        val exchangeIdList = photoInfoList.map { it.exchangeId }
 
-				val exchangedPhotoInfoList = photoInfoDao.findManyByUserIdAndExchangeId(uploaderUserIdList, exchangeIdList)
-					.awaitFirst()
+        val exchangedPhotoInfoList = photoInfoDao.findManyByUserIdAndExchangeId(uploaderUserIdList, exchangeIdList)
+          .awaitFirst()
 
-				val photoInfoMap = photoInfoList.associateBy { it.exchangeId }
-				val exchangedPhotoInfoMap = exchangedPhotoInfoList.associateBy { it.exchangeId }
+        val photoInfoMap = photoInfoList.associateBy { it.exchangeId }
+        val exchangedPhotoInfoMap = exchangedPhotoInfoList.associateBy { it.exchangeId }
 
-				for (photoInfo in photoInfoList) {
-					if (!photoInfoMap.containsKey(photoInfo.exchangeId) || !exchangedPhotoInfoMap.containsKey(photoInfo.exchangeId)) {
-						continue
-					}
+        for (photoInfo in photoInfoList) {
+          if (!photoInfoMap.containsKey(photoInfo.exchangeId) || !exchangedPhotoInfoMap.containsKey(photoInfo.exchangeId)) {
+            continue
+          }
 
-					resultList += Pair(
-						photoInfoMap[photoInfo.exchangeId]!!,
-						exchangedPhotoInfoMap[photoInfo.exchangeId]!!
-					)
-				}
+          resultList += Pair(
+            photoInfoMap[photoInfo.exchangeId]!!,
+            exchangedPhotoInfoMap[photoInfo.exchangeId]!!
+          )
+        }
 
-				return@withLock resultList
-			}
-		}
-	}
+        return@withLock resultList
+      }
+    }
+  }
 
-	suspend fun updateSetLocationMapId(photoId: Long, locationMapId: Long): Boolean {
-		return withContext(coroutineContext) {
-			return@withContext mutex.withLock {
-				return@withLock photoInfoDao.updateSetLocationMapId(photoId, locationMapId).awaitFirst()
-			}
-		}
-	}
+  suspend fun updateSetLocationMapId(photoId: Long, locationMapId: Long): Boolean {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        return@withLock photoInfoDao.updateSetLocationMapId(photoId, locationMapId).awaitFirst()
+      }
+    }
+  }
 
-	data class PhotoInfoWithLocation(
-		var photoInfo: PhotoInfo,
-		var lon: Double,
-		var lat: Double
-	)
+  data class PhotoInfoWithLocation(
+    var photoInfo: PhotoInfo,
+    var lon: Double,
+    var lat: Double
+  )
 
-	data class GalleryPhotoInfoDto(
-		var galleryPhotoId: Long,
-		var isFavourited: Boolean = false,
-		var isReported: Boolean = false
-	)
+  data class GalleryPhotoInfoDto(
+    var galleryPhotoId: Long,
+    var isFavourited: Boolean = false,
+    var isReported: Boolean = false
+  )
 
-	data class GalleryPhotoDto(
-		val photoInfo: PhotoInfo,
-		val galleryPhoto: GalleryPhoto,
-		val favouritesCount: Long
-	)
+  data class GalleryPhotoDto(
+    val photoInfo: PhotoInfo,
+    val galleryPhoto: GalleryPhoto,
+    val favouritesCount: Long
+  )
 
-	sealed class ReportPhotoResult {
-		class Reported : ReportPhotoResult()
-		class Unreported : ReportPhotoResult()
-		class Error : ReportPhotoResult()
-	}
+  sealed class ReportPhotoResult {
+    class Reported : ReportPhotoResult()
+    class Unreported : ReportPhotoResult()
+    class Error : ReportPhotoResult()
+  }
 
-	sealed class FavouritePhotoResult {
-		class Favourited(val count: Long) : FavouritePhotoResult()
-		class Unfavourited(val count: Long) : FavouritePhotoResult()
-		class Error : FavouritePhotoResult()
-	}
+  sealed class FavouritePhotoResult {
+    class Favourited(val count: Long) : FavouritePhotoResult()
+    class Unfavourited(val count: Long) : FavouritePhotoResult()
+    class Error : FavouritePhotoResult()
+  }
 }
 
 

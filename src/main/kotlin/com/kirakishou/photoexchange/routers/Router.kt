@@ -5,7 +5,6 @@ import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoH
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotoIdsHandler
 import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotosHandler
-import com.kirakishou.photoexchange.handlers.uploaded_photos.GetUploadedPhotoIdsHandler
 import com.kirakishou.photoexchange.handlers.uploaded_photos.GetUploadedPhotosHandler
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.server.router
@@ -19,7 +18,6 @@ class Router(
 	private val reportPhotoHandler: ReportPhotoHandler,
 	private val getUserIdHandler: GetUserIdHandler,
 	private val getGalleryPhotoInfoHandler: GetGalleryPhotoInfoHandler,
-	private val getUploadedPhotoIdsHandler: GetUploadedPhotoIdsHandler,
 	private val getUploadedPhotosHandler: GetUploadedPhotosHandler,
 	private val getReceivedPhotoIdsHandler: GetReceivedPhotoIdsHandler,
 	private val getReceivedPhotosHandler: GetReceivedPhotosHandler,
@@ -40,8 +38,7 @@ class Router(
 					GET("/get_page_of_gallery_photos/{last_uploaded_on}/{count}", getGalleryPhotosHandler::handle)
 					GET("/get_gallery_photo_info/{user_id}/{photo_ids}", getGalleryPhotoInfoHandler::handle)
 
-					GET("/get_uploaded_photo_ids/{user_id}/{last_id}/{count}", getUploadedPhotoIdsHandler::handle)
-					GET("/get_uploaded_photos/{user_id}/{photo_ids}", getUploadedPhotosHandler::handle)
+					GET("/get_page_of_uploaded_photos/{user_id}/{last_uploaded_on}/{count}", getUploadedPhotosHandler::handle)
 
 					GET("/get_received_photo_ids/{user_id}/{last_id}/{count}", getReceivedPhotoIdsHandler::handle)
 					GET("/get_received_photos/{user_id}/{photo_ids}", getReceivedPhotosHandler::handle)

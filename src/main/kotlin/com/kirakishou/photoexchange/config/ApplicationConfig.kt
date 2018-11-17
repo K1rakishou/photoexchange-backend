@@ -11,7 +11,6 @@ import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoH
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotoIdsHandler
 import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotosHandler
-import com.kirakishou.photoexchange.handlers.uploaded_photos.GetUploadedPhotoIdsHandler
 import com.kirakishou.photoexchange.handlers.uploaded_photos.GetUploadedPhotosHandler
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.GeneratorService
@@ -68,7 +67,6 @@ fun myBeans() = beans {
 	bean<FavouritePhotoHandler>()
 	bean<ReportPhotoHandler>()
 	bean<GetUserIdHandler>()
-	bean<GetUploadedPhotoIdsHandler>()
 	bean<GetUploadedPhotosHandler>()
 	bean<GetReceivedPhotoIdsHandler>()
 	bean<GetReceivedPhotosHandler>()

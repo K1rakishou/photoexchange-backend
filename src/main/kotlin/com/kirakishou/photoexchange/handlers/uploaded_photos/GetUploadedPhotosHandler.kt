@@ -1,16 +1,12 @@
 package com.kirakishou.photoexchange.handlers.uploaded_photos
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.handlers.AbstractWebHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.uploaded_photos.GetUploadedPhotosResponse
-import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.util.Utils
-import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -20,72 +16,64 @@ import reactor.core.publisher.Mono
 
 class GetUploadedPhotosHandler(
 	jsonConverter: JsonConverterService,
-	private val photoInfoRepository: PhotoInfoRepository,
-	private val photoInfoExchangeRepository: PhotoInfoExchangeRepository
+	private val photoInfoRepository: PhotoInfoRepository
 ) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(GetUploadedPhotosHandler::class.java)
-	private val USER_ID_PATH_VARIABLE = "user_id"
-	private val PHOTO_IDS_PATH_VARIABLE = "photo_ids"
+	private val USER_ID = "user_id"
+	private val LAST_UPLOADED_ON = "last_uploaded_on"
+	private val COUNT = "count"
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		return mono {
 			logger.debug("New GetUploadedPhotos request")
 
 			try {
-				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_IDS_PATH_VARIABLE)) {
+				if (!request.containsAllPathVars(USER_ID, LAST_UPLOADED_ON, COUNT)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						GetUploadedPhotosResponse.fail(ErrorCode.GetUploadedPhotosErrors.BadRequest))
 				}
 
-				val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
-				val photoIdsString = request.pathVariable(PHOTO_IDS_PATH_VARIABLE)
+				val lastUploadedOn = try {
+					request.pathVariable(LAST_UPLOADED_ON).toLong()
+				} catch (error: Throwable) {
+					error.printStackTrace()
 
-				val uploadedPhotoIds = Utils.parsePhotoIds(photoIdsString,
-					ServerSettings.MAX_UPLOADED_PHOTOS_PER_REQUEST_COUNT,
-					ServerSettings.PHOTOS_DELIMITER)
-
-				if (uploadedPhotoIds.isEmpty()) {
-					logger.debug("uploadedPhotoIds is empty")
+					logger.debug("Bad param last_uploaded_on (${request.pathVariable(LAST_UPLOADED_ON)})")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						GetUploadedPhotosResponse.fail(ErrorCode.GetUploadedPhotosErrors.NoPhotosInRequest))
+						GetUploadedPhotosResponse.fail(ErrorCode.GetUploadedPhotosErrors.BadRequest))
 				}
 
-				val uploadedPhotos = photoInfoRepository.findManyPhotosFromUploader(userId, uploadedPhotoIds)
-				val exchangeIdList = uploadedPhotos.map { it.photoInfo.exchangeId }
-				val photoExchangeMap = photoInfoExchangeRepository.findMany(exchangeIdList).awaitFirst()
-					.associateBy { it.id }
+				val count = try {
+					request.pathVariable(COUNT)
+						.toInt()
+						.coerceIn(ServerSettings.MIN_UPLOADED_PHOTOS_PER_REQUEST_COUNT, ServerSettings.MAX_UPLOADED_PHOTOS_PER_REQUEST_COUNT)
+				} catch (error: Throwable) {
+					error.printStackTrace()
 
-				val uploadedPhotosDataList = getUploadedPhotos(uploadedPhotos, photoExchangeMap)
+					logger.debug("Bad param count (${request.pathVariable(COUNT)})")
+					return@mono formatResponse(HttpStatus.BAD_REQUEST,
+						GetUploadedPhotosResponse.fail(ErrorCode.GetUploadedPhotosErrors.BadRequest))
+				}
 
+        val userId = request.pathVariable(USER_ID)
+        if (userId.isNullOrEmpty()) {
+          logger.debug("Bad param userId (${request.pathVariable(USER_ID)})")
+          return@mono formatResponse(HttpStatus.BAD_REQUEST,
+            GetUploadedPhotosResponse.fail(ErrorCode.GetUploadedPhotosErrors.BadRequest))
+        }
+
+				val uploadedPhotos = photoInfoRepository.findPageOfUploadedPhotos(userId, lastUploadedOn, count)
 				logger.debug("Found ${uploadedPhotos.size} uploaded photos")
+
 				return@mono formatResponse(HttpStatus.OK,
-					GetUploadedPhotosResponse.success(uploadedPhotosDataList))
+					GetUploadedPhotosResponse.success(uploadedPhotos))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 					GetUploadedPhotosResponse.fail(ErrorCode.GetUploadedPhotosErrors.UnknownError))
 			}
 		}.flatMap { it }
-	}
-
-	private fun getUploadedPhotos(
-		uploadedPhotos: List<PhotoInfoRepository.PhotoInfoWithLocation>,
-		photoExchangeMap: Map<Long, PhotoInfoExchange>
-	): List<GetUploadedPhotosResponse.UploadedPhoto> {
-		return uploadedPhotos.map { uploadedPhoto ->
-			val photoInfoExchange = photoExchangeMap.getOrElse(uploadedPhoto.photoInfo.exchangeId, { PhotoInfoExchange.empty() })
-			val hasReceiverInfo = photoInfoExchange
-				.takeIf { !it.isEmpty() }?.receiverUserId?.isNotEmpty() ?: false
-
-			GetUploadedPhotosResponse.UploadedPhoto(
-				uploadedPhoto.photoInfo.photoId,
-				uploadedPhoto.photoInfo.photoName,
-				uploadedPhoto.lon,
-				uploadedPhoto.lat,
-				hasReceiverInfo,
-				uploadedPhoto.photoInfo.uploadedOn)
-		}
 	}
 }

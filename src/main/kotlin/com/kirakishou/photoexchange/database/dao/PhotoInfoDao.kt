@@ -110,6 +110,25 @@ open class PhotoInfoDao(
 			.onErrorReturn(emptyList())
 	}
 
+	fun findPageOfUploadedPhotos(userId: String, lastUploadedOn: Long, count: Int): Mono<List<PhotoInfo>> {
+    val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lte(lastUploadedOn))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
+      .limit(count)
+
+    return template.find(query, PhotoInfo::class.java)
+      .collectList()
+      .defaultIfEmpty(emptyList())
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(emptyList())
+  }
+
+  fun findPageOfReceivedPhotos(userId: String, lastUploadedOn: Long, count: Int): Mono<List<PhotoInfo>> {
+    //query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_USER_ID).`is`(userId))
+    TODO("implement")
+  }
+
+  //TODO: remove
 	fun findManyByUserIdAndPhotoIds(userId: String, photoIdList: List<Long>, searchForUploaded: Boolean): Mono<List<PhotoInfo>> {
 		val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
