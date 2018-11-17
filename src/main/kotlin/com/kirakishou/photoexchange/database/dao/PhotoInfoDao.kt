@@ -65,6 +65,44 @@ open class PhotoInfoDao(
       .onErrorReturn(false)
   }
 
+  fun findPhotosByNames(userId: String, photoNameList: List<String>): Mono<List<PhotoInfo>> {
+    val query = Query()
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`in`(photoNameList))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_PHOTO_ID).ne(PhotoInfo.EMPTY_PHOTO_ID))
+      .limit(photoNameList.size)
+
+    return template.find(query, PhotoInfo::class.java)
+      .collectList()
+      .defaultIfEmpty(emptyList())
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(emptyList())
+  }
+
+  fun findManyByIds(photoIdList: List<Long>, sortOrder: SortOrder = SortOrder.Unsorted): Mono<List<PhotoInfo>> {
+    val query = when (sortOrder) {
+      PhotoInfoDao.SortOrder.Descending -> {
+        Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
+
+      }
+      PhotoInfoDao.SortOrder.Ascending -> {
+        Query().with(Sort(Sort.Direction.ASC, PhotoInfo.Mongo.Field.PHOTO_ID))
+      }
+      PhotoInfoDao.SortOrder.Unsorted -> Query()
+    }
+
+    query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
+      .limit(photoIdList.size)
+
+    return template.find(query, PhotoInfo::class.java)
+      .collectList()
+      .defaultIfEmpty(emptyList())
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(emptyList())
+  }
+
+  //======================
+
 	fun findByUploaderId(uploaderPhotoId: Long): Mono<PhotoInfo> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(uploaderPhotoId))
@@ -101,28 +139,6 @@ open class PhotoInfoDao(
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`in`(photoNames))
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.LOCATION_MAP_ID).ne(PhotoInfo.EMPTY_LOCATION_MAP_ID))
-
-		return template.find(query, PhotoInfo::class.java)
-			.collectList()
-			.defaultIfEmpty(emptyList())
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(emptyList())
-	}
-
-	fun findManyByIds(photoIdList: List<Long>, sortOrder: SortOrder = SortOrder.Unsorted): Mono<List<PhotoInfo>> {
-		val query = when (sortOrder) {
-			PhotoInfoDao.SortOrder.Descending -> {
-				Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
-
-			}
-			PhotoInfoDao.SortOrder.Ascending -> {
-				Query().with(Sort(Sort.Direction.ASC, PhotoInfo.Mongo.Field.PHOTO_ID))
-			}
-			PhotoInfoDao.SortOrder.Unsorted -> Query()
-		}
-
-		query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
-			.limit(photoIdList.size)
 
 		return template.find(query, PhotoInfo::class.java)
 			.collectList()

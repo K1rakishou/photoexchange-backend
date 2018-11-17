@@ -2,6 +2,7 @@ package com.kirakishou.photoexchange.database.repository
 
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.model.exception.ExchangeException
+import com.kirakishou.photoexchange.model.net.response.ReceivePhotosResponse
 import com.kirakishou.photoexchange.model.net.response.received_photos.GetReceivedPhotosResponse
 import com.kirakishou.photoexchange.model.net.response.uploaded_photos.GetUploadedPhotosResponse
 import com.kirakishou.photoexchange.model.repo.*
@@ -354,37 +355,28 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun findPhotosWithReceiverByPhotoNamesList(userId: String, photoNameList: List<String>): List<Pair<PhotoInfo, PhotoInfo>> {
+  suspend fun findPhotosWithReceiverByPhotoNamesList(userId: String, photoNameList: List<String>): List<ReceivePhotosResponse.ReceivedPhoto> {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        val photoInfoList = photoInfoDao.findManyByUserIdAndPhotoNamesWithReceiver(userId, photoNameList).awaitFirst()
+        val uploaderPhotos = photoInfoDao.findPhotosByNames(userId, photoNameList).awaitFirst()
+        val receiverPhotoIdList = uploaderPhotos.map { it.receiverPhotoId }
 
-        val resultList = mutableListOf<Pair<PhotoInfo, PhotoInfo>>()
-        val uploaderUserIdList = photoInfoList.map { it.receiverUserId }
-        val exchangeIdList = photoInfoList.map { it.exchangeId }
+        val receiverPhotos = photoInfoDao.findManyByIds(receiverPhotoIdList).awaitFirst()
+        val result = mutableListOf<ReceivePhotosResponse.ReceivedPhoto>()
 
-        val exchangedPhotoInfoList = photoInfoDao.findManyByUserIdAndExchangeId(uploaderUserIdList, exchangeIdList)
-          .awaitFirst()
+        for (receiverPhoto in receiverPhotos) {
+          val uploaderPhoto = uploaderPhotos.first { it.photoId == receiverPhoto.receiverPhotoId }
 
-        val photoInfoMap = photoInfoList.associateBy { it.exchangeId }
-        val exchangedPhotoInfoMap = exchangedPhotoInfoList.associateBy { it.exchangeId }
-
-        if (photoInfoMap.isEmpty() || exchangedPhotoInfoMap.isEmpty()) {
-          return@withLock emptyList<Pair<PhotoInfo, PhotoInfo>>()
-        }
-
-        for (photoInfo in photoInfoList) {
-          if (!photoInfoMap.containsKey(photoInfo.exchangeId) || !exchangedPhotoInfoMap.containsKey(photoInfo.exchangeId)) {
-            continue
-          }
-
-          resultList += Pair(
-            photoInfoMap[photoInfo.exchangeId]!!,
-            exchangedPhotoInfoMap[photoInfo.exchangeId]!!
+          result += ReceivePhotosResponse.ReceivedPhoto(
+            receiverPhoto.photoId,
+            uploaderPhoto.photoName,
+            receiverPhoto.photoName,
+            receiverPhoto.lon,
+            receiverPhoto.lat
           )
         }
 
-        return@withLock resultList
+        return@withLock result
       }
     }
   }
