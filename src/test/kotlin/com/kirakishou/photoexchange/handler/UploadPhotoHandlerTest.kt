@@ -1,12 +1,10 @@
 package com.kirakishou.photoexchange.handler
 
-import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
-import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import junit.framework.Assert.assertEquals
@@ -518,7 +516,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			.block()
 
 		runBlocking {
-			val allPhotoInfo = photoInfoDao.findAll().awaitFirst()
+			val allPhotoInfo = photoInfoDao.testFindAll().awaitFirst()
 			assertEquals(300, allPhotoInfo.size)
 
 			for (photoInfo in allPhotoInfo) {

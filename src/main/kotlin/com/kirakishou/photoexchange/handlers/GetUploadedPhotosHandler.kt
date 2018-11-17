@@ -1,9 +1,8 @@
-package com.kirakishou.photoexchange.handlers.uploaded_photos
+package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
-import com.kirakishou.photoexchange.handlers.AbstractWebHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.uploaded_photos.GetUploadedPhotosResponse
 import com.kirakishou.photoexchange.service.JsonConverterService

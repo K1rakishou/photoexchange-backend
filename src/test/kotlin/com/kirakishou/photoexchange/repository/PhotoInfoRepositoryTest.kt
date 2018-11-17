@@ -1,7 +1,6 @@
 package com.kirakishou.photoexchange.repository
 
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
-import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking

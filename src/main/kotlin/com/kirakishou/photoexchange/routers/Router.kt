@@ -3,9 +3,8 @@ package com.kirakishou.photoexchange.routers
 import com.kirakishou.photoexchange.handlers.*
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoHandler
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
-import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotoIdsHandler
-import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotosHandler
-import com.kirakishou.photoexchange.handlers.uploaded_photos.GetUploadedPhotosHandler
+import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
+import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.server.router
 
@@ -19,7 +18,6 @@ class Router(
 	private val getUserIdHandler: GetUserIdHandler,
 	private val getGalleryPhotoInfoHandler: GetGalleryPhotoInfoHandler,
 	private val getUploadedPhotosHandler: GetUploadedPhotosHandler,
-	private val getReceivedPhotoIdsHandler: GetReceivedPhotoIdsHandler,
 	private val getReceivedPhotosHandler: GetReceivedPhotosHandler,
 	private val getStaticMapHandler: GetStaticMapHandler,
 	private val checkAccountExistsHandler: CheckAccountExistsHandler
@@ -35,13 +33,10 @@ class Router(
 					GET("/get_user_id", getUserIdHandler::handle)
 					GET("/receive_photos/{photo_names}/{user_id}", receivePhotosHandler::handle)
 
-					GET("/get_page_of_gallery_photos/{last_uploaded_on}/{count}", getGalleryPhotosHandler::handle)
 					GET("/get_gallery_photo_info/{user_id}/{photo_ids}", getGalleryPhotoInfoHandler::handle)
-
+          GET("/get_page_of_gallery_photos/{last_uploaded_on}/{count}", getGalleryPhotosHandler::handle)
 					GET("/get_page_of_uploaded_photos/{user_id}/{last_uploaded_on}/{count}", getUploadedPhotosHandler::handle)
-
-					GET("/get_received_photo_ids/{user_id}/{last_id}/{count}", getReceivedPhotoIdsHandler::handle)
-					GET("/get_received_photos/{user_id}/{photo_ids}", getReceivedPhotosHandler::handle)
+					GET("/get_page_of_received_photos/{user_id}/{last_uploaded_on}/{count}", getReceivedPhotosHandler::handle)
 
 					GET("/check_account_exists/{user_id}", checkAccountExistsHandler::handle)
 

@@ -9,9 +9,8 @@ import com.kirakishou.photoexchange.database.repository.*
 import com.kirakishou.photoexchange.handlers.*
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoHandler
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
-import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotoIdsHandler
-import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotosHandler
-import com.kirakishou.photoexchange.handlers.uploaded_photos.GetUploadedPhotosHandler
+import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
+import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -68,7 +67,6 @@ fun myBeans() = beans {
 	bean<ReportPhotoHandler>()
 	bean<GetUserIdHandler>()
 	bean<GetUploadedPhotosHandler>()
-	bean<GetReceivedPhotoIdsHandler>()
 	bean<GetReceivedPhotosHandler>()
 	bean<GetStaticMapHandler>()
 	bean<CheckAccountExistsHandler>()

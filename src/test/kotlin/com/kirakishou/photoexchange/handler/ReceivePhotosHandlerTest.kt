@@ -5,7 +5,6 @@ import com.kirakishou.photoexchange.handlers.ReceivePhotosHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.response.ReceivePhotosResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
-import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
 import com.kirakishou.photoexchange.service.JsonConverterService
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.reactive.awaitFirst
