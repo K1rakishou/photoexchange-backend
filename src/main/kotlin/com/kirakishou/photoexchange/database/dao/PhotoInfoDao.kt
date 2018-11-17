@@ -114,6 +114,17 @@ open class PhotoInfoDao(
       .onErrorReturn(emptyList())
   }
 
+  fun getPhotoIdByName(photoName: String): Mono<Long> {
+    val query = Query()
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
+
+    return template.findOne(query, PhotoInfo::class.java)
+      .defaultIfEmpty(PhotoInfo.empty())
+      .map { it.photoId }
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(-1L)
+  }
+
   //======================
 
 	fun findByUploaderId(uploaderPhotoId: Long): Mono<PhotoInfo> {
@@ -294,16 +305,7 @@ open class PhotoInfoDao(
 			.onErrorReturn(false)
 	}
 
-	fun getPhotoIdByName(photoName: String): Mono<Long> {
-		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
-		return template.findOne(query, PhotoInfo::class.java)
-			.defaultIfEmpty(PhotoInfo.empty())
-			.map { it.photoId }
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(-1L)
-	}
 
   /**
    * For test purposes
