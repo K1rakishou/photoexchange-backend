@@ -46,8 +46,12 @@ data class PhotoInfo(
 	}
 
 	companion object {
-
-		const val EMPTY_PHOTO_ID = -1L
+    //This is a default exchangedPhotoId when photo is uploading.
+    //This is used so other uploading request wouldn't be able to find this photo to do the exchange
+    //Upon successful exchange exchangedPhotoId is set to theirPhoto.photoId
+    //Upon unsuccessful exchange (when there are no photos to exchange with) exchangedPhotoId is set to EMPTY_PHOTO_ID
+    const val PHOTO_IS_EXCHANGING = -1L
+    const val EMPTY_PHOTO_ID = -2L
 		const val EMPTY_LOCATION_MAP_ID = -1L
 
 		fun empty(): PhotoInfo {
@@ -55,13 +59,13 @@ data class PhotoInfo(
 		}
 
 		fun create(userId: String, photoName: String, isPublic: Boolean, lon: Double, lat: Double, time: Long): PhotoInfo {
-			return PhotoInfo(EMPTY_PHOTO_ID, EMPTY_PHOTO_ID, EMPTY_LOCATION_MAP_ID, userId, photoName, isPublic, lon, lat, time)
+			return PhotoInfo(EMPTY_PHOTO_ID, PHOTO_IS_EXCHANGING, EMPTY_LOCATION_MAP_ID, userId, photoName, isPublic, lon, lat, time)
 		}
 	}
 
 	object Mongo {
 		object Field {
-			const val PHOTO_ID = "photo_id"
+			const val PHOTO_ID = "_id"
 			const val EXCHANGED_PHOTO_ID = "exchanged_photo_id"
 			const val USER_ID = "user_id"
 			const val PHOTO_NAME = "photo_name"

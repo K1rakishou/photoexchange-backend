@@ -40,7 +40,6 @@ abstract class AbstractHandlerTest {
 
 	lateinit var mongoSequenceDao: MongoSequenceDao
 	lateinit var photoInfoDao: PhotoInfoDao
-	lateinit var photoInfoExchangeDao: PhotoInfoExchangeDao
 	lateinit var galleryPhotoDao: GalleryPhotoDao
 	lateinit var favouritedPhotoDao: FavouritedPhotoDao
 	lateinit var reportedPhotoDao: ReportedPhotoDao
@@ -50,7 +49,6 @@ abstract class AbstractHandlerTest {
 	lateinit var staticMapDownloaderService: StaticMapDownloaderService
 	lateinit var locationMapRepository: LocationMapRepository
 	lateinit var photoInfoRepository: PhotoInfoRepository
-	lateinit var photoInfoExchangeRepository: PhotoInfoExchangeRepository
 
 	fun init() {
 		jsonConverterService = JsonConverterService(gson)
@@ -64,10 +62,6 @@ abstract class AbstractHandlerTest {
 			it.create()
 		}
 		photoInfoDao = PhotoInfoDao(template).also {
-			it.clear()
-			it.create()
-		}
-		photoInfoExchangeDao = PhotoInfoExchangeDao(template).also {
 			it.clear()
 			it.create()
 		}
@@ -97,18 +91,12 @@ abstract class AbstractHandlerTest {
 		photoInfoRepository = PhotoInfoRepository(
 			mongoSequenceDao,
 			photoInfoDao,
-			photoInfoExchangeDao,
 			galleryPhotoDao,
 			favouritedPhotoDao,
 			reportedPhotoDao,
 			userInfoDao,
 			locationMapDao,
 			generator
-		)
-
-		photoInfoExchangeRepository = PhotoInfoExchangeRepository(
-			mongoSequenceDao,
-			photoInfoExchangeDao
 		)
 
 		locationMapRepository = LocationMapRepository(
@@ -122,7 +110,6 @@ abstract class AbstractHandlerTest {
 	fun clear() {
 		mongoSequenceDao.clear()
 		photoInfoDao.clear()
-		photoInfoExchangeDao.clear()
 		galleryPhotoDao.clear()
 		favouritedPhotoDao.clear()
 		reportedPhotoDao.clear()

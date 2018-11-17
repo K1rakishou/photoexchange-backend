@@ -33,10 +33,26 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).ne(userId))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).`is`(PhotoInfo.EMPTY_PHOTO_ID))
 
-    return template.findOne(query, PhotoInfo::class.java)
+    val update = Update()
+      .set(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID, PhotoInfo.PHOTO_IS_EXCHANGING)
+
+    return template.findAndModify(query, update, PhotoInfo::class.java)
       .defaultIfEmpty(PhotoInfo.empty())
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(PhotoInfo.empty())
+  }
+
+  fun resetVacantPhoto(photoId: Long): Mono<Boolean> {
+    val query = Query()
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+    val update = Update()
+      .set(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID, PhotoInfo.EMPTY_PHOTO_ID)
+
+    return template.updateFirst(query, update, PhotoInfo::class.java)
+      .map { updateResult -> updateResult.wasAcknowledged() }
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(false)
   }
 
   fun updatePhotoSetReceiverId(photoId: Long, receiverId: Long): Mono<Boolean> {
@@ -70,6 +86,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`in`(photoNameList))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).ne(PhotoInfo.EMPTY_PHOTO_ID))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.LOCATION_MAP_ID).ne(PhotoInfo.EMPTY_LOCATION_MAP_ID))
       .limit(photoNameList.size)
 
     return template.find(query, PhotoInfo::class.java)
@@ -125,9 +142,7 @@ open class PhotoInfoDao(
       .onErrorReturn(-1L)
   }
 
-  //======================
-
-	fun findByUploaderId(uploaderPhotoId: Long): Mono<PhotoInfo> {
+	fun findById(uploaderPhotoId: Long): Mono<PhotoInfo> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(uploaderPhotoId))
 
@@ -136,16 +151,6 @@ open class PhotoInfoDao(
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(PhotoInfo.empty())
 	}
-
-  fun findByReceiverId(receiverPhotoId: Long): Mono<PhotoInfo> {
-    val query = Query()
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).`is`(receiverPhotoId))
-
-    return template.findOne(query, PhotoInfo::class.java)
-      .defaultIfEmpty(PhotoInfo.empty())
-      .doOnError { error -> logger.error("DB error", error) }
-      .onErrorReturn(PhotoInfo.empty())
-  }
 
 	fun findOneByUserIdAndPhotoName(userId: String, photoName: String): Mono<PhotoInfo> {
 		val query = Query()
@@ -158,37 +163,10 @@ open class PhotoInfoDao(
 			.onErrorReturn(PhotoInfo.empty())
 	}
 
-	fun findManyUserPhotosWithMap(userId: String, photoNames: List<String>): Mono<List<PhotoInfo>> {
-		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`in`(photoNames))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.LOCATION_MAP_ID).ne(PhotoInfo.EMPTY_LOCATION_MAP_ID))
-
-		return template.find(query, PhotoInfo::class.java)
-			.collectList()
-			.defaultIfEmpty(emptyList())
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(emptyList())
-	}
-
-	fun findPageOfUploadedPhotos(userId: String, lastUploadedOn: Long, count: Int): Mono<List<PhotoInfo>> {
-    val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lte(lastUploadedOn))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
-      .limit(count)
-
-    return template.find(query, PhotoInfo::class.java)
-      .collectList()
-      .defaultIfEmpty(emptyList())
-      .doOnError { error -> logger.error("DB error", error) }
-      .onErrorReturn(emptyList())
-  }
-
 	fun findOlderThan(time: Long): Mono<List<PhotoInfo>> {
 		val query = Query()
 			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(time))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).ne(""))
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_USER_ID).ne(""))
+			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).ne(PhotoInfo.EMPTY_PHOTO_ID))
 
 		return template.find(query, PhotoInfo::class.java)
 			.collectList()
@@ -197,70 +175,6 @@ open class PhotoInfoDao(
 			.onErrorReturn(emptyList())
 	}
 
-	open fun updateSetExchangeId(photoId: Long, exchangeId: Long): Mono<Boolean> {
-		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
-
-		val update = Update()
-			.set(PhotoInfo.Mongo.Field.EXCHANGE_ID, exchangeId)
-
-		return template.updateFirst(query, update, PhotoInfo::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() }
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(false)
-	}
-
-	open fun updateSetReceiverId(photoId: Long, receiverUserId: String): Mono<Boolean> {
-		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
-
-		val update = Update()
-			.set(PhotoInfo.Mongo.Field.RECEIVER_USER_ID, receiverUserId)
-
-		return template.updateFirst(query, update, PhotoInfo::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() }
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(false)
-	}
-
-	open fun updateSetUploadedOn(photoId: Long, uploadedOn: Long): Mono<Boolean> {
-		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
-
-		val update = Update()
-			.set(PhotoInfo.Mongo.Field.UPLOADED_ON, uploadedOn)
-
-		return template.updateFirst(query, update, PhotoInfo::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() }
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(false)
-	}
-
-	fun updateResetReceivedUserId(photoId: Long): Mono<Boolean> {
-		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
-
-		val update = Update()
-			.set(PhotoInfo.Mongo.Field.RECEIVER_USER_ID, "")
-
-		return template.updateFirst(query, update, PhotoInfo::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() }
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(false)
-	}
-
-	fun updateResetExchangeId(photoId: Long): Mono<Boolean> {
-		val query = Query()
-			.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
-
-		val update = Update()
-			.set(PhotoInfo.Mongo.Field.EXCHANGE_ID, -1L)
-
-		return template.updateFirst(query, update, PhotoInfo::class.java)
-			.map { updateResult -> updateResult.wasAcknowledged() }
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(false)
-	}
 
 	fun updateSetLocationMapId(photoId: Long, locationMapId: Long): Mono<Boolean> {
 		val query = Query()

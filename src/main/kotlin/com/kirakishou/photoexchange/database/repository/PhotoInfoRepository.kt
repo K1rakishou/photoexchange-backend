@@ -19,7 +19,6 @@ import reactor.core.publisher.Mono
 open class PhotoInfoRepository(
   private val mongoSequenceDao: MongoSequenceDao,
   private val photoInfoDao: PhotoInfoDao,
-  private val photoInfoExchangeDao: PhotoInfoExchangeDao,
   private val galleryPhotoDao: GalleryPhotoDao,
   private val favouritedPhotoDao: FavouritedPhotoDao,
   private val reportedPhotoDao: ReportedPhotoDao,
@@ -115,7 +114,7 @@ open class PhotoInfoRepository(
         val myPhotos = photoInfoDao.findPageOfPhotos(userId, lastUploadedOn, count).awaitFirst()
         val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
 
-        val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds).awaitFirst()
+        val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds, PhotoInfoDao.SortOrder.Descending).awaitFirst()
         val result = mutableListOf<GetReceivedPhotosResponse.ReceivedPhoto>()
 
         for (theirPhoto in theirPhotos) {
@@ -149,7 +148,12 @@ open class PhotoInfoRepository(
       return@withContext mutex.withLock {
         val oldestPhoto = photoInfoDao.findOldestVacantPhoto(userId).awaitFirst()
         if (oldestPhoto.isEmpty()) {
-          //no photos to exchange with, do nothing
+          //no photos to exchange with, set newUploadingPhoto's exchangeId to PhotoInfo.EMPTY_PHOTO_ID
+          //so it can be found by other's upon uploading
+          if (!photoInfoDao.resetVacantPhoto(newUploadingPhoto.photoId).awaitFirst()) {
+            throw RuntimeException("Something is wrong with the database. Could not reset photo exchange id for photo with id (${oldestPhoto.photoId})")
+          }
+
           return@withLock
         }
 
@@ -163,11 +167,15 @@ open class PhotoInfoRepository(
           }
         } catch (exception: ExchangeException) {
           if (!photoInfoDao.resetPhotoReceiverId(newUploadingPhoto.photoId).awaitFirst()) {
-            throw RuntimeException("Something is wrong with the database")
+            throw RuntimeException("Something is wrong with the database. Could not reset photo receiver id for photo with id (${newUploadingPhoto.photoId})")
           }
 
           if (!photoInfoDao.resetPhotoReceiverId(oldestPhoto.photoId).awaitFirst()) {
-            throw RuntimeException("Something is wrong with the database")
+            throw RuntimeException("Something is wrong with the database. Could not reset photo receiver id for photo with id (${oldestPhoto.photoId})")
+          }
+
+          if (!photoInfoDao.resetVacantPhoto(oldestPhoto.photoId).awaitFirst()) {
+            throw RuntimeException("Something is wrong with the database. Could not reset photo exchange id for photo with id (${oldestPhoto.photoId})")
           }
         }
       }
@@ -177,7 +185,7 @@ open class PhotoInfoRepository(
   suspend fun delete(userId: String, photoName: String, isUploader: Boolean = true): Boolean {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        val photoInfo = photoInfoDao.findOneByUserIdAndPhotoName(userId, photoName, isUploader).awaitFirst()
+        val photoInfo = photoInfoDao.findOneByUserIdAndPhotoName(userId, photoName).awaitFirst()
         return@withLock deletePhotoInternal(photoInfo)
       }
     }
@@ -199,7 +207,6 @@ open class PhotoInfoRepository(
 
     val results = mutableListOf<Mono<Boolean>>()
     results += photoInfoDao.deleteById(photoInfo.photoId)
-    results += photoInfoExchangeDao.deleteById(photoInfo.exchangeId)
     results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
     results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
     results += locationMapDao.deleteById(photoInfo.photoId)
@@ -216,11 +223,9 @@ open class PhotoInfoRepository(
     }
 
     val photoIds = filteredPhotoInfoList.map { it.photoId }
-    val exchangeIds = filteredPhotoInfoList.map { it.exchangeId }
     val results = mutableListOf<Mono<Boolean>>()
 
     results += photoInfoDao.deleteAll(photoIds)
-    results += photoInfoExchangeDao.deleteAll(exchangeIds)
     results += favouritedPhotoDao.deleteAll(photoIds)
     results += reportedPhotoDao.deleteAll(photoIds)
     results += locationMapDao.deleteAll(photoIds)

@@ -12,7 +12,6 @@ open class MongoSequenceDao(
 	template: ReactiveMongoTemplate
 ) : BaseDao(template) {
 	private val PHOTO_INFO_SEQUENCE_NAME = "photo_info_sequence"
-	private val PHOTO_EXCHANGE_INFO_SEQUENCE_NAME = "photo_exchange_info_sequence"
 	private val GALLERY_PHOTO_SEQUENCE_NAME = "gallery_photo_sequence"
 	private val FAVOURITED_PHOTO_SEQUENCE_NAME = "favourited_photo_sequence"
 	private val REPORTED_PHOTO_SEQUENCE_NAME = "reported_photo_sequence"
@@ -42,10 +41,6 @@ open class MongoSequenceDao(
 
 	fun getNextPhotoId(): Mono<Long> {
 		return getNextId(PHOTO_INFO_SEQUENCE_NAME)
-	}
-
-	fun getNextPhotoExchangeId(): Mono<Long> {
-		return getNextId(PHOTO_EXCHANGE_INFO_SEQUENCE_NAME)
 	}
 
 	fun getNextGalleryPhotoId(): Mono<Long> {

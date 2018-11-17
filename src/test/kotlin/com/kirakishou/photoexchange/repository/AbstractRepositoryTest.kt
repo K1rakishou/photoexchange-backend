@@ -15,7 +15,6 @@ abstract class AbstractRepositoryTest {
 
 	lateinit var mongoSequenceDao: MongoSequenceDao
 	lateinit var photoInfoDao: PhotoInfoDao
-	lateinit var photoInfoExchangeDao: PhotoInfoExchangeDao
 	lateinit var galleryPhotoDao: GalleryPhotoDao
 	lateinit var favouritedPhotoDao: FavouritedPhotoDao
 	lateinit var reportedPhotoDao: ReportedPhotoDao
@@ -34,10 +33,6 @@ abstract class AbstractRepositoryTest {
 			it.create()
 		})
 		photoInfoDao = Mockito.spy(PhotoInfoDao(template).also {
-			it.clear()
-			it.create()
-		})
-		photoInfoExchangeDao = Mockito.spy(PhotoInfoExchangeDao(template).also {
 			it.clear()
 			it.create()
 		})
@@ -68,7 +63,6 @@ abstract class AbstractRepositoryTest {
 		photoInfoRepository = Mockito.spy(PhotoInfoRepository(
 			mongoSequenceDao,
 			photoInfoDao,
-			photoInfoExchangeDao,
 			galleryPhotoDao,
 			favouritedPhotoDao,
 			reportedPhotoDao,
@@ -81,7 +75,6 @@ abstract class AbstractRepositoryTest {
 	fun clear() {
 		mongoSequenceDao.clear()
 		photoInfoDao.clear()
-		photoInfoExchangeDao.clear()
 		galleryPhotoDao.clear()
 		favouritedPhotoDao.clear()
 		reportedPhotoDao.clear()

@@ -52,14 +52,14 @@ class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
 
 		runBlocking {
-			photoInfoDao.save(PhotoInfo(1, 1, 3L, "111", "222", "photo1", true, 11.1, 11.1, 111L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(2, 2, 4L, "111", "222", "photo2", true, 11.1, 11.1, 222L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(3, 3, 2L, "111", "222", "photo3", true, 11.1, 11.1, 333L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(4, 4, 1L, "111", "222", "photo4", true, 11.1, 11.1, 444L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(5, 5, 9L, "111", "222", "photo5", true, 11.1, 11.1, 555L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(6, 6, 8L, "111", "222", "photo6", true, 11.1, 11.1, 666L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(7, 7, 7L, "111", "222", "photo7", true, 11.1, 11.1, 777L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(8, 8, 6L, "111", "222", "photo8", true, 11.1, 11.1, 888L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(1, 1, 3L, "111", "222", true, 11.1, 11.1, 111L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(2, 2, 4L, "111", "222", true, 11.1, 11.1, 222L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(3, 3, 2L, "111", "222", true, 11.1, 11.1, 333L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(4, 4, 1L, "111", "222", true, 11.1, 11.1, 444L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(5, 5, 9L, "111", "222", true, 11.1, 11.1, 555L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(6, 6, 8L, "111", "222", true, 11.1, 11.1, 666L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(7, 7, 7L, "111", "222", true, 11.1, 11.1, 777L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(8, 8, 6L, "111", "222", true, 11.1, 11.1, 888L)).awaitFirst()
 
 			galleryPhotoDao.save(GalleryPhoto(1L, 1L, 111L)).awaitFirst()
 			galleryPhotoDao.save(GalleryPhoto(2L, 2L, 222L)).awaitFirst()

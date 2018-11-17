@@ -40,7 +40,6 @@ fun myBeans() = beans {
 	//dao
 	bean { MongoSequenceDao(ref()).also { it.create() } }
 	bean { PhotoInfoDao(ref()).also { it.create() } }
-	bean { PhotoInfoExchangeDao(ref()).also { it.create() } }
 	bean { GalleryPhotoDao(ref()).also { it.create() } }
 	bean { FavouritedPhotoDao(ref()).also { it.create() } }
 	bean { ReportedPhotoDao(ref()).also { it.create() } }
@@ -49,7 +48,6 @@ fun myBeans() = beans {
 
 	//repository
 	bean<PhotoInfoRepository>()
-	bean<PhotoInfoExchangeRepository>()
 	bean<UserInfoRepository>()
 	bean<LocationMapRepository>()
 
