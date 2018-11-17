@@ -112,50 +112,26 @@ open class PhotoInfoRepository(
   ): List<GetReceivedPhotosResponse.ReceivedPhoto> {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        val receivedPhotos = photoInfoDao.findPageOfReceivedPhotos(userId, lastUploadedOn, count).awaitFirst()
+        val myPhotos = photoInfoDao.findPageOfPhotos(userId, lastUploadedOn, count).awaitFirst()
+        val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
 
-        println()
-        println()
-        println()
-        println()
-        println()
-        println()
-        println()
-        println()
-        println()
+        val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds).awaitFirst()
+        val result = mutableListOf<GetReceivedPhotosResponse.ReceivedPhoto>()
 
+        for (theirPhoto in theirPhotos) {
+          val myPhoto = myPhotos.first { it.photoId == theirPhoto.exchangedPhotoId }
 
-        val resultList = mutableListOf<Pair<PhotoInfo, PhotoInfo>>()
-
-        val uploaderUserIdList = receivedPhotos.map { it.receiverUserId }
-        val exchangeIdList = receivedPhotos.map { it.exchangeId }
-
-        val exchangedPhotoInfoList = photoInfoDao.findManyByUserIdAndExchangeId(uploaderUserIdList, exchangeIdList)
-          .awaitFirst()
-
-        val photoInfoMap = receivedPhotos.associateBy { it.exchangeId }
-        val exchangedPhotoInfoMap = exchangedPhotoInfoList.associateBy { it.exchangeId }
-
-        for (photoInfo in receivedPhotos) {
-          if (!photoInfoMap.containsKey(photoInfo.exchangeId) || !exchangedPhotoInfoMap.containsKey(photoInfo.exchangeId)) {
-            continue
-          }
-
-          resultList += Pair(
-            photoInfoMap[photoInfo.exchangeId]!!,
-            exchangedPhotoInfoMap[photoInfo.exchangeId]!!
+          result += GetReceivedPhotosResponse.ReceivedPhoto(
+            theirPhoto.photoId,
+            myPhoto.photoName,
+            theirPhoto.photoName,
+            theirPhoto.lon,
+            theirPhoto.lat
           )
         }
 
-        return@withLock resultList.map { photos ->
-          GetReceivedPhotosResponse.ReceivedPhoto(
-            photos.first.photoId,
-            photos.second.photoName,
-            photos.first.photoName,
-            photos.first.lon,
-            photos.first.lat
-          )
-        }
+        return@withLock result
+
       }
     }
   }
@@ -355,24 +331,27 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun findPhotosWithReceiverByPhotoNamesList(userId: String, photoNameList: List<String>): List<ReceivePhotosResponse.ReceivedPhoto> {
+  suspend fun findPhotosWithReceiverByPhotoNamesList(
+    userId: String,
+    photoNameList: List<String>
+  ): List<ReceivePhotosResponse.ReceivedPhoto> {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        val uploaderPhotos = photoInfoDao.findPhotosByNames(userId, photoNameList).awaitFirst()
-        val receiverPhotoIdList = uploaderPhotos.map { it.receiverPhotoId }
+        val myPhotos = photoInfoDao.findPhotosByNames(userId, photoNameList).awaitFirst()
+        val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
 
-        val receiverPhotos = photoInfoDao.findManyByIds(receiverPhotoIdList).awaitFirst()
+        val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds).awaitFirst()
         val result = mutableListOf<ReceivePhotosResponse.ReceivedPhoto>()
 
-        for (receiverPhoto in receiverPhotos) {
-          val uploaderPhoto = uploaderPhotos.first { it.photoId == receiverPhoto.receiverPhotoId }
+        for (theirPhoto in theirPhotos) {
+          val myPhoto = myPhotos.first { it.photoId == theirPhoto.exchangedPhotoId }
 
           result += ReceivePhotosResponse.ReceivedPhoto(
-            receiverPhoto.photoId,
-            uploaderPhoto.photoName,
-            receiverPhoto.photoName,
-            receiverPhoto.lon,
-            receiverPhoto.lat
+            theirPhoto.photoId,
+            myPhoto.photoName,
+            theirPhoto.photoName,
+            theirPhoto.lon,
+            theirPhoto.lat
           )
         }
 

@@ -13,9 +13,9 @@ data class PhotoInfo(
 	@Field(Mongo.Field.PHOTO_ID)
 	var photoId: Long,
 
-  @Indexed(name = Mongo.Index.RECEIVER_PHOTO_ID)
-  @Field(Mongo.Field.RECEIVER_PHOTO_ID)
-  var receiverPhotoId: Long,
+  @Indexed(name = Mongo.Index.EXCHANGED_PHOTO_ID)
+  @Field(Mongo.Field.EXCHANGED_PHOTO_ID)
+  var exchangedPhotoId: Long,
 
 	@Field(Mongo.Field.LOCATION_MAP_ID)
 	val locationMapId: Long,
@@ -62,7 +62,7 @@ data class PhotoInfo(
 	object Mongo {
 		object Field {
 			const val PHOTO_ID = "photo_id"
-			const val RECEIVER_PHOTO_ID = "receiver_photo_id"
+			const val EXCHANGED_PHOTO_ID = "exchanged_photo_id"
 			const val USER_ID = "user_id"
 			const val PHOTO_NAME = "photo_name"
 			const val LOCATION_MAP_ID = "location_map_id"
@@ -73,7 +73,7 @@ data class PhotoInfo(
 		}
 
 		object Index {
-      const val RECEIVER_PHOTO_ID = "receiver_photo_id_index"
+      const val EXCHANGED_PHOTO_ID = "exchanged_photo_id_index"
 			const val USER_ID = "user_id_index"
 			const val PHOTO_NAME = "photo_name_index"
 			const val UPLOADED_ON = "uploaded_on_index"

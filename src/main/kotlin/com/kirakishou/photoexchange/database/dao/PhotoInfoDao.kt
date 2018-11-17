@@ -31,7 +31,7 @@ open class PhotoInfoDao(
   fun findOldestVacantPhoto(userId: String): Mono<PhotoInfo> {
     val query = Query().with(Sort(Sort.Direction.ASC, PhotoInfo.Mongo.Field.PHOTO_ID))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).ne(userId))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_PHOTO_ID).`is`(PhotoInfo.EMPTY_PHOTO_ID))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).`is`(PhotoInfo.EMPTY_PHOTO_ID))
 
     return template.findOne(query, PhotoInfo::class.java)
       .defaultIfEmpty(PhotoInfo.empty())
@@ -44,7 +44,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
 
     val update = Update()
-      .set(PhotoInfo.Mongo.Field.RECEIVER_PHOTO_ID, receiverId)
+      .set(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID, receiverId)
 
     return template.updateFirst(query, update, PhotoInfo::class.java)
       .map { updateResult -> updateResult.wasAcknowledged() }
@@ -57,7 +57,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
 
     val update = Update()
-      .set(PhotoInfo.Mongo.Field.RECEIVER_PHOTO_ID, PhotoInfo.EMPTY_PHOTO_ID)
+      .set(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID, PhotoInfo.EMPTY_PHOTO_ID)
 
     return template.updateFirst(query, update, PhotoInfo::class.java)
       .map { updateResult -> updateResult.wasAcknowledged() }
@@ -69,7 +69,7 @@ open class PhotoInfoDao(
     val query = Query()
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`in`(photoNameList))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_PHOTO_ID).ne(PhotoInfo.EMPTY_PHOTO_ID))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).ne(PhotoInfo.EMPTY_PHOTO_ID))
       .limit(photoNameList.size)
 
     return template.find(query, PhotoInfo::class.java)
@@ -101,6 +101,19 @@ open class PhotoInfoDao(
       .onErrorReturn(emptyList())
   }
 
+  fun findPageOfPhotos(userId: String, lastUploadedOn: Long, count: Int): Mono<List<PhotoInfo>> {
+    val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lte(lastUploadedOn))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+      .limit(count)
+
+    return template.find(query, PhotoInfo::class.java)
+      .collectList()
+      .defaultIfEmpty(emptyList())
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(emptyList())
+  }
+
   //======================
 
 	fun findByUploaderId(uploaderPhotoId: Long): Mono<PhotoInfo> {
@@ -115,7 +128,7 @@ open class PhotoInfoDao(
 
   fun findByReceiverId(receiverPhotoId: Long): Mono<PhotoInfo> {
     val query = Query()
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_PHOTO_ID).`is`(receiverPhotoId))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).`is`(receiverPhotoId))
 
     return template.findOne(query, PhotoInfo::class.java)
       .defaultIfEmpty(PhotoInfo.empty())
@@ -151,19 +164,6 @@ open class PhotoInfoDao(
     val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lte(lastUploadedOn))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADER_USER_ID).`is`(userId))
-      .limit(count)
-
-    return template.find(query, PhotoInfo::class.java)
-      .collectList()
-      .defaultIfEmpty(emptyList())
-      .doOnError { error -> logger.error("DB error", error) }
-      .onErrorReturn(emptyList())
-  }
-
-  fun findPageOfReceivedPhotos(userId: String, lastUploadedOn: Long, count: Int): Mono<List<PhotoInfo>> {
-    val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lte(lastUploadedOn))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.RECEIVER_USER_ID).`is`(userId))
       .limit(count)
 
     return template.find(query, PhotoInfo::class.java)
