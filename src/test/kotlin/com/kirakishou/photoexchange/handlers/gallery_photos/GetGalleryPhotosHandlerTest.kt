@@ -28,7 +28,7 @@ class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 			"/v1".nest {
 				"/api".nest {
 					accept(MediaType.APPLICATION_JSON).nest {
-						GET("/get_gallery_photos/{last_uploaded_on}/{count}", handler::handle)
+						GET("/get_page_of_gallery_photos/{last_uploaded_on}/{count}", handler::handle)
 					}
 				}
 			}
@@ -74,7 +74,7 @@ class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 		kotlin.run {
 			val content = webClient
 				.get()
-				.uri("/v1/api/get_gallery_photos/777/6")
+				.uri("/v1/api/get_page_of_gallery_photos/777/6")
 				.exchange()
 				.expectStatus().is2xxSuccessful
 				.expectBody()
