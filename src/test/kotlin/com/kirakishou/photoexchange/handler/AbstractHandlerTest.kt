@@ -4,7 +4,6 @@ import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.LocationMapRepository
-import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
@@ -41,7 +40,6 @@ abstract class AbstractHandlerTest {
 
 	lateinit var mongoSequenceDao: MongoSequenceDao
 	lateinit var photoInfoDao: PhotoInfoDao
-	lateinit var photoInfoExchangeDao: PhotoInfoExchangeDao
 	lateinit var galleryPhotoDao: GalleryPhotoDao
 	lateinit var favouritedPhotoDao: FavouritedPhotoDao
 	lateinit var reportedPhotoDao: ReportedPhotoDao
@@ -51,7 +49,6 @@ abstract class AbstractHandlerTest {
 	lateinit var staticMapDownloaderService: StaticMapDownloaderService
 	lateinit var locationMapRepository: LocationMapRepository
 	lateinit var photoInfoRepository: PhotoInfoRepository
-	lateinit var photoInfoExchangeRepository: PhotoInfoExchangeRepository
 
 	fun init() {
 		jsonConverterService = JsonConverterService(gson)
@@ -65,10 +62,6 @@ abstract class AbstractHandlerTest {
 			it.create()
 		}
 		photoInfoDao = PhotoInfoDao(template).also {
-			it.clear()
-			it.create()
-		}
-		photoInfoExchangeDao = PhotoInfoExchangeDao(template).also {
 			it.clear()
 			it.create()
 		}
@@ -98,18 +91,12 @@ abstract class AbstractHandlerTest {
 		photoInfoRepository = PhotoInfoRepository(
 			mongoSequenceDao,
 			photoInfoDao,
-			photoInfoExchangeDao,
 			galleryPhotoDao,
 			favouritedPhotoDao,
 			reportedPhotoDao,
 			userInfoDao,
 			locationMapDao,
 			generator
-		)
-
-		photoInfoExchangeRepository = PhotoInfoExchangeRepository(
-			mongoSequenceDao,
-			photoInfoExchangeDao
 		)
 
 		locationMapRepository = LocationMapRepository(
@@ -123,7 +110,6 @@ abstract class AbstractHandlerTest {
 	fun clear() {
 		mongoSequenceDao.clear()
 		photoInfoDao.clear()
-		photoInfoExchangeDao.clear()
 		galleryPhotoDao.clear()
 		favouritedPhotoDao.clear()
 		reportedPhotoDao.clear()

@@ -13,19 +13,16 @@ data class PhotoInfo(
 	@Field(Mongo.Field.PHOTO_ID)
 	var photoId: Long,
 
-	@Field(Mongo.Field.EXCHANGE_ID)
-	var exchangeId: Long,
+  @Indexed(name = Mongo.Index.EXCHANGED_PHOTO_ID)
+  @Field(Mongo.Field.EXCHANGED_PHOTO_ID)
+  var exchangedPhotoId: Long,
 
 	@Field(Mongo.Field.LOCATION_MAP_ID)
 	val locationMapId: Long,
 
-	@Indexed(name = Mongo.Index.UPLOADER_USER_ID)
-	@Field(Mongo.Field.UPLOADER_USER_ID)
-	var uploaderUserId: String,
-
-	@Indexed(name = Mongo.Index.RECEIVER_USER_ID)
-	@Field(Mongo.Field.RECEIVER_USER_ID)
-	var receiverUserId: String,
+	@Indexed(name = Mongo.Index.USER_ID)
+	@Field(Mongo.Field.USER_ID)
+	var userId: String,
 
 	@Indexed(name = Mongo.Index.PHOTO_NAME)
 	@Field(Mongo.Field.PHOTO_NAME)
@@ -49,28 +46,28 @@ data class PhotoInfo(
 	}
 
 	companion object {
-
-		const val EMPTY_PHOTO_ID = -1L
-		const val EMPTY_EXCHANGE_ID = -1L
+    //This is a default exchangedPhotoId when photo is uploading.
+    //This is used so other uploading request wouldn't be able to find this photo to do the exchange
+    //Upon successful exchange exchangedPhotoId is set to theirPhoto.photoId
+    //Upon unsuccessful exchange (when there are no photos to exchange with) exchangedPhotoId is set to EMPTY_PHOTO_ID
+    const val PHOTO_IS_EXCHANGING = -1L
+    const val EMPTY_PHOTO_ID = -2L
 		const val EMPTY_LOCATION_MAP_ID = -1L
 
 		fun empty(): PhotoInfo {
-			return PhotoInfo(EMPTY_PHOTO_ID, EMPTY_EXCHANGE_ID, EMPTY_LOCATION_MAP_ID,
-				"", "", "", false, 0.0, 0.0, 0L)
+			return PhotoInfo(EMPTY_PHOTO_ID, EMPTY_PHOTO_ID, EMPTY_LOCATION_MAP_ID, "", "", false, 0.0, 0.0, 0L)
 		}
 
 		fun create(userId: String, photoName: String, isPublic: Boolean, lon: Double, lat: Double, time: Long): PhotoInfo {
-			return PhotoInfo(EMPTY_PHOTO_ID, EMPTY_EXCHANGE_ID, EMPTY_LOCATION_MAP_ID,
-				userId, "", photoName, isPublic, lon, lat, time)
+			return PhotoInfo(EMPTY_PHOTO_ID, PHOTO_IS_EXCHANGING, EMPTY_LOCATION_MAP_ID, userId, photoName, isPublic, lon, lat, time)
 		}
 	}
 
 	object Mongo {
 		object Field {
 			const val PHOTO_ID = "_id"
-			const val EXCHANGE_ID = "exchange_id"
-			const val UPLOADER_USER_ID = "uploader_user_id"
-			const val RECEIVER_USER_ID = "receiver_user_id"
+			const val EXCHANGED_PHOTO_ID = "exchanged_photo_id"
+			const val USER_ID = "user_id"
 			const val PHOTO_NAME = "photo_name"
 			const val LOCATION_MAP_ID = "location_map_id"
 			const val IS_PUBLIC = "is_public"
@@ -80,8 +77,8 @@ data class PhotoInfo(
 		}
 
 		object Index {
-			const val UPLOADER_USER_ID = "uploader_user_id_index"
-			const val RECEIVER_USER_ID = "receiver_user_id_index"
+      const val EXCHANGED_PHOTO_ID = "exchanged_photo_id_index"
+			const val USER_ID = "user_id_index"
 			const val PHOTO_NAME = "photo_name_index"
 			const val UPLOADED_ON = "uploaded_on_index"
 		}

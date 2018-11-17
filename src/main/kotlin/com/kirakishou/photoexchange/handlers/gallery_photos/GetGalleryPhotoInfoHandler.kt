@@ -45,11 +45,7 @@ class GetGalleryPhotoInfoHandler(
 				}
 
 				val galleryPhotoIds = Utils.parsePhotoIds(photoIdsString, ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT, DELIMITER)
-				val galleryPhotoInfoList = photoInfoRepository.findGalleryPhotosInfo(userId, galleryPhotoIds)
-
-				val galleryPhotoInfoResponse = galleryPhotoInfoList.values.map { (galleryPhotoId, isFavourited, isReported) ->
-					GalleryPhotoInfoResponse.GalleryPhotosInfoData(galleryPhotoId, isFavourited, isReported)
-				}
+				val galleryPhotoInfoResponse = photoInfoRepository.findGalleryPhotosInfo(userId, galleryPhotoIds)
 
 				logger.debug("Found ${galleryPhotoInfoResponse.size} photo infos from gallery")
 				return@mono formatResponse(HttpStatus.OK, GalleryPhotoInfoResponse.success(galleryPhotoInfoResponse))

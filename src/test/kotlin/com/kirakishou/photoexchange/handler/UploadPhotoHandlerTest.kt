@@ -1,12 +1,11 @@
 package com.kirakishou.photoexchange.handler
 
-import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
 import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
-import com.kirakishou.photoexchange.model.repo.PhotoInfoExchange
+import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import junit.framework.Assert.assertEquals
@@ -34,12 +33,10 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
 								 photoInfoRepository: PhotoInfoRepository,
-								 photoInfoExchangeRepository: PhotoInfoExchangeRepository,
 								 staticMapDownloaderService: StaticMapDownloaderService): WebTestClient {
 		val handler = UploadPhotoHandler(
 			jsonConverterService,
 			photoInfoRepository,
-			photoInfoExchangeRepository,
 			staticMapDownloaderService
 		)
 
@@ -68,8 +65,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `test should exchange two photos`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository,
-			staticMapDownloaderService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, staticMapDownloaderService)
 
 		runBlocking {
 			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
@@ -95,21 +91,12 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				photoInfoDao.findById(1).awaitFirst()
 			}
 
-			assertEquals(1, photoInfo.exchangeId)
-			assertEquals(packet.userId, photoInfo.uploaderUserId)
-			assertEquals("", photoInfo.receiverUserId)
+			assertEquals(1, photoInfo.photoId)
+			assertEquals(PhotoInfo.EMPTY_PHOTO_ID, photoInfo.exchangedPhotoId)
+			assertEquals(packet.userId, photoInfo.userId)
 			assertEquals(packet.isPublic, photoInfo.isPublic)
 			assertEquals(packet.lon, photoInfo.lon, EPSILON)
 			assertEquals(packet.lat, photoInfo.lat, EPSILON)
-
-			val photoInfoExchange = runBlocking {
-				photoInfoExchangeDao.findById(1).awaitFirst()
-			}
-
-			assertEquals("111", photoInfoExchange.uploaderUserId)
-			assertEquals("", photoInfoExchange.receiverUserId)
-			assertEquals(1, photoInfoExchange.uploaderPhotoId)
-			assertEquals(-1, photoInfoExchange.receiverPhotoId)
 		}
 
 		kotlin.run {
@@ -136,35 +123,25 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				photoInfoDao.findById(2).awaitFirst()
 			}
 
-			assertEquals(1, photoInfo1.exchangeId)
-			assertEquals("111", photoInfo1.uploaderUserId)
-			assertEquals("222", photoInfo1.receiverUserId)
+			assertEquals(1, photoInfo1.photoId)
+			assertEquals(2, photoInfo1.exchangedPhotoId)
+			assertEquals("111", photoInfo1.userId)
 			assertEquals(true, photoInfo1.isPublic)
 			assertEquals(33.4, photoInfo1.lon, EPSILON)
 			assertEquals(55.2, photoInfo1.lat, EPSILON)
 
-			assertEquals(1, photoInfo1.exchangeId)
-			assertEquals("222", photoInfo2.uploaderUserId)
-			assertEquals("111", photoInfo2.receiverUserId)
+      assertEquals(2, photoInfo2.photoId)
+      assertEquals(1, photoInfo2.exchangedPhotoId)
+      assertEquals("222", photoInfo2.userId)
 			assertEquals(true, photoInfo2.isPublic)
 			assertEquals(11.4, photoInfo2.lon, EPSILON)
 			assertEquals(24.45, photoInfo2.lat, EPSILON)
-
-			val photoInfoExchange = runBlocking {
-				photoInfoExchangeDao.findById(1).awaitFirst()
-			}
-
-			assertEquals(1, photoInfoExchange.uploaderPhotoId)
-			assertEquals(2, photoInfoExchange.receiverPhotoId)
-			assertEquals("111", photoInfoExchange.uploaderUserId)
-			assertEquals("222", photoInfoExchange.receiverUserId)
 		}
 	}
 
 	@Test
 	fun `test should not exchange two photos with the same user id`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository,
-			staticMapDownloaderService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, staticMapDownloaderService)
 
 		runBlocking {
 			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
@@ -190,21 +167,12 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				photoInfoDao.findById(1).awaitFirst()
 			}
 
-			assertEquals(1, photoInfo.exchangeId)
-			assertEquals(packet.userId, photoInfo.uploaderUserId)
-			assertEquals("", photoInfo.receiverUserId)
+			assertEquals(1, photoInfo.photoId)
+			assertEquals(PhotoInfo.EMPTY_PHOTO_ID, photoInfo.exchangedPhotoId)
+			assertEquals(packet.userId, photoInfo.userId)
 			assertEquals(packet.isPublic, photoInfo.isPublic)
 			assertEquals(packet.lon, photoInfo.lon, EPSILON)
 			assertEquals(packet.lat, photoInfo.lat, EPSILON)
-
-			val photoInfoExchange = runBlocking {
-				photoInfoExchangeDao.findById(1).awaitFirst()
-			}
-
-			assertEquals("111", photoInfoExchange.uploaderUserId)
-			assertEquals("", photoInfoExchange.receiverUserId)
-			assertEquals(1, photoInfoExchange.uploaderPhotoId)
-			assertEquals(-1, photoInfoExchange.receiverPhotoId)
 		}
 
 		kotlin.run {
@@ -231,44 +199,25 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				photoInfoDao.findById(2).awaitFirst()
 			}
 
-			assertEquals(1, photoInfo1.exchangeId)
-			assertEquals("111", photoInfo1.uploaderUserId)
-			assertEquals("", photoInfo1.receiverUserId)
+      assertEquals(1, photoInfo1.photoId)
+      assertEquals(PhotoInfo.EMPTY_PHOTO_ID, photoInfo1.exchangedPhotoId)
+      assertEquals(packet.userId, photoInfo1.userId)
 			assertEquals(true, photoInfo1.isPublic)
 			assertEquals(33.4, photoInfo1.lon, EPSILON)
 			assertEquals(55.2, photoInfo1.lat, EPSILON)
 
-			assertEquals(2, photoInfo2.exchangeId)
-			assertEquals("111", photoInfo2.uploaderUserId)
-			assertEquals("", photoInfo2.receiverUserId)
+      assertEquals(2, photoInfo2.photoId)
+      assertEquals(PhotoInfo.EMPTY_PHOTO_ID, photoInfo2.exchangedPhotoId)
+      assertEquals(packet.userId, photoInfo2.userId)
 			assertEquals(true, photoInfo2.isPublic)
 			assertEquals(11.4, photoInfo2.lon, EPSILON)
 			assertEquals(24.45, photoInfo2.lat, EPSILON)
-
-			val photoInfoExchange1 = runBlocking {
-				photoInfoExchangeDao.findById(1).awaitFirst()
-			}
-
-			val photoInfoExchange2 = runBlocking {
-				photoInfoExchangeDao.findById(2).awaitFirst()
-			}
-
-			assertEquals("111", photoInfoExchange1.uploaderUserId)
-			assertEquals("", photoInfoExchange1.receiverUserId)
-			assertEquals(1, photoInfoExchange1.uploaderPhotoId)
-			assertEquals(-1, photoInfoExchange1.receiverPhotoId)
-
-			assertEquals("111", photoInfoExchange2.uploaderUserId)
-			assertEquals("", photoInfoExchange2.receiverUserId)
-			assertEquals(2, photoInfoExchange2.uploaderPhotoId)
-			assertEquals(-1, photoInfoExchange2.receiverPhotoId)
 		}
 	}
 
 	@Test
 	fun `test should exchange 4 photos`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository,
-			staticMapDownloaderService)
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, staticMapDownloaderService)
 
 		runBlocking {
 			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
@@ -294,21 +243,12 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				photoInfoDao.findById(1).awaitFirst()
 			}
 
-			assertEquals(1, photoInfo.exchangeId)
-			assertEquals(packet.userId, photoInfo.uploaderUserId)
-			assertEquals("", photoInfo.receiverUserId)
+			assertEquals(1, photoInfo.photoId)
+			assertEquals(PhotoInfo.EMPTY_PHOTO_ID, photoInfo.exchangedPhotoId)
+			assertEquals(packet.userId, photoInfo.userId)
 			assertEquals(packet.isPublic, photoInfo.isPublic)
 			assertEquals(packet.lon, photoInfo.lon, EPSILON)
 			assertEquals(packet.lat, photoInfo.lat, EPSILON)
-
-			val photoInfoExchange = runBlocking {
-				photoInfoExchangeDao.findById(1).awaitFirst()
-			}
-
-			assertEquals("111", photoInfoExchange.uploaderUserId)
-			assertEquals("", photoInfoExchange.receiverUserId)
-			assertEquals(1, photoInfoExchange.uploaderPhotoId)
-			assertEquals(-1, photoInfoExchange.receiverPhotoId)
 		}
 
 		kotlin.run {
@@ -335,34 +275,19 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				photoInfoDao.findById(2).awaitFirst()
 			}
 
-			assertEquals(1, photoInfo1.exchangeId)
-			assertEquals("111", photoInfo1.uploaderUserId)
-			assertEquals("222", photoInfo1.receiverUserId)
+			assertEquals(1, photoInfo1.photoId)
+			assertEquals(2, photoInfo1.exchangedPhotoId)
+			assertEquals("111", photoInfo1.userId)
 			assertEquals(true, photoInfo1.isPublic)
 			assertEquals(33.4, photoInfo1.lon, EPSILON)
 			assertEquals(55.2, photoInfo1.lat, EPSILON)
 
-			assertEquals(1, photoInfo2.exchangeId)
-			assertEquals("222", photoInfo2.uploaderUserId)
-			assertEquals("111", photoInfo2.receiverUserId)
+			assertEquals(2, photoInfo2.photoId)
+			assertEquals(1, photoInfo2.exchangedPhotoId)
+			assertEquals("222", photoInfo2.userId)
 			assertEquals(true, photoInfo2.isPublic)
 			assertEquals(11.4, photoInfo2.lon, EPSILON)
 			assertEquals(24.45, photoInfo2.lat, EPSILON)
-
-			val photoInfoExchange1 = runBlocking {
-				photoInfoExchangeDao.findById(1).awaitFirst()
-			}
-
-			val photoInfoExchange2 = runBlocking {
-				photoInfoExchangeDao.findById(2).awaitFirst()
-			}
-
-			assertEquals("111", photoInfoExchange1.uploaderUserId)
-			assertEquals("222", photoInfoExchange1.receiverUserId)
-			assertEquals(1, photoInfoExchange1.uploaderPhotoId)
-			assertEquals(2, photoInfoExchange1.receiverPhotoId)
-
-			assertEquals(true, photoInfoExchange2.isEmpty())
 		}
 
 		kotlin.run {
@@ -412,69 +337,40 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				photoInfoDao.findById(4).awaitFirst()
 			}
 
-			assertEquals(1, photoInfo1.exchangeId)
-			assertEquals("111", photoInfo1.uploaderUserId)
-			assertEquals("222", photoInfo1.receiverUserId)
+			assertEquals(1, photoInfo1.photoId)
+			assertEquals(2, photoInfo1.exchangedPhotoId)
+			assertEquals("111", photoInfo1.userId)
 			assertEquals(true, photoInfo1.isPublic)
 			assertEquals(33.4, photoInfo1.lon, EPSILON)
 			assertEquals(55.2, photoInfo1.lat, EPSILON)
 
-			assertEquals(1, photoInfo2.exchangeId)
-			assertEquals("222", photoInfo2.uploaderUserId)
-			assertEquals("111", photoInfo2.receiverUserId)
+			assertEquals(2, photoInfo2.photoId)
+      assertEquals(1, photoInfo2.exchangedPhotoId)
+      assertEquals("222", photoInfo2.userId)
 			assertEquals(true, photoInfo2.isPublic)
 			assertEquals(11.4, photoInfo2.lon, EPSILON)
 			assertEquals(24.45, photoInfo2.lat, EPSILON)
 
-			assertEquals(2, photoInfo3.exchangeId)
-			assertEquals("333", photoInfo3.uploaderUserId)
-			assertEquals("444", photoInfo3.receiverUserId)
+			assertEquals(3, photoInfo3.photoId)
+      assertEquals(4, photoInfo3.exchangedPhotoId)
+			assertEquals("333", photoInfo3.userId)
 			assertEquals(true, photoInfo3.isPublic)
 			assertEquals(36.4, photoInfo3.lon, EPSILON)
 			assertEquals(66.66, photoInfo3.lat, EPSILON)
 
-			assertEquals(2, photoInfo4.exchangeId)
-			assertEquals("444", photoInfo4.uploaderUserId)
-			assertEquals("333", photoInfo4.receiverUserId)
+			assertEquals(4, photoInfo4.photoId)
+      assertEquals(3, photoInfo4.exchangedPhotoId)
+			assertEquals("444", photoInfo4.userId)
 			assertEquals(true, photoInfo4.isPublic)
 			assertEquals(38.4235, photoInfo4.lon, EPSILON)
 			assertEquals(16.7788, photoInfo4.lat, EPSILON)
-
-			val photoInfoExchange1 = runBlocking {
-				photoInfoExchangeDao.findById(1).awaitFirst()
-			}
-
-			val photoInfoExchange2 = runBlocking {
-				photoInfoExchangeDao.findById(2).awaitFirst()
-			}
-
-			val photoInfoExchange3 = runBlocking {
-				photoInfoExchangeDao.findById(3).awaitFirst()
-			}
-
-			val photoInfoExchange4 = runBlocking {
-				photoInfoExchangeDao.findById(4).awaitFirst()
-			}
-
-			assertEquals("111", photoInfoExchange1.uploaderUserId)
-			assertEquals("222", photoInfoExchange1.receiverUserId)
-			assertEquals(1, photoInfoExchange1.uploaderPhotoId)
-			assertEquals(2, photoInfoExchange1.receiverPhotoId)
-
-			assertEquals("333", photoInfoExchange2.uploaderUserId)
-			assertEquals("444", photoInfoExchange2.receiverUserId)
-			assertEquals(3, photoInfoExchange2.uploaderPhotoId)
-			assertEquals(4, photoInfoExchange2.receiverPhotoId)
-
-			assertEquals(true, photoInfoExchange3.isEmpty())
-			assertEquals(true, photoInfoExchange4.isEmpty())
 		}
 	}
 
 	@Test
 	fun `test 300 concurrent uploadings at the same time`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, photoInfoExchangeRepository,
-			staticMapDownloaderService)
+    val concurrency = 300
+		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, staticMapDownloaderService)
 
 		runBlocking {
 			Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
@@ -500,12 +396,12 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 		val executor = Executors.newFixedThreadPool(40)
 
-		Flux.range(0, 300)
+		Flux.range(0, concurrency)
 			.flatMap {
 				return@flatMap Flux.just(it)
 					.subscribeOn(Schedulers.fromExecutor(executor))
 					.flatMap { index ->
-						println("Sending packet #$index out of 300")
+						println("Sending packet #$index out of $concurrency")
 
 						if (index % 2 == 0) {
 							return@flatMap uploadPhoto(SendPhotoPacket(11.1, 22.2, "111", true))
@@ -518,23 +414,21 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			.block()
 
 		runBlocking {
-			val allPhotoInfo = photoInfoDao.findAll().awaitFirst()
-			assertEquals(300, allPhotoInfo.size)
+			val allPhotoInfo = photoInfoDao.testFindAll().awaitFirst()
+			assertEquals(concurrency, allPhotoInfo.size)
 
 			for (photoInfo in allPhotoInfo) {
-				assertEquals(true, photoInfo.uploaderUserId != photoInfo.receiverUserId)
-				assertEquals(false, photoInfo.exchangeId == -1L)
+				assertEquals(true, photoInfo.photoId != photoInfo.exchangedPhotoId)
+				assertEquals(false, photoInfo.exchangedPhotoId == -1L)
 			}
 
-			val photoInfoExchangeList = mutableListOf<PhotoInfoExchange>()
-			for (photoInfo in allPhotoInfo) {
-				val photoInfoExchange = photoInfoExchangeDao.findById(photoInfo.exchangeId).awaitFirst()
-				assertEquals(false, photoInfoExchange.isEmpty())
+      val mapByPhotoId = allPhotoInfo.associateBy { it.photoId }
+      val mapByExchangedPhotoId = allPhotoInfo.associateBy { it.exchangedPhotoId }
 
-				photoInfoExchangeList += photoInfoExchange
-			}
-
-			assertEquals(150, photoInfoExchangeList.distinctBy { it.id }.size)
+      for (photo in mapByPhotoId.values) {
+        assertEquals(photo.photoId, mapByExchangedPhotoId[photo.exchangedPhotoId]!!.photoId)
+        assertEquals(photo.exchangedPhotoId, mapByPhotoId[photo.photoId]!!.exchangedPhotoId)
+      }
 		}
 	}
 }

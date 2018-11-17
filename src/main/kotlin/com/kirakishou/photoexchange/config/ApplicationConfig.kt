@@ -9,10 +9,8 @@ import com.kirakishou.photoexchange.database.repository.*
 import com.kirakishou.photoexchange.handlers.*
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoHandler
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
-import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotoIdsHandler
-import com.kirakishou.photoexchange.handlers.received_photos.GetReceivedPhotosHandler
-import com.kirakishou.photoexchange.handlers.uploaded_photos.GetUploadedPhotoIdsHandler
-import com.kirakishou.photoexchange.handlers.uploaded_photos.GetUploadedPhotosHandler
+import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
+import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -42,7 +40,6 @@ fun myBeans() = beans {
 	//dao
 	bean { MongoSequenceDao(ref()).also { it.create() } }
 	bean { PhotoInfoDao(ref()).also { it.create() } }
-	bean { PhotoInfoExchangeDao(ref()).also { it.create() } }
 	bean { GalleryPhotoDao(ref()).also { it.create() } }
 	bean { FavouritedPhotoDao(ref()).also { it.create() } }
 	bean { ReportedPhotoDao(ref()).also { it.create() } }
@@ -51,7 +48,6 @@ fun myBeans() = beans {
 
 	//repository
 	bean<PhotoInfoRepository>()
-	bean<PhotoInfoExchangeRepository>()
 	bean<UserInfoRepository>()
 	bean<LocationMapRepository>()
 
@@ -68,9 +64,7 @@ fun myBeans() = beans {
 	bean<FavouritePhotoHandler>()
 	bean<ReportPhotoHandler>()
 	bean<GetUserIdHandler>()
-	bean<GetUploadedPhotoIdsHandler>()
 	bean<GetUploadedPhotosHandler>()
-	bean<GetReceivedPhotoIdsHandler>()
 	bean<GetReceivedPhotosHandler>()
 	bean<GetStaticMapHandler>()
 	bean<CheckAccountExistsHandler>()

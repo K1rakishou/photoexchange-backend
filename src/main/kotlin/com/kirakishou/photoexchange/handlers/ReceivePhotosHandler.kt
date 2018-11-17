@@ -48,21 +48,16 @@ class ReceivePhotosHandler(
 				}
 
 				val photoInfoList = photoInfoRepo.findPhotosWithReceiverByPhotoNamesList(userId, photoNameList)
-				val photoAnswerList = photoInfoList.map {
-					ReceivePhotosResponse.ReceivedPhoto(it.second.photoId, it.first.photoName, it.second.photoName, it.second.lon, it.second.lat)
-				}
-
-				if (photoAnswerList.isEmpty()) {
+				if (photoInfoList.isEmpty()) {
 					logger.debug("photoAnswerList is empty")
 					return@mono formatResponse(HttpStatus.OK,
 						ReceivePhotosResponse.fail(ErrorCode.ReceivePhotosErrors.NoPhotosToSendBack))
 				}
 
+        logger.debug("Found ${photoInfoList.size} photos")
 				cleanUp()
 
-				logger.debug("Found ${photoAnswerList.size} photos")
-				return@mono formatResponse(HttpStatus.OK,
-					ReceivePhotosResponse.success(photoAnswerList))
+				return@mono formatResponse(HttpStatus.OK, ReceivePhotosResponse.success(photoInfoList))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,

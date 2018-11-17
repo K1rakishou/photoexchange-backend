@@ -8,7 +8,6 @@ import com.kirakishou.photoexchange.config.ServerSettings.MEDIUM_PHOTO_SIZE
 import com.kirakishou.photoexchange.config.ServerSettings.MEDIUM_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SIZE
 import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SUFFIX
-import com.kirakishou.photoexchange.database.repository.PhotoInfoExchangeRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
 import com.kirakishou.photoexchange.model.ErrorCode
@@ -41,7 +40,6 @@ import java.io.IOException
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
-	private val photoInfoExchangeRepository: PhotoInfoExchangeRepository,
 	private val staticMapDownloaderService: StaticMapDownloaderService
 ) : AbstractWebHandler(jsonConverter) {
 
@@ -109,7 +107,7 @@ class UploadPhotoHandler(
 					resizeAndSavePhotos(tempFile, newUploadingPhoto)
 				} catch (error: Throwable) {
 					logger.error("Unknown error", error)
-					photoInfoRepo.delete(newUploadingPhoto.uploaderUserId, photoInfoName)
+					photoInfoRepo.delete(newUploadingPhoto.userId, photoInfoName)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
 				} finally {
@@ -125,7 +123,7 @@ class UploadPhotoHandler(
 				}
 
 				try {
-					photoInfoRepo.tryDoExchange(newUploadingPhoto)
+					photoInfoRepo.tryDoExchange(packet.userId, newUploadingPhoto)
 				} catch (error: Throwable) {
 					logger.error("Unknown error while trying to do photo exchange", error)
 
