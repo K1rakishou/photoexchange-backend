@@ -32,7 +32,7 @@ fun myBeans() = beans {
 	bean<Router>()
 
 	bean { WebClient.builder().build() }
-	bean { GsonBuilder().create() }
+	bean { GsonBuilder().excludeFieldsWithoutExposeAnnotation().create() }
 	bean { JsonConverterService(ref()) }
 	bean { ReactiveMongoRepositoryFactory(ref()) }
 	bean { ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(ConnectionString("mongodb://$HOST:$PORT/$DB_NAME"))) }

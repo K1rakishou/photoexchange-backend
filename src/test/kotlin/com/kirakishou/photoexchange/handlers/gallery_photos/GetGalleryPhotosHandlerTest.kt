@@ -81,14 +81,14 @@ class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 
 			val response = fromBodyContent<GalleryPhotosResponse>(content)
 			assertEquals(ErrorCode.Ok.value, response.errorCode)
-			assertEquals(6, response.galleryPhoto.size)
+			assertEquals(6, response.galleryPhotos.size)
 
-			assertEquals(7, response.galleryPhoto[0].id)
-			assertEquals(6, response.galleryPhoto[1].id)
-			assertEquals(5, response.galleryPhoto[2].id)
-			assertEquals(4, response.galleryPhoto[3].id)
-			assertEquals(3, response.galleryPhoto[4].id)
-			assertEquals(2, response.galleryPhoto[5].id)
+			assertEquals(7, response.galleryPhotos[0].id)
+			assertEquals(6, response.galleryPhotos[1].id)
+			assertEquals(5, response.galleryPhotos[2].id)
+			assertEquals(4, response.galleryPhotos[3].id)
+			assertEquals(3, response.galleryPhotos[4].id)
+			assertEquals(2, response.galleryPhotos[5].id)
 		}
 	}
 }
