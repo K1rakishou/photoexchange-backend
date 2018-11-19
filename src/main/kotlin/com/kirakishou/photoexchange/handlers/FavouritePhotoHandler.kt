@@ -1,12 +1,12 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.request.FavouritePhotoPacket
-import com.kirakishou.photoexchange.model.net.response.FavouritePhotoResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
+import core.ErrorCode
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.mono
+import net.request.FavouritePhotoPacket
+import net.response.FavouritePhotoResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.BodyExtractors
@@ -32,7 +32,7 @@ class FavouritePhotoHandler(
 				val packet = jsonConverter.fromJson<FavouritePhotoPacket>(packetBuffers)
 				if (!packet.isPacketOk()) {
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						FavouritePhotoResponse.fail(ErrorCode.FavouritePhotoErrors.BadRequest))
+						FavouritePhotoResponse.fail(ErrorCode.BadRequest))
 				}
 
 				val result = photoInfoRepository.favouritePhoto(packet.userId, packet.photoName)
@@ -40,7 +40,7 @@ class FavouritePhotoHandler(
 				return@mono when (result) {
 					is PhotoInfoRepository.FavouritePhotoResult.Error -> {
 						logger.debug("Could not favoutite photo (${packet.photoName})")
-						formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, FavouritePhotoResponse.fail(ErrorCode.FavouritePhotoErrors.UnknownError))
+						formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, FavouritePhotoResponse.fail(ErrorCode.UnknownError))
 					}
 					is PhotoInfoRepository.FavouritePhotoResult.Unfavourited -> {
 						logger.debug("A photo (${packet.photoName}) has been unfavourited")
@@ -54,7 +54,7 @@ class FavouritePhotoHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					FavouritePhotoResponse.fail(ErrorCode.FavouritePhotoErrors.UnknownError))
+					FavouritePhotoResponse.fail(ErrorCode.UnknownError))
 			}
 		}.flatMap { it }
 	}

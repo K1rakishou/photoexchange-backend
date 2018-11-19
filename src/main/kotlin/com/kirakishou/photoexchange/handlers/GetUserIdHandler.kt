@@ -1,10 +1,10 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
-import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.GetUserIdResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
+import core.ErrorCode
 import kotlinx.coroutines.reactor.mono
+import net.response.GetUserIdResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -26,7 +26,7 @@ class GetUserIdHandler(
 				val userInfo = userInfoRepository.createNew()
 				if (userInfo.isEmpty()) {
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						GetUserIdResponse.fail(ErrorCode.GetUserIdErrors.DatabaseError))
+						GetUserIdResponse.fail(ErrorCode.DatabaseError))
 				}
 
 				logger.debug("Successfully created new uploaderPhotoId = ${userInfo.userId}")
@@ -35,7 +35,7 @@ class GetUserIdHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GetUserIdResponse.fail(ErrorCode.GetUserIdErrors.UnknownError))
+					GetUserIdResponse.fail(ErrorCode.UnknownError))
 			}
 		}.flatMap { it }
 	}

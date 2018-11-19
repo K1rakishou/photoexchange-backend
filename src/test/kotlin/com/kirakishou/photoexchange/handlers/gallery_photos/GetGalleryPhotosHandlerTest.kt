@@ -2,14 +2,14 @@ package com.kirakishou.photoexchange.handlers.gallery_photos
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handler.AbstractHandlerTest
-import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.gallery_photos.GalleryPhotosResponse
 import com.kirakishou.photoexchange.model.repo.GalleryPhoto
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
+import core.ErrorCode
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
+import net.response.GalleryPhotosResponse
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -80,15 +80,15 @@ class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 				.expectBody()
 
 			val response = fromBodyContent<GalleryPhotosResponse>(content)
-			assertEquals(ErrorCode.GalleryPhotosErrors.Ok.value, response.errorCode)
-			assertEquals(6, response.galleryPhoto.size)
+			assertEquals(ErrorCode.Ok.value, response.errorCode)
+			assertEquals(6, response.galleryPhotos.size)
 
-			assertEquals(7, response.galleryPhoto[0].id)
-			assertEquals(6, response.galleryPhoto[1].id)
-			assertEquals(5, response.galleryPhoto[2].id)
-			assertEquals(4, response.galleryPhoto[3].id)
-			assertEquals(3, response.galleryPhoto[4].id)
-			assertEquals(2, response.galleryPhoto[5].id)
+			assertEquals(7, response.galleryPhotos[0].id)
+			assertEquals(6, response.galleryPhotos[1].id)
+			assertEquals(5, response.galleryPhotos[2].id)
+			assertEquals(4, response.galleryPhotos[3].id)
+			assertEquals(3, response.galleryPhotos[4].id)
+			assertEquals(2, response.galleryPhotos[5].id)
 		}
 	}
 }

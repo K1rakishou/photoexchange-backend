@@ -2,13 +2,13 @@ package com.kirakishou.photoexchange.handler
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handlers.ReceivePhotosHandler
-import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.ReceivePhotosResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
+import core.ErrorCode
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
+import net.response.ReceivePhotosResponse
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -75,7 +75,7 @@ class ReceivePhotosHandlerTest : AbstractHandlerTest() {
         .expectBody()
 
       val response = fromBodyContent<ReceivePhotosResponse>(content)
-      assertEquals(ErrorCode.ReceivePhotosErrors.Ok.value, response.errorCode)
+      assertEquals(ErrorCode.Ok.value, response.errorCode)
       assertEquals(5, response.receivedPhotos.size)
 
       assertEquals(6, response.receivedPhotos[0].photoId)
@@ -118,7 +118,7 @@ class ReceivePhotosHandlerTest : AbstractHandlerTest() {
         .expectBody()
 
       val response = fromBodyContent<ReceivePhotosResponse>(content)
-      assertEquals(ErrorCode.ReceivePhotosErrors.Ok.value, response.errorCode)
+      assertEquals(ErrorCode.Ok.value, response.errorCode)
       assertEquals(5, response.receivedPhotos.size)
 
       assertEquals(1, response.receivedPhotos[0].photoId)
@@ -179,7 +179,7 @@ class ReceivePhotosHandlerTest : AbstractHandlerTest() {
         .expectBody()
 
       val response = fromBodyContent<ReceivePhotosResponse>(content)
-      assertEquals(ErrorCode.ReceivePhotosErrors.NoPhotosToSendBack.value, response.errorCode)
+      assertEquals(ErrorCode.NoPhotosToSendBack.value, response.errorCode)
       assertEquals(0, response.receivedPhotos.size)
     }
   }

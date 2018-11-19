@@ -27,6 +27,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.github.K1rakishou</groupId>
+            <artifactId>photoexchange-common</artifactId>
+            <version>4645cb29a7</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
@@ -188,6 +194,10 @@
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
+        </repository>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
         </repository>
     </repositories>
 

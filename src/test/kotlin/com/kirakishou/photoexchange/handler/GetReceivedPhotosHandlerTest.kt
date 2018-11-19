@@ -2,13 +2,13 @@ package com.kirakishou.photoexchange.handler
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
-import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.received_photos.GetReceivedPhotosResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
+import core.ErrorCode
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
+import net.response.GetReceivedPhotosResponse
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -82,7 +82,7 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 				.expectBody()
 
 			val response = fromBodyContent<GetReceivedPhotosResponse>(content)
-			assertEquals(ErrorCode.GetReceivedPhotosErrors.Ok.value, response.errorCode)
+			assertEquals(ErrorCode.Ok.value, response.errorCode)
 			assertEquals(6, response.receivedPhotos.size)
 
 			assertEquals(16, response.receivedPhotos[0].photoId)
@@ -137,7 +137,7 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 				.expectBody()
 
 			val response = fromBodyContent<GetReceivedPhotosResponse>(content)
-			assertEquals(ErrorCode.GetReceivedPhotosErrors.Ok.value, response.errorCode)
+			assertEquals(ErrorCode.Ok.value, response.errorCode)
 			assertEquals(6, response.receivedPhotos.size)
 
       assertEquals(8, response.receivedPhotos[0].photoId)

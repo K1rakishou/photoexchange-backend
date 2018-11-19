@@ -5,12 +5,12 @@ import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
-import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.mongodb.ConnectionString
+import net.request.SendPhotoPacket
+import net.response.UploadPhotoResponse
 import org.mockito.Mockito
 import org.springframework.core.io.ClassPathResource
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate

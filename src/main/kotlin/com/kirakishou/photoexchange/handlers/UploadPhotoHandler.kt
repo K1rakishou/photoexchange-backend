@@ -10,20 +10,20 @@ import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SIZE
 import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
-import com.kirakishou.photoexchange.model.ErrorCode
 import com.kirakishou.photoexchange.model.exception.EmptyPacket
-import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
-import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.ImageUtils
 import com.kirakishou.photoexchange.util.TimeUtils
+import core.ErrorCode
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.mono
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import net.request.SendPhotoPacket
+import net.response.UploadPhotoResponse
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
@@ -58,7 +58,7 @@ class UploadPhotoHandler(
 				if (!multiValueMap.containsAllParts(PACKET_PART_KEY, PHOTO_PART_KEY)) {
 					logger.error("Request does not contain one of the required path variables")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest))
+						UploadPhotoResponse.fail(ErrorCode.BadRequest))
 				}
 
 				val packetParts = collectPart(multiValueMap, PACKET_PART_KEY).awaitSingle()
@@ -68,13 +68,13 @@ class UploadPhotoHandler(
 				if (!packet.isPacketOk()) {
 					logger.error("One or more of the packet's fields are incorrect")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest))
+						UploadPhotoResponse.fail(ErrorCode.BadRequest))
 				}
 
 				if (!checkPhotoTotalSize(photoParts)) {
 					logger.error("Bad photo size")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.BadRequest))
+						UploadPhotoResponse.fail(ErrorCode.BadRequest))
 				}
 
 				val photoInfoName = photoInfoRepo.generatePhotoInfoName()
@@ -83,7 +83,7 @@ class UploadPhotoHandler(
 				if (newUploadingPhoto.isEmpty()) {
 					logger.error("Could not save a photoInfo")
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
+						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
 				}
 
 				if (!staticMapDownloaderService.enqueue(newUploadingPhoto.photoId)) {
@@ -91,7 +91,7 @@ class UploadPhotoHandler(
 
 					cleanup(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
+						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
 				}
 
 				val tempFile = saveTempFile(photoParts, newUploadingPhoto)
@@ -100,7 +100,7 @@ class UploadPhotoHandler(
 
 					cleanup(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
+						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
 				}
 
 				try {
@@ -109,7 +109,7 @@ class UploadPhotoHandler(
 					logger.error("Unknown error", error)
 					photoInfoRepo.delete(newUploadingPhoto.userId, photoInfoName)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
+						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
 				} finally {
 					if (tempFile.exists()) {
 						tempFile.delete()
@@ -129,7 +129,7 @@ class UploadPhotoHandler(
 
 					cleanup(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.DatabaseError))
+						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
 				}
 
 				logger.debug("Photo has been successfully uploaded")
@@ -138,7 +138,7 @@ class UploadPhotoHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					UploadPhotoResponse.fail(ErrorCode.UploadPhotoErrors.UnknownError))
+					UploadPhotoResponse.fail(ErrorCode.UnknownError))
 			}
 		}.flatMap { it }
 	}

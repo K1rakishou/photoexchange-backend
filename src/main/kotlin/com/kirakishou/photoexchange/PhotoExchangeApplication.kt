@@ -9,19 +9,17 @@ import reactor.netty.http.server.HttpServer
 import java.time.Duration
 
 class PhotoExchangeApplication(val port: Int = 8080) {
-	private val httpHandler: HttpHandler
-
-	init {
-		val context = GenericApplicationContext().apply {
-			myBeans().initialize(this)
-			refresh()
-		}
-
-		httpHandler = WebHttpHandlerBuilder.applicationContext(context).build()
-	}
 
 	fun startAndAwait() {
+    val context = GenericApplicationContext().apply {
+      myBeans().initialize(this)
+      refresh()
+    }
+
+    val httpHandler = WebHttpHandlerBuilder.applicationContext(context).build()
+
 		HttpServer.create()
+			.host("0.0.0.0")
 			.port(port)
 			.handle(ReactorHttpHandlerAdapter(httpHandler))
 			.bindUntilJavaShutdown(Duration.ofSeconds(10), null)

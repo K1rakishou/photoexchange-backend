@@ -2,10 +2,10 @@ package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
-import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.CheckAccountExistsResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
+import core.ErrorCode
 import kotlinx.coroutines.reactor.mono
+import net.response.CheckAccountExistsResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -27,7 +27,7 @@ class CheckAccountExistsHandler(
 				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						CheckAccountExistsResponse.fail(ErrorCode.CheckAccountExistsErrors.BadRequest))
+						CheckAccountExistsResponse.fail(ErrorCode.BadRequest))
 				}
 
 				val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
@@ -44,7 +44,7 @@ class CheckAccountExistsHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					CheckAccountExistsResponse.fail(ErrorCode.CheckAccountExistsErrors.UnknownError))
+					CheckAccountExistsResponse.fail(ErrorCode.UnknownError))
 			}
 		}.flatMap { it }
 	}
