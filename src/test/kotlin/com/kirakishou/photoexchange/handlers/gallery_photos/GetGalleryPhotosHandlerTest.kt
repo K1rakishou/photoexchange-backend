@@ -2,14 +2,14 @@ package com.kirakishou.photoexchange.handlers.gallery_photos
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handler.AbstractHandlerTest
-import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.gallery_photos.GalleryPhotosResponse
 import com.kirakishou.photoexchange.model.repo.GalleryPhoto
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
+import core.ErrorCode
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
+import net.response.GalleryPhotosResponse
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -80,7 +80,7 @@ class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 				.expectBody()
 
 			val response = fromBodyContent<GalleryPhotosResponse>(content)
-			assertEquals(ErrorCode.GalleryPhotosErrors.Ok.value, response.errorCode)
+			assertEquals(ErrorCode.Ok.value, response.errorCode)
 			assertEquals(6, response.galleryPhoto.size)
 
 			assertEquals(7, response.galleryPhoto[0].id)

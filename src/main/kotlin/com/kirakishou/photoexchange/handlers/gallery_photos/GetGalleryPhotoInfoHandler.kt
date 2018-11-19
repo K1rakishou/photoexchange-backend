@@ -4,11 +4,11 @@ import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.handlers.AbstractWebHandler
-import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.gallery_photos.GalleryPhotoInfoResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.Utils
+import core.ErrorCode
 import kotlinx.coroutines.reactor.mono
+import net.response.GalleryPhotoInfoResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -32,7 +32,7 @@ class GetGalleryPhotoInfoHandler(
 				if (!request.containsAllPathVars(USER_ID_VARIABLE, PHOTO_IDS_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						GalleryPhotoInfoResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest))
+						GalleryPhotoInfoResponse.fail(ErrorCode.BadRequest))
 				}
 
 				val photoIdsString = request.pathVariable(PHOTO_IDS_VARIABLE)
@@ -41,7 +41,7 @@ class GetGalleryPhotoInfoHandler(
 				if (photoIdsString.isEmpty()) {
 					logger.debug("galleryPhotoIds is empty")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						GalleryPhotoInfoResponse.fail(ErrorCode.GalleryPhotosErrors.NoPhotosInRequest))
+						GalleryPhotoInfoResponse.fail(ErrorCode.NoPhotosInRequest))
 				}
 
 				val galleryPhotoIds = Utils.parsePhotoIds(photoIdsString, ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT, DELIMITER)
@@ -52,7 +52,7 @@ class GetGalleryPhotoInfoHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GalleryPhotoInfoResponse.fail(ErrorCode.GalleryPhotosErrors.UnknownError))
+					GalleryPhotoInfoResponse.fail(ErrorCode.UnknownError))
 			}
 		}.flatMap { it }
 	}

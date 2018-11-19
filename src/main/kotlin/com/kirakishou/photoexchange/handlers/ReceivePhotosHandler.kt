@@ -3,11 +3,11 @@ package com.kirakishou.photoexchange.handlers
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
-import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.ReceivePhotosResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.TimeUtils
+import core.ErrorCode
 import kotlinx.coroutines.reactor.mono
+import net.response.ReceivePhotosResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -33,7 +33,7 @@ class ReceivePhotosHandler(
 				if (!request.containsAllPathVars(USER_ID_PATH_VARIABLE, PHOTO_NAME_PATH_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						ReceivePhotosResponse.fail(ErrorCode.ReceivePhotosErrors.BadRequest))
+						ReceivePhotosResponse.fail(ErrorCode.BadRequest))
 				}
 
 				val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
@@ -44,14 +44,14 @@ class ReceivePhotosHandler(
 				if (photoNameList.isEmpty()) {
 					logger.debug("photoNameList is empty")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						ReceivePhotosResponse.fail(ErrorCode.ReceivePhotosErrors.NoPhotosInRequest))
+						ReceivePhotosResponse.fail(ErrorCode.NoPhotosInRequest))
 				}
 
 				val photoInfoList = photoInfoRepo.findPhotosWithReceiverByPhotoNamesList(userId, photoNameList)
 				if (photoInfoList.isEmpty()) {
 					logger.debug("photoAnswerList is empty")
 					return@mono formatResponse(HttpStatus.OK,
-						ReceivePhotosResponse.fail(ErrorCode.ReceivePhotosErrors.NoPhotosToSendBack))
+						ReceivePhotosResponse.fail(ErrorCode.NoPhotosToSendBack))
 				}
 
         logger.debug("Found ${photoInfoList.size} photos")
@@ -61,7 +61,7 @@ class ReceivePhotosHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					ReceivePhotosResponse.fail(ErrorCode.ReceivePhotosErrors.UnknownError))
+					ReceivePhotosResponse.fail(ErrorCode.UnknownError))
 			}
 		}.flatMap { it }
 	}

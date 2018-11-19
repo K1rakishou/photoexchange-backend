@@ -2,15 +2,15 @@ package com.kirakishou.photoexchange.handler
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
-import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.request.SendPhotoPacket
-import com.kirakishou.photoexchange.model.net.response.UploadPhotoResponse
 import com.kirakishou.photoexchange.model.repo.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
+import core.ErrorCode
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
+import net.request.SendPhotoPacket
+import net.response.UploadPhotoResponse
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -85,7 +85,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				.expectBody()
 
 			val response = fromBodyContent<UploadPhotoResponse>(content)
-			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
+			Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
 			val photoInfo = runBlocking {
 				photoInfoDao.findById(1).awaitFirst()
@@ -113,7 +113,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				.expectBody()
 
 			val response = fromBodyContent<UploadPhotoResponse>(content)
-			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
+			Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
 			val photoInfo1 = runBlocking {
 				photoInfoDao.findById(1).awaitFirst()
@@ -161,7 +161,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				.expectBody()
 
 			val response = fromBodyContent<UploadPhotoResponse>(content)
-			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
+			Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
 			val photoInfo = runBlocking {
 				photoInfoDao.findById(1).awaitFirst()
@@ -189,7 +189,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				.expectBody()
 
 			val response = fromBodyContent<UploadPhotoResponse>(content)
-			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
+			Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
 			val photoInfo1 = runBlocking {
 				photoInfoDao.findById(1).awaitFirst()
@@ -237,7 +237,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				.expectBody()
 
 			val response = fromBodyContent<UploadPhotoResponse>(content)
-			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
+			Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
 			val photoInfo = runBlocking {
 				photoInfoDao.findById(1).awaitFirst()
@@ -265,7 +265,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				.expectBody()
 
 			val response = fromBodyContent<UploadPhotoResponse>(content)
-			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
+			Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
 			val photoInfo1 = runBlocking {
 				photoInfoDao.findById(1).awaitFirst()
@@ -307,7 +307,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				.expectBody()
 
 			val response1 = fromBodyContent<UploadPhotoResponse>(content1)
-			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response1.errorCode)
+			Assert.assertEquals(ErrorCode.Ok.value, response1.errorCode)
 
 			val content2 = webClient
 				.post()
@@ -319,7 +319,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 				.expectBody()
 
 			val response2 = fromBodyContent<UploadPhotoResponse>(content2)
-			Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response2.errorCode)
+			Assert.assertEquals(ErrorCode.Ok.value, response2.errorCode)
 
 			val photoInfo1 = runBlocking {
 				photoInfoDao.findById(1).awaitFirst()
@@ -390,7 +390,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 					.expectBody()
 
 				val response = fromBodyContent<UploadPhotoResponse>(content)
-				Assert.assertEquals(ErrorCode.UploadPhotoErrors.Ok.value, response.errorCode)
+				Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 			}
 		}
 

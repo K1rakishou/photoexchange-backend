@@ -1,12 +1,12 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.request.ReportPhotoPacket
-import com.kirakishou.photoexchange.model.net.response.ReportPhotoResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
+import core.ErrorCode
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.mono
+import net.request.ReportPhotoPacket
+import net.response.ReportPhotoResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.BodyExtractors
@@ -32,7 +32,7 @@ class ReportPhotoHandler(
 				val packet = jsonConverter.fromJson<ReportPhotoPacket>(packetBuffers)
 				if (!packet.isPacketOk()) {
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.BadRequest))
+						ReportPhotoResponse.fail(ErrorCode.BadRequest))
 				}
 
 				val result = photoInfoRepository.reportPhoto(packet.userId, packet.photoName)
@@ -40,7 +40,7 @@ class ReportPhotoHandler(
 				return@mono when (result) {
 					is PhotoInfoRepository.ReportPhotoResult.Error -> {
 						logger.debug("Could not report photo (${packet.photoName})")
-						formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.UnknownError))
+						formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ReportPhotoResponse.fail(ErrorCode.UnknownError))
 					}
 					is PhotoInfoRepository.ReportPhotoResult.Unreported -> {
 						logger.debug("A photo (${packet.photoName}) has been unreported")
@@ -54,7 +54,7 @@ class ReportPhotoHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					ReportPhotoResponse.fail(ErrorCode.ReportPhotoErrors.UnknownError))
+					ReportPhotoResponse.fail(ErrorCode.UnknownError))
 			}
 		}.flatMap { it }
 	}

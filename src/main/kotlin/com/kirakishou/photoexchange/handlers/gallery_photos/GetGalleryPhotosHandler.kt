@@ -4,11 +4,10 @@ import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.handlers.AbstractWebHandler
-import com.kirakishou.photoexchange.model.ErrorCode
-import com.kirakishou.photoexchange.model.net.response.gallery_photos.GalleryPhotosResponse
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.util.Utils
+import core.ErrorCode
 import kotlinx.coroutines.reactor.mono
+import net.response.GalleryPhotosResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -32,7 +31,7 @@ class GetGalleryPhotosHandler(
 				if (!request.containsAllPathVars(LAST_UPLOADED_ON, COUNT)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest))
+						GalleryPhotosResponse.fail(ErrorCode.BadRequest))
 				}
 
 				val lastUploadedOn = try {
@@ -42,7 +41,7 @@ class GetGalleryPhotosHandler(
 
           logger.debug("Bad param last_uploaded_on (${request.pathVariable(LAST_UPLOADED_ON)})")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest))
+            GalleryPhotosResponse.fail(ErrorCode.BadRequest))
         }
 
         val count = try {
@@ -54,7 +53,7 @@ class GetGalleryPhotosHandler(
 
           logger.debug("Bad param count (${request.pathVariable(COUNT)})")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.BadRequest))
+            GalleryPhotosResponse.fail(ErrorCode.BadRequest))
         }
 
 				val galleryPhotosResponse = photoInfoRepository.findGalleryPhotos(lastUploadedOn, count)
@@ -65,7 +64,7 @@ class GetGalleryPhotosHandler(
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GalleryPhotosResponse.fail(ErrorCode.GalleryPhotosErrors.UnknownError))
+					GalleryPhotosResponse.fail(ErrorCode.UnknownError))
 			}
 		}.flatMap { it }
 	}
