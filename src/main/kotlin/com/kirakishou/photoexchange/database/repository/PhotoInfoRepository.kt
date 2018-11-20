@@ -104,19 +104,19 @@ open class PhotoInfoRepository(
     userId: String,
     lastUploadedOn: Long,
     count: Int
-  ): List<GetReceivedPhotosResponse.ReceivedPhotoResponseData> {
+  ): List<ReceivedPhotosResponse.ReceivedPhotoResponseData> {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val myPhotos = photoInfoDao.findPageOfPhotos(userId, lastUploadedOn, count).awaitFirst()
         val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
 
         val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds, PhotoInfoDao.SortOrder.Descending).awaitFirst()
-        val result = mutableListOf<GetReceivedPhotosResponse.ReceivedPhotoResponseData>()
+        val result = mutableListOf<ReceivedPhotosResponse.ReceivedPhotoResponseData>()
 
         for (theirPhoto in theirPhotos) {
           val myPhoto = myPhotos.first { it.photoId == theirPhoto.exchangedPhotoId }
 
-          result += GetReceivedPhotosResponse.ReceivedPhotoResponseData(
+          result += ReceivedPhotosResponse.ReceivedPhotoResponseData(
             theirPhoto.photoId,
             myPhoto.photoName,
             theirPhoto.photoName,
@@ -343,19 +343,19 @@ open class PhotoInfoRepository(
   suspend fun findPhotosWithReceiverByPhotoNamesList(
     userId: String,
     photoNameList: List<String>
-  ): List<ReceivePhotosResponse.ReceivedPhotoResponseData> {
+  ): List<ReceivedPhotosResponse.ReceivedPhotoResponseData> {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val myPhotos = photoInfoDao.findPhotosByNames(userId, photoNameList).awaitFirst()
         val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
 
         val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds).awaitFirst()
-        val result = mutableListOf<ReceivePhotosResponse.ReceivedPhotoResponseData>()
+        val result = mutableListOf<ReceivedPhotosResponse.ReceivedPhotoResponseData>()
 
         for (theirPhoto in theirPhotos) {
           val myPhoto = myPhotos.first { it.photoId == theirPhoto.exchangedPhotoId }
 
-          result += ReceivePhotosResponse.ReceivedPhotoResponseData(
+          result += ReceivedPhotosResponse.ReceivedPhotoResponseData(
             theirPhoto.photoId,
             myPhoto.photoName,
             theirPhoto.photoName,

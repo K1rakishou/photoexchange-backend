@@ -8,7 +8,7 @@ import core.ErrorCode
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
-import net.response.GetReceivedPhotosResponse
+import net.response.ReceivedPhotosResponse
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -81,50 +81,50 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 				.expectStatus().is2xxSuccessful
 				.expectBody()
 
-			val response = fromBodyContent<GetReceivedPhotosResponse>(content)
+			val response = fromBodyContent<ReceivedPhotosResponse>(content)
 			assertEquals(ErrorCode.Ok.value, response.errorCode)
 			assertEquals(6, response.receivedPhotos.size)
 
 			assertEquals(16, response.receivedPhotos[0].photoId)
 			assertEquals("photo8", response.receivedPhotos[0].uploadedPhotoName)
 			assertEquals("photo16", response.receivedPhotos[0].receivedPhotoName)
-			assertEquals(22.2, response.receivedPhotos[0].receiverLon, EPSILON)
-			assertEquals(22.2, response.receivedPhotos[0].receiverLat, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[0].lon, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[0].lat, EPSILON)
 			assertEquals(false, response.receivedPhotos[0].uploadedPhotoName == response.receivedPhotos[0].receivedPhotoName)
 
 			assertEquals(15, response.receivedPhotos[1].photoId)
 			assertEquals("photo7", response.receivedPhotos[1].uploadedPhotoName)
 			assertEquals("photo15", response.receivedPhotos[1].receivedPhotoName)
-			assertEquals(22.2, response.receivedPhotos[1].receiverLon, EPSILON)
-			assertEquals(22.2, response.receivedPhotos[1].receiverLat, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[1].lon, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[1].lat, EPSILON)
 			assertEquals(false, response.receivedPhotos[1].uploadedPhotoName == response.receivedPhotos[1].receivedPhotoName)
 
 			assertEquals(14, response.receivedPhotos[2].photoId)
 			assertEquals("photo6", response.receivedPhotos[2].uploadedPhotoName)
 			assertEquals("photo14", response.receivedPhotos[2].receivedPhotoName)
-			assertEquals(22.2, response.receivedPhotos[2].receiverLon, EPSILON)
-			assertEquals(22.2, response.receivedPhotos[2].receiverLat, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[2].lon, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[2].lat, EPSILON)
 			assertEquals(false, response.receivedPhotos[2].uploadedPhotoName == response.receivedPhotos[2].receivedPhotoName)
 
 			assertEquals(13, response.receivedPhotos[3].photoId)
 			assertEquals("photo5", response.receivedPhotos[3].uploadedPhotoName)
 			assertEquals("photo13", response.receivedPhotos[3].receivedPhotoName)
-			assertEquals(22.2, response.receivedPhotos[3].receiverLon, EPSILON)
-			assertEquals(22.2, response.receivedPhotos[3].receiverLat, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[3].lon, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[3].lat, EPSILON)
 			assertEquals(false, response.receivedPhotos[3].uploadedPhotoName == response.receivedPhotos[3].receivedPhotoName)
 
 			assertEquals(12, response.receivedPhotos[4].photoId)
 			assertEquals("photo4", response.receivedPhotos[4].uploadedPhotoName)
 			assertEquals("photo12", response.receivedPhotos[4].receivedPhotoName)
-			assertEquals(22.2, response.receivedPhotos[4].receiverLon, EPSILON)
-			assertEquals(22.2, response.receivedPhotos[4].receiverLat, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[4].lon, EPSILON)
+			assertEquals(22.2, response.receivedPhotos[4].lat, EPSILON)
 			assertEquals(false, response.receivedPhotos[4].uploadedPhotoName == response.receivedPhotos[4].receivedPhotoName)
 
       assertEquals(11, response.receivedPhotos[5].photoId)
       assertEquals("photo3", response.receivedPhotos[5].uploadedPhotoName)
       assertEquals("photo11", response.receivedPhotos[5].receivedPhotoName)
-      assertEquals(22.2, response.receivedPhotos[5].receiverLon, EPSILON)
-      assertEquals(22.2, response.receivedPhotos[5].receiverLat, EPSILON)
+      assertEquals(22.2, response.receivedPhotos[5].lon, EPSILON)
+      assertEquals(22.2, response.receivedPhotos[5].lat, EPSILON)
       assertEquals(false, response.receivedPhotos[5].uploadedPhotoName == response.receivedPhotos[5].receivedPhotoName)
 		}
 
@@ -136,50 +136,50 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 				.expectStatus().is2xxSuccessful
 				.expectBody()
 
-			val response = fromBodyContent<GetReceivedPhotosResponse>(content)
+			val response = fromBodyContent<ReceivedPhotosResponse>(content)
 			assertEquals(ErrorCode.Ok.value, response.errorCode)
 			assertEquals(6, response.receivedPhotos.size)
 
       assertEquals(8, response.receivedPhotos[0].photoId)
       assertEquals("photo16", response.receivedPhotos[0].uploadedPhotoName)
       assertEquals("photo8", response.receivedPhotos[0].receivedPhotoName)
-      assertEquals(11.1, response.receivedPhotos[0].receiverLon, EPSILON)
-      assertEquals(11.1, response.receivedPhotos[0].receiverLat, EPSILON)
+      assertEquals(11.1, response.receivedPhotos[0].lon, EPSILON)
+      assertEquals(11.1, response.receivedPhotos[0].lat, EPSILON)
       assertEquals(false, response.receivedPhotos[0].uploadedPhotoName == response.receivedPhotos[0].receivedPhotoName)
 
       assertEquals(7, response.receivedPhotos[1].photoId)
       assertEquals("photo15", response.receivedPhotos[1].uploadedPhotoName)
       assertEquals("photo7", response.receivedPhotos[1].receivedPhotoName)
-      assertEquals(11.1, response.receivedPhotos[1].receiverLon, EPSILON)
-      assertEquals(11.1, response.receivedPhotos[1].receiverLat, EPSILON)
+      assertEquals(11.1, response.receivedPhotos[1].lon, EPSILON)
+      assertEquals(11.1, response.receivedPhotos[1].lat, EPSILON)
       assertEquals(false, response.receivedPhotos[1].uploadedPhotoName == response.receivedPhotos[1].receivedPhotoName)
 
       assertEquals(6, response.receivedPhotos[2].photoId)
       assertEquals("photo14", response.receivedPhotos[2].uploadedPhotoName)
       assertEquals("photo6", response.receivedPhotos[2].receivedPhotoName)
-      assertEquals(11.1, response.receivedPhotos[2].receiverLon, EPSILON)
-      assertEquals(11.1, response.receivedPhotos[2].receiverLat, EPSILON)
+      assertEquals(11.1, response.receivedPhotos[2].lon, EPSILON)
+      assertEquals(11.1, response.receivedPhotos[2].lat, EPSILON)
       assertEquals(false, response.receivedPhotos[2].uploadedPhotoName == response.receivedPhotos[2].receivedPhotoName)
 
       assertEquals(5, response.receivedPhotos[3].photoId)
       assertEquals("photo13", response.receivedPhotos[3].uploadedPhotoName)
       assertEquals("photo5", response.receivedPhotos[3].receivedPhotoName)
-      assertEquals(11.1, response.receivedPhotos[3].receiverLon, EPSILON)
-      assertEquals(11.1, response.receivedPhotos[3].receiverLat, EPSILON)
+      assertEquals(11.1, response.receivedPhotos[3].lon, EPSILON)
+      assertEquals(11.1, response.receivedPhotos[3].lat, EPSILON)
       assertEquals(false, response.receivedPhotos[3].uploadedPhotoName == response.receivedPhotos[3].receivedPhotoName)
 
       assertEquals(4, response.receivedPhotos[4].photoId)
       assertEquals("photo12", response.receivedPhotos[4].uploadedPhotoName)
       assertEquals("photo4", response.receivedPhotos[4].receivedPhotoName)
-      assertEquals(11.1, response.receivedPhotos[4].receiverLon, EPSILON)
-      assertEquals(11.1, response.receivedPhotos[4].receiverLat, EPSILON)
+      assertEquals(11.1, response.receivedPhotos[4].lon, EPSILON)
+      assertEquals(11.1, response.receivedPhotos[4].lat, EPSILON)
       assertEquals(false, response.receivedPhotos[4].uploadedPhotoName == response.receivedPhotos[4].receivedPhotoName)
 
       assertEquals(3, response.receivedPhotos[5].photoId)
       assertEquals("photo11", response.receivedPhotos[5].uploadedPhotoName)
       assertEquals("photo3", response.receivedPhotos[5].receivedPhotoName)
-      assertEquals(11.1, response.receivedPhotos[5].receiverLon, EPSILON)
-      assertEquals(11.1, response.receivedPhotos[5].receiverLat, EPSILON)
+      assertEquals(11.1, response.receivedPhotos[5].lon, EPSILON)
+      assertEquals(11.1, response.receivedPhotos[5].lat, EPSILON)
       assertEquals(false, response.receivedPhotos[5].uploadedPhotoName == response.receivedPhotos[5].receivedPhotoName)
 		}
 	}
