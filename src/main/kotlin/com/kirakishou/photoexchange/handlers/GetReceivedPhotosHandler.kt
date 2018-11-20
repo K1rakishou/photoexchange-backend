@@ -6,7 +6,7 @@ import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import kotlinx.coroutines.reactor.mono
-import net.response.GetReceivedPhotosResponse
+import net.response.ReceivedPhotosResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -31,7 +31,7 @@ class GetReceivedPhotosHandler(
 				if (!request.containsAllPathVars(USER_ID, LAST_UPLOADED_ON, COUNT)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						GetReceivedPhotosResponse.fail(ErrorCode.BadRequest))
+						ReceivedPhotosResponse.fail(ErrorCode.BadRequest))
 				}
 
         val lastUploadedOn = try {
@@ -41,7 +41,7 @@ class GetReceivedPhotosHandler(
 
           logger.debug("Bad param last_uploaded_on (${request.pathVariable(LAST_UPLOADED_ON)})")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GetReceivedPhotosResponse.fail(ErrorCode.BadRequest))
+						ReceivedPhotosResponse.fail(ErrorCode.BadRequest))
         }
 
         val count = try {
@@ -53,25 +53,25 @@ class GetReceivedPhotosHandler(
 
           logger.debug("Bad param count (${request.pathVariable(COUNT)})")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GetReceivedPhotosResponse.fail(ErrorCode.BadRequest))
+						ReceivedPhotosResponse.fail(ErrorCode.BadRequest))
         }
 
         val userId = request.pathVariable(USER_ID)
         if (userId.isNullOrEmpty()) {
           logger.debug("Bad param userId (${request.pathVariable(USER_ID)})")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GetReceivedPhotosResponse.fail(ErrorCode.BadRequest))
+						ReceivedPhotosResponse.fail(ErrorCode.BadRequest))
         }
 
 				val receivedPhotos = photoInfoRepo.findPageOfReceivedPhotos(userId, lastUploadedOn, count)
 				logger.debug("Found ${receivedPhotos.size} received photos")
 
 				return@mono formatResponse(HttpStatus.OK,
-					GetReceivedPhotosResponse.success(receivedPhotos))
+					ReceivedPhotosResponse.success(receivedPhotos))
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GetReceivedPhotosResponse.fail(ErrorCode.UnknownError))
+					ReceivedPhotosResponse.fail(ErrorCode.UnknownError))
 			}
 
 		}.flatMap { it }

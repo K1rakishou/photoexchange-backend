@@ -8,7 +8,7 @@ import core.ErrorCode
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
-import net.response.ReceivePhotosResponse
+import net.response.ReceivedPhotosResponse
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -74,7 +74,7 @@ class ReceivePhotosHandlerTest : AbstractHandlerTest() {
         .expectStatus().is2xxSuccessful
         .expectBody()
 
-      val response = fromBodyContent<ReceivePhotosResponse>(content)
+      val response = fromBodyContent<ReceivedPhotosResponse>(content)
       assertEquals(ErrorCode.Ok.value, response.errorCode)
       assertEquals(5, response.receivedPhotos.size)
 
@@ -117,7 +117,7 @@ class ReceivePhotosHandlerTest : AbstractHandlerTest() {
         .expectStatus().is2xxSuccessful
         .expectBody()
 
-      val response = fromBodyContent<ReceivePhotosResponse>(content)
+      val response = fromBodyContent<ReceivedPhotosResponse>(content)
       assertEquals(ErrorCode.Ok.value, response.errorCode)
       assertEquals(5, response.receivedPhotos.size)
 
@@ -178,7 +178,7 @@ class ReceivePhotosHandlerTest : AbstractHandlerTest() {
         .expectStatus().is2xxSuccessful
         .expectBody()
 
-      val response = fromBodyContent<ReceivePhotosResponse>(content)
+      val response = fromBodyContent<ReceivedPhotosResponse>(content)
       assertEquals(ErrorCode.NoPhotosToSendBack.value, response.errorCode)
       assertEquals(0, response.receivedPhotos.size)
     }
