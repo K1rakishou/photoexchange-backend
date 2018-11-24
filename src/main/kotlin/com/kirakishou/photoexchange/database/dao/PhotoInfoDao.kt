@@ -118,9 +118,9 @@ open class PhotoInfoDao(
       .onErrorReturn(emptyList())
   }
 
-  fun findPageOfPhotos(userId: String, lastUploadedOn: Long, count: Int): Mono<List<PhotoInfo>> {
+  fun findPage(userId: String, lastUploadedOn: Long, count: Int): Mono<List<PhotoInfo>> {
     val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lte(lastUploadedOn))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(lastUploadedOn))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
       .limit(count)
 

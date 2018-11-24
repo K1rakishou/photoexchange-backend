@@ -80,7 +80,7 @@ open class PhotoInfoRepository(
   ): List<GetUploadedPhotosResponse.UploadedPhotoResponseData> {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        val myPhotos = photoInfoDao.findPageOfPhotos(userId, lastUploadedOn, count).awaitFirst()
+        val myPhotos = photoInfoDao.findPage(userId, lastUploadedOn, count).awaitFirst()
         val result = mutableListOf<GetUploadedPhotosResponse.UploadedPhotoResponseData>()
 
         for (myPhoto in myPhotos) {
@@ -107,7 +107,7 @@ open class PhotoInfoRepository(
   ): List<ReceivedPhotosResponse.ReceivedPhotoResponseData> {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        val myPhotos = photoInfoDao.findPageOfPhotos(userId, lastUploadedOn, count).awaitFirst()
+        val myPhotos = photoInfoDao.findPage(userId, lastUploadedOn, count).awaitFirst()
         val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
 
         val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds, PhotoInfoDao.SortOrder.Descending).awaitFirst()
@@ -285,7 +285,7 @@ open class PhotoInfoRepository(
       return@withContext mutex.withLock {
         val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
 
-        val pageOfGalleryPhotos = galleryPhotoDao.findPaged(lastUploadedOn, count).awaitFirst()
+        val pageOfGalleryPhotos = galleryPhotoDao.findPage(lastUploadedOn, count).awaitFirst()
         val photoIds = pageOfGalleryPhotos.map { it.photoId }
 
         val photoInfosDeferred = photoInfoDao.findManyByIds(photoIds, PhotoInfoDao.SortOrder.Descending)

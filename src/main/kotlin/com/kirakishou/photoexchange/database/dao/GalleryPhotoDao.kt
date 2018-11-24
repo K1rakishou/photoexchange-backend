@@ -28,9 +28,9 @@ open class GalleryPhotoDao(
 			.onErrorReturn(false)
 	}
 
-	fun findPaged(lastUploadedOn: Long, count: Int): Mono<List<GalleryPhoto>> {
+	fun findPage(lastUploadedOn: Long, count: Int): Mono<List<GalleryPhoto>> {
 		val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
-			.addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).lte(lastUploadedOn))
+			.addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).lt(lastUploadedOn))
 			.limit(count)
 
 		return template.find(query, GalleryPhoto::class.java)
