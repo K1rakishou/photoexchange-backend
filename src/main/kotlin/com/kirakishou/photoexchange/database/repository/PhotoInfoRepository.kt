@@ -121,7 +121,8 @@ open class PhotoInfoRepository(
             myPhoto.photoName,
             theirPhoto.photoName,
             theirPhoto.lon,
-            theirPhoto.lat
+            theirPhoto.lat,
+            theirPhoto.uploadedOn
           )
         }
 
@@ -360,7 +361,8 @@ open class PhotoInfoRepository(
             myPhoto.photoName,
             theirPhoto.photoName,
             theirPhoto.lon,
-            theirPhoto.lat
+            theirPhoto.lat,
+            theirPhoto.uploadedOn
           )
         }
 
