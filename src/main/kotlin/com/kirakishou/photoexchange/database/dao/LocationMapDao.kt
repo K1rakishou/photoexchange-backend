@@ -59,7 +59,7 @@ open class LocationMapDao(
 			.addCriteria(Criteria.where(LocationMap.Mongo.Field.PHOTO_ID).`is`(photoId))
 
 		val update = Update()
-			.set(LocationMap.Mongo.Field.MAP_STATUS, LocationMap.MapStatus.Ready.value)
+			.set(LocationMap.Mongo.Field.MAP_STATUS, LocationMap.MapStatus.Failed.value)
 
 		return template.updateFirst(query, update, LocationMap::class.java)
 			.map { updateResult -> updateResult.wasAcknowledged() }

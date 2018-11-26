@@ -14,8 +14,6 @@ import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitLast
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.client.ClientResponse
@@ -47,10 +45,11 @@ open class StaticMapDownloaderService(
 
 	private val repeatTimesList = listOf(
 		0L,
-		10L * 1000L, 			//10 seconds
+		20L * 1000L, 			//20 seconds
 		60L * 1000L, 			//60 seconds
 		300L * 1000L, 			//300 seconds (5 minutes)
 		3600L * 1000L,  		//3600 seconds (one hour)
+		3600L * 4L * 1000L,  	//14400 (4 hours)
 		3600L * 24L * 1000L  	//86400 (24 hours)
 	)
 
@@ -69,33 +68,42 @@ open class StaticMapDownloaderService(
 	}
 
 	open suspend fun enqueue(photoId: Long): Boolean {
-		launch {
+    val saveResult = locationMapRepository.save(LocationMap.create(photoId))
+
+		launch(dispatcher) {
+      logger.debug("Notifying the actor to process the next batch of maps")
+
 			//try to start the downloading process regardless of the save result because there might be old requests in the queue
 			//and we want to process them
 			requestActor.offer(Unit)
 		}
 
-		return !locationMapRepository.save(LocationMap.create(photoId)).isEmpty()
+    logger.debug("Notifying done!")
+		return !saveResult.isEmpty()
 	}
 
 	private suspend fun startDownloadingMapFiles() {
 		val requestsBatch = locationMapRepository.getOldest(REQUESTS_PER_BATCH, TimeUtils.getTimeFast())
-		if (requestsBatch.isNotEmpty()) {
-			processBatch(requestsBatch.chunked(CHUNCKS_COUNT))
+		if (requestsBatch.isEmpty()) {
+      logger.debug("No requests for map downloading")
+			return
 		}
+
+    logger.debug("Found ${requestsBatch.size} requests")
+    processBatch(requestsBatch.chunked(CHUNCKS_COUNT))
+
+    //check again if there any new maps to be downloaded
+    logger.debug("Chunk processed, proceeding to the next one")
+    startDownloadingMapFiles()
 	}
 
 	private suspend fun processBatch(requestsBatchChunked: List<List<LocationMap>>) {
 		for (chunk in requestsBatchChunked) {
-			val resultList = mutableListOf<Deferred<Boolean>>()
-
-			//send concurrent requests (CHUNCKS_COUNT max) to the google servers
-			for (locationMap in chunk) {
-				resultList += async { getLocationMap(locationMap) }
-			}
-
-			//all errors are being handled inside of the coroutine so we shouldn't get any exceptions here
-			resultList.forEach { it.await() }
+      chunk
+        //send concurrent requests (CHUNCKS_COUNT max) to the google servers
+        .map { locationMap -> async { getLocationMap(locationMap) } }
+        //all errors are being handled inside of the coroutine so we shouldn't get any exceptions here
+        .forEach { result -> result.await() }
 		}
 	}
 
@@ -164,6 +172,10 @@ open class StaticMapDownloaderService(
 
 	private suspend fun increaseAttemptsCountOrSetStatusFailed(locationMap: LocationMap) {
 		if (locationMap.attemptsCount > MAX_ATTEMPTS) {
+			//TODO
+      // probably should set here some kind of default image for a case when we could not
+      // download a map from the google servers and wasted all of the attempts
+
 			if (!locationMapRepository.setMapFailed(locationMap.photoId)) {
 				logger.error("Could not set map status as Failed")
 			}

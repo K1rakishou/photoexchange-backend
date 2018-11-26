@@ -39,4 +39,23 @@
     <logger name="io.netty.handler.ssl.SslHandler" level="WARN"/>
     <logger name="reactor.ipc.netty.http.client.HttpClientOperations" level="WARN"/>
     <logger name="org.springframework.web.reactive.function.client.ExchangeFunctions" level="WARN"/>
+    <logger name="reactor.netty.channel.FluxReceive" level="WARN"/>
+    <logger name="org.springframework.web.server.adapter.HttpWebHandlerAdapter" level="WARN"/>
+    <logger name="reactor.netty.channel.ChannelOperationsHandler" level="WARN"/>
+    <logger name="reactor.netty.http.server.HttpServerOperations" level="WARN"/>
+    <logger name="reactor.netty.channel.BootstrapHandlers" level="WARN"/>
+    <logger name="reactor.netty.http.server.HttpServer" level="WARN"/>
+    <logger name="reactor.netty.resources.PooledConnectionProvider" level="WARN"/>
+    <logger name="reactor.netty.http.client.HttpClientOperations" level="WARN"/>
+    <logger name="org.springframework.core.codec.CharSequenceEncoder" level="WARN"/>
+    <logger name="io.netty.handler.ssl.JdkSslContext" level="WARN"/>
+    <logger name="org.springframework.http.codec.multipart.MultipartHttpMessageReader" level="WARN"/>
+    <logger name="org.springframework.data.mongodb.core.index.ReactiveMongoPersistentEntityIndexCreator" level="WARN"/>
+    <logger name="reactor.netty.tcp.SslProvider" level="WARN"/>
+    <logger name="reactor.netty.http.client.HttpClientConnect" level="WARN"/>
+    <logger name="org.springframework.web.HttpLogging" level="WARN"/>
+    <logger name="io.netty.buffer.AbstractByteBuf" level="WARN"/>
+    <logger name="io.netty.util.ResourceLeakDetectorFactory" level="WARN"/>
+    <logger name="io.netty.util.Recycler" level="WARN"/>
+    <logger name="io.netty.handler.ssl.OpenSsl" level="WARN"/>
 </configuration>
