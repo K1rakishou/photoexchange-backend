@@ -81,17 +81,22 @@ open class PhotoInfoRepository(
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val myPhotos = photoInfoDao.findPage(userId, lastUploadedOn, count).awaitFirst()
+
+        val exchangeIds = myPhotos.map { it.exchangedPhotoId }
+        val theirPhotos = photoInfoDao.findManyByIds(exchangeIds).awaitFirst()
+
         val result = mutableListOf<GetUploadedPhotosResponse.UploadedPhotoResponseData>()
 
         for (myPhoto in myPhotos) {
-          val hasReceiverInfo = myPhoto.exchangedPhotoId != PhotoInfo.EMPTY_PHOTO_ID
+          val theirPhoto = theirPhotos.firstOrNull { it.photoId == myPhoto.exchangedPhotoId }
+          val receiverInfo = theirPhoto?.let { GetUploadedPhotosResponse.ReceiverInfoResponseData(it.lon, it.lat) }
 
           result += GetUploadedPhotosResponse.UploadedPhotoResponseData(
             myPhoto.photoId,
             myPhoto.photoName,
             myPhoto.lon,
             myPhoto.lat,
-            hasReceiverInfo,
+            receiverInfo,
             myPhoto.uploadedOn)
         }
 

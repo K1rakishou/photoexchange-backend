@@ -9,6 +9,7 @@ import com.kirakishou.photoexchange.extensions.deleteIfExists
 import com.kirakishou.photoexchange.model.repo.LocationMap
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.reactive.awaitFirstOrNull
@@ -29,7 +30,6 @@ open class StaticMapDownloaderService(
 	private val locationMapRepository: LocationMapRepository
 ) : CoroutineScope {
 	private val logger = LoggerFactory.getLogger(StaticMapDownloaderService::class.java)
-	private val mutex = Mutex()
   private val job = Job()
 	private val REQUESTS_PER_BATCH = 100
 	private val MAX_TIMEOUT_SECONDS = 15L
@@ -57,7 +57,7 @@ open class StaticMapDownloaderService(
   override val coroutineContext: CoroutineContext
     get() = job + dispatcher
 
-  private val requestActor = actor<Unit>(capacity = 1) {
+  private val requestActor = actor<Unit>(capacity = Channel.RENDEZVOUS, context = dispatcher) {
     consumeEach {
       startDownloadingMapFiles()
     }
@@ -69,15 +69,13 @@ open class StaticMapDownloaderService(
 	}
 
 	open suspend fun enqueue(photoId: Long): Boolean {
-		return mutex.withLock {
-			val result = locationMapRepository.save(LocationMap.create(photoId))
-
+		launch {
 			//try to start the downloading process regardless of the save result because there might be old requests in the queue
 			//and we want to process them
 			requestActor.offer(Unit)
-
-			return@withLock !result.isEmpty()
 		}
+
+		return !locationMapRepository.save(LocationMap.create(photoId)).isEmpty()
 	}
 
 	private suspend fun startDownloadingMapFiles() {
