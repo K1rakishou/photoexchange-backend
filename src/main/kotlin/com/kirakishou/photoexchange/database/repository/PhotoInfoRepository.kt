@@ -53,13 +53,19 @@ open class PhotoInfoRepository(
           return@withLock savedPhotoInfo
         }
 
-        val galleryPhotoId = mongoSequenceDao.getNextGalleryPhotoId().awaitFirst()
-        val result = galleryPhotoDao.save(GalleryPhoto.create(galleryPhotoId, photoInfo.photoId,
-          savedPhotoInfo.uploadedOn)).awaitFirst()
+        if (photoInfo.isPublic) {
+          val galleryPhotoId = mongoSequenceDao.getNextGalleryPhotoId().awaitFirst()
+          val newGalleryPhoto = GalleryPhoto.create(
+            galleryPhotoId,
+            photoInfo.photoId,
+            savedPhotoInfo.uploadedOn
+          )
 
-        if (!result) {
-          photoInfoDao.deleteById(photoInfo.photoId).awaitFirst()
-          return@withLock PhotoInfo.empty()
+          val result = galleryPhotoDao.save(newGalleryPhoto).awaitFirst()
+          if (!result) {
+            photoInfoDao.deleteById(photoInfo.photoId).awaitFirst()
+            return@withLock PhotoInfo.empty()
+          }
         }
 
         return@withLock savedPhotoInfo
@@ -113,7 +119,8 @@ open class PhotoInfoRepository(
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val myPhotos = photoInfoDao.findPage(userId, lastUploadedOn, count).awaitFirst()
-        val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
+        val theirPhotoIds = myPhotos
+          .map { it.exchangedPhotoId }
 
         val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds, PhotoInfoDao.SortOrder.Descending).awaitFirst()
         val result = mutableListOf<ReceivedPhotosResponse.ReceivedPhotoResponseData>()
@@ -132,7 +139,6 @@ open class PhotoInfoRepository(
         }
 
         return@withLock result
-
       }
     }
   }
