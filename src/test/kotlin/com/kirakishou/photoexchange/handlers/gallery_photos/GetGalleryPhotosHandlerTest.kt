@@ -52,14 +52,14 @@ class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
 
 		runBlocking {
-			photoInfoDao.save(PhotoInfo(1, 1, 3L, "111", "222", true, 11.1, 11.1, 111L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(1, 1, 3L, "111", "221", true, 11.1, 11.1, 111L)).awaitFirst()
 			photoInfoDao.save(PhotoInfo(2, 2, 4L, "111", "222", true, 11.1, 11.1, 222L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(3, 3, 2L, "111", "222", true, 11.1, 11.1, 333L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(4, 4, 1L, "111", "222", true, 11.1, 11.1, 444L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(5, 5, 9L, "111", "222", true, 11.1, 11.1, 555L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(6, 6, 8L, "111", "222", true, 11.1, 11.1, 666L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(7, 7, 7L, "111", "222", true, 11.1, 11.1, 777L)).awaitFirst()
-			photoInfoDao.save(PhotoInfo(8, 8, 6L, "111", "222", true, 11.1, 11.1, 888L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(3, 3, 2L, "111", "223", true, 11.1, 11.1, 333L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(4, 4, 1L, "111", "224", true, 11.1, 11.1, 444L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(5, 5, 9L, "111", "225", true, 11.1, 11.1, 555L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(6, 6, 8L, "111", "226", true, 11.1, 11.1, 666L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(7, 7, 7L, "111", "227", true, 11.1, 11.1, 777L)).awaitFirst()
+			photoInfoDao.save(PhotoInfo(8, 8, 6L, "111", "228", true, 11.1, 11.1, 888L)).awaitFirst()
 
 			galleryPhotoDao.save(GalleryPhoto(1L, 1L, 111L)).awaitFirst()
 			galleryPhotoDao.save(GalleryPhoto(2L, 2L, 222L)).awaitFirst()
@@ -83,12 +83,13 @@ class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 			assertEquals(ErrorCode.Ok.value, response.errorCode)
 			assertEquals(6, response.galleryPhotos.size)
 
-			assertEquals(6, response.galleryPhotos[0].id)
-			assertEquals(5, response.galleryPhotos[1].id)
-			assertEquals(4, response.galleryPhotos[2].id)
-			assertEquals(3, response.galleryPhotos[3].id)
-			assertEquals(2, response.galleryPhotos[4].id)
-			assertEquals(1, response.galleryPhotos[5].id)
+			//TODO
+			assertEquals("226", response.galleryPhotos[0].photoName)
+			assertEquals("226", response.galleryPhotos[1].photoName)
+			assertEquals("226", response.galleryPhotos[2].photoName)
+			assertEquals("226", response.galleryPhotos[3].photoName)
+			assertEquals("226", response.galleryPhotos[4].photoName)
+			assertEquals("226", response.galleryPhotos[5].photoName)
 		}
 	}
 }

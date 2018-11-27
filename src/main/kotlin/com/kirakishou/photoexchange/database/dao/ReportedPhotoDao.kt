@@ -38,6 +38,19 @@ open class ReportedPhotoDao(
 			.onErrorReturn(false)
 	}
 
+	fun findManyByPhotoNameList(userId: String, photoNameList: List<String>): Mono<List<ReportedPhoto>> {
+		val query = Query()
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`in`(photoNameList))
+			.limit(photoNameList.size)
+
+		return template.find(query, ReportedPhoto::class.java)
+			.collectList()
+			.defaultIfEmpty(emptyList())
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(emptyList())
+	}
+
 	fun findMany(userId: String, photoIdList: List<Long>): Mono<List<ReportedPhoto>> {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))

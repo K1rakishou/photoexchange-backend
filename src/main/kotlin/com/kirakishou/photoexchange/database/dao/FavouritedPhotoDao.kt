@@ -50,6 +50,19 @@ open class FavouritedPhotoDao(
 			.onErrorReturn(emptyList())
 	}
 
+	fun findManyByPhotoNameList(userId: String, photoNameList: List<String>): Mono<List<FavouritedPhoto>> {
+    val query = Query()
+      .addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
+      .addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_NAME).`in`(photoNameList))
+      .limit(photoNameList.size)
+
+    return template.find(query, FavouritedPhoto::class.java)
+      .collectList()
+      .defaultIfEmpty(emptyList())
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(emptyList())
+  }
+
 	fun findMany(userId: String, photoIdList: List<Long>): Mono<List<FavouritedPhoto>> {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
