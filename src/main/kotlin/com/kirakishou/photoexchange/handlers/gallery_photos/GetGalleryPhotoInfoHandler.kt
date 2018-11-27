@@ -21,7 +21,7 @@ class GetGalleryPhotoInfoHandler(
 ) : AbstractWebHandler(jsonConverter) {
 	private val logger = LoggerFactory.getLogger(GetGalleryPhotoInfoHandler::class.java)
 	private val USER_ID_VARIABLE = "user_id"
-	private val PHOTO_IDS_VARIABLE = "photo_ids"
+	private val PHOTO_NAMES_VARIABLE = "photo_names"
 	private val DELIMITER = ','
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
@@ -29,23 +29,23 @@ class GetGalleryPhotoInfoHandler(
 			logger.debug("New GetGalleryPhotoInfo request")
 
 			try {
-				if (!request.containsAllPathVars(USER_ID_VARIABLE, PHOTO_IDS_VARIABLE)) {
+				if (!request.containsAllPathVars(USER_ID_VARIABLE, PHOTO_NAMES_VARIABLE)) {
 					logger.debug("Request does not contain one of the required path variables")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						GalleryPhotoInfoResponse.fail(ErrorCode.BadRequest))
 				}
 
-				val photoIdsString = request.pathVariable(PHOTO_IDS_VARIABLE)
+				val photoNamesString = request.pathVariable(PHOTO_NAMES_VARIABLE)
 				val userId = request.pathVariable(USER_ID_VARIABLE)
 
-				if (photoIdsString.isEmpty()) {
-					logger.debug("galleryPhotoIds is empty")
+				if (photoNamesString.isEmpty()) {
+					logger.debug("photoNamesString is empty")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						GalleryPhotoInfoResponse.fail(ErrorCode.NoPhotosInRequest))
 				}
 
-				val galleryPhotoIds = Utils.parsePhotoIds(photoIdsString, ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT, DELIMITER)
-				val galleryPhotoInfoResponse = photoInfoRepository.findGalleryPhotosInfo(userId, galleryPhotoIds)
+				val photoNames = Utils.parsePhotoNames(photoNamesString, ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT, DELIMITER)
+				val galleryPhotoInfoResponse = photoInfoRepository.findGalleryPhotosInfo(userId, photoNames)
 
 				logger.debug("Found ${galleryPhotoInfoResponse.size} photo infos from gallery")
 				return@mono formatResponse(HttpStatus.OK, GalleryPhotoInfoResponse.success(galleryPhotoInfoResponse))

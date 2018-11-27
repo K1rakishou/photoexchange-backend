@@ -257,7 +257,7 @@ open class PhotoInfoRepository(
           FavouritePhotoResult.Unfavourited(favouritesCount)
         } else {
           val id = mongoSequenceDao.getNextFavouritedPhotoId().awaitFirst()
-          if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, userId, photoId)).awaitFirst()) {
+          if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, photoName, userId, photoId)).awaitFirst()) {
             return@withLock FavouritePhotoResult.Error()
           }
 
@@ -282,7 +282,7 @@ open class PhotoInfoRepository(
         } else {
 
           val id = mongoSequenceDao.getNextReportedPhotoId().awaitFirst()
-          if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, userId, photoId)).awaitFirst()) {
+          if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, photoName, userId, photoId)).awaitFirst()) {
             return@withLock ReportPhotoResult.Error()
           }
 
@@ -313,9 +313,14 @@ open class PhotoInfoRepository(
           resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto, favouritedPhotos.size.toLong())
         }
 
-        return@withLock resultMap.values.map { (photoInfo, galleryPhoto, favouritesCount) ->
-          GalleryPhotosResponse.GalleryPhotoResponseData(galleryPhoto.id, photoInfo.photoName, photoInfo.lon, photoInfo.lat,
-            photoInfo.uploadedOn, favouritesCount)
+        return@withLock resultMap.values.map { (photoInfo, _, favouritesCount) ->
+          GalleryPhotosResponse.GalleryPhotoResponseData(
+            photoInfo.photoName,
+            photoInfo.lon,
+            photoInfo.lat,
+            photoInfo.uploadedOn,
+            favouritesCount
+          )
         }
       }
     }
@@ -323,30 +328,34 @@ open class PhotoInfoRepository(
 
   suspend fun findGalleryPhotosInfo(
     userId: String,
-    galleryPhotoIdList: List<Long>
+    photoNames: List<String>
   ): List<GalleryPhotoInfoResponse.GalleryPhotosInfoResponseData> {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val resultMap = linkedMapOf<Long, GalleryPhotoInfoDto>()
 
-        val userFavouritedPhotosDeffered = favouritedPhotoDao.findMany(userId, galleryPhotoIdList)
-        val userReportedPhotosDeffered = reportedPhotoDao.findMany(userId, galleryPhotoIdList)
+        val userFavouritedPhotosDeferred = favouritedPhotoDao.findManyByPhotoNameList(userId, photoNames)
+        val userReportedPhotosDeferred = reportedPhotoDao.findManyByPhotoNameList(userId, photoNames)
 
-        val userFavouritedPhotos = userFavouritedPhotosDeffered.awaitFirst()
-        val userReportedPhotos = userReportedPhotosDeffered.awaitFirst()
+        val userFavouritedPhotos = userFavouritedPhotosDeferred.awaitFirst()
+        val userReportedPhotos = userReportedPhotosDeferred.awaitFirst()
 
         for (favouritedPhoto in userFavouritedPhotos) {
-          resultMap.putIfAbsent(favouritedPhoto.photoId, GalleryPhotoInfoDto(favouritedPhoto.photoId))
+          resultMap.putIfAbsent(favouritedPhoto.photoId, GalleryPhotoInfoDto(favouritedPhoto.photoName))
           resultMap[favouritedPhoto.photoId]!!.isFavourited = true
         }
 
         for (reportedPhoto in userReportedPhotos) {
-          resultMap.putIfAbsent(reportedPhoto.photoId, GalleryPhotoInfoDto(reportedPhoto.photoId))
+          resultMap.putIfAbsent(reportedPhoto.photoId, GalleryPhotoInfoDto(reportedPhoto.photoName))
           resultMap[reportedPhoto.photoId]!!.isReported = true
         }
 
-        return@withLock resultMap.values.map { (galleryPhotoId, isFavourited, isReported) ->
-          GalleryPhotoInfoResponse.GalleryPhotosInfoResponseData(galleryPhotoId, isFavourited, isReported)
+        return@withLock resultMap.values.map { (galleryPhotoName, isFavourited, isReported) ->
+          GalleryPhotoInfoResponse.GalleryPhotosInfoResponseData(
+            galleryPhotoName,
+            isFavourited,
+            isReported
+          )
         }
       }
     }
@@ -391,7 +400,7 @@ open class PhotoInfoRepository(
   }
 
   data class GalleryPhotoInfoDto(
-    var galleryPhotoId: Long,
+    var galleryPhotoName: String,
     var isFavourited: Boolean = false,
     var isReported: Boolean = false
   )
