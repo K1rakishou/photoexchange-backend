@@ -74,6 +74,7 @@ open class PushNotificationSenderService(
     val toBeRemoveList = mutableListOf<String>()
 
     for (chunk in chunked) {
+      //only requests that were executed successfully will be removed from the requests set
       toBeRemoveList.addAll(processChunk(chunk, url, accessToken))
     }
 
@@ -81,7 +82,7 @@ open class PushNotificationSenderService(
   }
 
   /**
-   * Return a list of userIds which requests were successful
+   * Returns a list of userIds which requests were successful
    * */
   private suspend fun processChunk(chunk: List<String>, url: String, accessToken: String): List<String> {
     return chunk
@@ -110,7 +111,7 @@ open class PushNotificationSenderService(
     val packet = Packet(Message(userToken, TestData("test1", "test2")))
     val body = jsonConverterService.toJson(packet)
 
-    //TODO: find out whether there is a way to send notifications in batches not by one at a time
+    //TODO: find out whether there is a way to send notifications in batches and not one at a time
     val response = try {
       client.post()
         .uri(url)
