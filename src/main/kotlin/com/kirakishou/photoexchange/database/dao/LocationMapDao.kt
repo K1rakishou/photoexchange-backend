@@ -1,6 +1,6 @@
 package com.kirakishou.photoexchange.database.dao
 
-import com.kirakishou.photoexchange.model.repo.LocationMap
+import com.kirakishou.photoexchange.database.entity.LocationMap
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate

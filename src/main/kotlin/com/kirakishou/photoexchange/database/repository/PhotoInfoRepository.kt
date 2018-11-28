@@ -1,8 +1,11 @@
 package com.kirakishou.photoexchange.database.repository
 
 import com.kirakishou.photoexchange.database.dao.*
+import com.kirakishou.photoexchange.database.entity.FavouritedPhoto
+import com.kirakishou.photoexchange.database.entity.GalleryPhoto
+import com.kirakishou.photoexchange.database.entity.PhotoInfo
+import com.kirakishou.photoexchange.database.entity.ReportedPhoto
 import com.kirakishou.photoexchange.model.exception.ExchangeException
-import com.kirakishou.photoexchange.model.repo.*
 import com.kirakishou.photoexchange.service.GeneratorService
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.sync.Mutex
@@ -151,7 +154,7 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun tryDoExchange(userId: String, newUploadingPhoto: PhotoInfo) {
+  suspend fun tryDoExchange(userId: String, newUploadingPhoto: PhotoInfo): PhotoInfo {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val oldestPhoto = photoInfoDao.findOldestVacantPhoto(userId).awaitFirst()
@@ -162,7 +165,7 @@ open class PhotoInfoRepository(
             throw RuntimeException("Something is wrong with the database. Could not reset photo exchange id for photo with id (${oldestPhoto.photoId})")
           }
 
-          return@withLock
+          return@withLock oldestPhoto
         }
 
         try {
@@ -186,6 +189,8 @@ open class PhotoInfoRepository(
             throw RuntimeException("Something is wrong with the database. Could not reset photo exchange id for photo with id (${oldestPhoto.photoId})")
           }
         }
+
+        return@withLock oldestPhoto
       }
     }
   }

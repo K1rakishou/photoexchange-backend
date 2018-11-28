@@ -7,6 +7,7 @@ import com.kirakishou.photoexchange.database.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.PushNotificationSenderService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.mongodb.ConnectionString
 import net.request.SendPhotoPacket
@@ -47,6 +48,8 @@ abstract class AbstractHandlerTest {
 	lateinit var locationMapDao: LocationMapDao
 
 	lateinit var staticMapDownloaderService: StaticMapDownloaderService
+	lateinit var pushNotificationSenderService: PushNotificationSenderService
+
 	lateinit var locationMapRepository: LocationMapRepository
 	lateinit var photoInfoRepository: PhotoInfoRepository
 
@@ -105,6 +108,7 @@ abstract class AbstractHandlerTest {
 		)
 
 		staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)
+    pushNotificationSenderService = Mockito.mock(PushNotificationSenderService::class.java)
 	}
 
 	fun clear() {

@@ -11,8 +11,9 @@ import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
 import com.kirakishou.photoexchange.model.exception.EmptyPacket
-import com.kirakishou.photoexchange.model.repo.PhotoInfo
+import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.PushNotificationSenderService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.ImageUtils
@@ -40,7 +41,8 @@ import java.io.IOException
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
-	private val staticMapDownloaderService: StaticMapDownloaderService
+	private val staticMapDownloaderService: StaticMapDownloaderService,
+  private val pushNotificationSenderService: PushNotificationSenderService
 ) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
@@ -122,7 +124,7 @@ class UploadPhotoHandler(
 					logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
 				}
 
-				try {
+				val exchangedPhoto = try {
 					photoInfoRepo.tryDoExchange(packet.userId, newUploadingPhoto)
 				} catch (error: Throwable) {
 					logger.error("Unknown error while trying to do photo exchange", error)
@@ -133,6 +135,10 @@ class UploadPhotoHandler(
 				}
 
 				logger.debug("Photo has been successfully uploaded")
+
+				if (!exchangedPhoto.isEmpty()) {
+          pushNotificationSenderService.enqueue(exchangedPhoto)
+        }
 
         val response = UploadPhotoResponse.success(
           newUploadingPhoto.photoId,

@@ -14,6 +14,7 @@ import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.PushNotificationSenderService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.mongodb.ConnectionString
 import com.samskivert.mustache.Mustache
@@ -54,6 +55,7 @@ fun myBeans() = beans {
 	//service
 	bean<GeneratorService>()
 	bean { StaticMapDownloaderService(ref(), ref(), ref()).also { it.init() } }
+	bean { PushNotificationSenderService(ref(), ref(), ref()) }
 
 	//handler
 	bean<UploadPhotoHandler>()

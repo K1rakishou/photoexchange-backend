@@ -1,4 +1,4 @@
-package com.kirakishou.photoexchange.model.repo
+package com.kirakishou.photoexchange.database.entity
 
 import com.kirakishou.photoexchange.database.dao.GalleryPhotoDao
 import org.springframework.data.annotation.Id

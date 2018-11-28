@@ -3,7 +3,8 @@ package com.kirakishou.photoexchange.config
 import org.springframework.core.io.ClassPathResource
 
 object ServerSettings {
-	val GOOGLE_MAPS_KEY by lazy { getGoogleMapsKey() }
+	val GOOGLE_MAPS_KEY by lazy { getPropertyByName("GOOGLE_MAPS_KEY") }
+	val PROJECT_ID by lazy { getPropertyByName("FIREBASE_PROJECT_ID") }
 
 	const val FILE_DIR_PATH = "D:\\projects\\data\\photos"
 	const val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
@@ -39,9 +40,8 @@ object ServerSettings {
 		const val DB_NAME = "photoexchange"
 	}
 
-	private fun getGoogleMapsKey(): String {
+	private fun getPropertyByName(propertyName: String): String {
 		val fileResource = ClassPathResource("keys.properties")
-		val googleMapsKeyName = "GOOGLE_MAPS_KEY"
 
 		val keysMap = fileResource.file
 			.readLines()
@@ -51,6 +51,6 @@ object ServerSettings {
 			}
 			.toMap()
 
-		return keysMap[googleMapsKeyName]!!
+		return keysMap[propertyName]!!
 	}
 }

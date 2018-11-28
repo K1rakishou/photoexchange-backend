@@ -1,6 +1,6 @@
 package com.kirakishou.photoexchange.database.dao
 
-import com.kirakishou.photoexchange.model.repo.MongoSequence
+import com.kirakishou.photoexchange.database.entity.MongoSequence
 import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
