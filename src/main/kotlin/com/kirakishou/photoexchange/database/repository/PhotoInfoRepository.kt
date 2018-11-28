@@ -188,6 +188,8 @@ open class PhotoInfoRepository(
           if (!photoInfoDao.resetVacantPhoto(oldestPhoto.photoId).awaitFirst()) {
             throw RuntimeException("Something is wrong with the database. Could not reset photo exchange id for photo with id (${oldestPhoto.photoId})")
           }
+
+          return@withLock PhotoInfo.empty()
         }
 
         return@withLock oldestPhoto

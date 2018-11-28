@@ -5,6 +5,7 @@ import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.PushNotificationSenderService
@@ -52,6 +53,7 @@ abstract class AbstractHandlerTest {
 
 	lateinit var locationMapRepository: LocationMapRepository
 	lateinit var photoInfoRepository: PhotoInfoRepository
+  lateinit var userInfoRepository: UserInfoRepository
 
 	fun init() {
 		jsonConverterService = JsonConverterService(gson)
@@ -101,6 +103,12 @@ abstract class AbstractHandlerTest {
 			locationMapDao,
 			generator
 		)
+
+    userInfoRepository = UserInfoRepository(
+      mongoSequenceDao,
+      userInfoDao,
+      generator
+    )
 
 		locationMapRepository = LocationMapRepository(
 			mongoSequenceDao,

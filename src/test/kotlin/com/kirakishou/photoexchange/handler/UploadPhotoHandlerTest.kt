@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.handler
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
+import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.PushNotificationSenderService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
@@ -34,11 +35,13 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
   private fun getWebTestClient(jsonConverterService: JsonConverterService,
                                photoInfoRepository: PhotoInfoRepository,
+                               userInfoRepository: UserInfoRepository,
                                staticMapDownloaderService: StaticMapDownloaderService,
                                pushNotificationSenderService: PushNotificationSenderService): WebTestClient {
     val handler = UploadPhotoHandler(
       jsonConverterService,
       photoInfoRepository,
+      userInfoRepository,
       staticMapDownloaderService,
       pushNotificationSenderService
     )
@@ -74,6 +77,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     val webClient = getWebTestClient(
       jsonConverterService,
       photoInfoRepository,
+      userInfoRepository,
       staticMapDownloaderService,
       pushNotificationSenderService
     )
@@ -160,6 +164,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     val webClient = getWebTestClient(
       jsonConverterService,
       photoInfoRepository,
+      userInfoRepository,
       staticMapDownloaderService,
       pushNotificationSenderService
     )
@@ -241,6 +246,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     val webClient = getWebTestClient(
       jsonConverterService,
       photoInfoRepository,
+      userInfoRepository,
       staticMapDownloaderService,
       pushNotificationSenderService
     )
@@ -409,6 +415,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     val webClient = getWebTestClient(
       jsonConverterService,
       photoInfoRepository,
+      userInfoRepository,
       staticMapDownloaderService,
       pushNotificationSenderService
     )

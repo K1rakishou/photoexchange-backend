@@ -13,9 +13,9 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.reactive.awaitFirst
-import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitLast
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClient
@@ -125,6 +125,7 @@ open class StaticMapDownloaderService(
 			val requestString = String.format(requestStringFormat, lon, lat, lon, lat)
 
 			logger.debug("[$photoMapName], Trying to get map from google services")
+			logger.debug("requestString = $requestString")
 
 			val response = client.get()
         .uri(requestString)
@@ -133,6 +134,10 @@ open class StaticMapDownloaderService(
         .awaitFirst()
 
 			if (!response.statusCode().is2xxSuccessful) {
+        if (response.statusCode() == HttpStatus.FORBIDDEN) {
+          logger.debug("StatusCode is FORBIDDEN. Probably should check the developer account")
+        }
+
 				throw ResponseIsNot2xxSuccessful("[$photoMapName], Response status code is not 2xxSuccessful (${response.statusCode()})")
 			}
 
