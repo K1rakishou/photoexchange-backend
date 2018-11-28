@@ -20,7 +20,8 @@ class Router(
 	private val getUploadedPhotosHandler: GetUploadedPhotosHandler,
 	private val getReceivedPhotosHandler: GetReceivedPhotosHandler,
 	private val getStaticMapHandler: GetStaticMapHandler,
-	private val checkAccountExistsHandler: CheckAccountExistsHandler
+	private val checkAccountExistsHandler: CheckAccountExistsHandler,
+  private val updateFirebaseTokenHandler: UpdateFirebaseTokenHandler
 ) {
 	fun setUpRouter() = router {
 		"/v1".nest {
@@ -28,6 +29,9 @@ class Router(
 				accept(MediaType.MULTIPART_FORM_DATA).nest {
 					POST("/upload", uploadPhotoHandler::handle)
 				}
+        accept(MediaType.APPLICATION_JSON).nest {
+          POST("/update_token", updateFirebaseTokenHandler::handle)
+        }
 
 				accept(MediaType.APPLICATION_JSON).nest {
 					GET("/get_user_id", getUserIdHandler::handle)

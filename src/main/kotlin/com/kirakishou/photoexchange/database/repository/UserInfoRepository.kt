@@ -57,4 +57,12 @@ class UserInfoRepository(
       }
     }
   }
+
+  suspend fun updateFirebaseToken(userId: String, newToken: String): Boolean {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        return@withLock userInfoDao.updateFirebaseToken(userId, newToken).awaitFirst()
+      }
+    }
+  }
 }
