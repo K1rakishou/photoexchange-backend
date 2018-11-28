@@ -83,13 +83,12 @@ class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 			assertEquals(ErrorCode.Ok.value, response.errorCode)
 			assertEquals(6, response.galleryPhotos.size)
 
-			//TODO
 			assertEquals("226", response.galleryPhotos[0].photoName)
-			assertEquals("226", response.galleryPhotos[1].photoName)
-			assertEquals("226", response.galleryPhotos[2].photoName)
-			assertEquals("226", response.galleryPhotos[3].photoName)
-			assertEquals("226", response.galleryPhotos[4].photoName)
-			assertEquals("226", response.galleryPhotos[5].photoName)
+			assertEquals("225", response.galleryPhotos[1].photoName)
+			assertEquals("224", response.galleryPhotos[2].photoName)
+			assertEquals("223", response.galleryPhotos[3].photoName)
+			assertEquals("222", response.galleryPhotos[4].photoName)
+			assertEquals("221", response.galleryPhotos[5].photoName)
 		}
 	}
 }

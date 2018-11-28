@@ -63,6 +63,9 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 		super.clear()
 	}
 
+	//TODO: add a test case when static photo haven't been downloaded yet
+  //TODO: add a test case with a few photos when some of them do not have static map downloaded
+
 	@Test
 	fun `test should exchange two photos`() {
 		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, staticMapDownloaderService)
@@ -88,11 +91,13 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
 			val photoInfo = runBlocking {
+        photoInfoDao.updateSetLocationMapId(1, 1).awaitFirst()
 				photoInfoDao.findById(1).awaitFirst()
 			}
 
 			assertEquals(1, photoInfo.photoId)
 			assertEquals(PhotoInfo.EMPTY_PHOTO_ID, photoInfo.exchangedPhotoId)
+			assertEquals(1, photoInfo.locationMapId)
 			assertEquals(packet.userId, photoInfo.userId)
 			assertEquals(packet.isPublic, photoInfo.isPublic)
 			assertEquals(packet.lon, photoInfo.lon, EPSILON)
@@ -120,11 +125,13 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			}
 
 			val photoInfo2 = runBlocking {
+        photoInfoDao.updateSetLocationMapId(2, 2).awaitFirst()
 				photoInfoDao.findById(2).awaitFirst()
 			}
 
 			assertEquals(1, photoInfo1.photoId)
 			assertEquals(2, photoInfo1.exchangedPhotoId)
+      assertEquals(1, photoInfo1.locationMapId)
 			assertEquals("111", photoInfo1.userId)
 			assertEquals(true, photoInfo1.isPublic)
 			assertEquals(33.4, photoInfo1.lon, EPSILON)
@@ -132,6 +139,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
       assertEquals(2, photoInfo2.photoId)
       assertEquals(1, photoInfo2.exchangedPhotoId)
+      assertEquals(2, photoInfo2.locationMapId)
       assertEquals("222", photoInfo2.userId)
 			assertEquals(true, photoInfo2.isPublic)
 			assertEquals(11.4, photoInfo2.lon, EPSILON)
@@ -240,6 +248,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
 			val photoInfo = runBlocking {
+        photoInfoDao.updateSetLocationMapId(1, 1).awaitFirst()
 				photoInfoDao.findById(1).awaitFirst()
 			}
 
@@ -272,6 +281,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			}
 
 			val photoInfo2 = runBlocking {
+        photoInfoDao.updateSetLocationMapId(2, 2).awaitFirst()
 				photoInfoDao.findById(2).awaitFirst()
 			}
 
@@ -309,6 +319,10 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 			val response1 = fromBodyContent<UploadPhotoResponse>(content1)
 			Assert.assertEquals(ErrorCode.Ok.value, response1.errorCode)
 
+      runBlocking {
+        photoInfoDao.updateSetLocationMapId(3, 3).awaitFirst()
+      }
+
 			val content2 = webClient
 				.post()
 				.uri("/v1/api/upload")
@@ -320,6 +334,10 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 			val response2 = fromBodyContent<UploadPhotoResponse>(content2)
 			Assert.assertEquals(ErrorCode.Ok.value, response2.errorCode)
+
+      runBlocking {
+        photoInfoDao.updateSetLocationMapId(4, 4).awaitFirst()
+      }
 
 			val photoInfo1 = runBlocking {
 				photoInfoDao.findById(1).awaitFirst()
@@ -368,8 +386,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 	}
 
 	@Test
-	fun `test 300 concurrent uploadings at the same time`() {
-    val concurrency = 300
+	fun `test 100 concurrent uploadings at the same time`() {
+    val concurrency = 100
 		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository, staticMapDownloaderService)
 
 		runBlocking {
@@ -391,6 +409,13 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
 				val response = fromBodyContent<UploadPhotoResponse>(content)
 				Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
+
+        runBlocking {
+          //set locationMapId for every photo to 10 so they can exchange between themselves
+          photoInfoDao.updateSetLocationMapId(response.photoId, 10).awaitFirst()
+        }
+
+        Unit
 			}
 		}
 
