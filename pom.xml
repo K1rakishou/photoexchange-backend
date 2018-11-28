@@ -117,6 +117,13 @@
             <version>0.4.8</version>
         </dependency>
 
+        <!-- for sending push-notifications -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>1.24.1</version>
+        </dependency>
+
     </dependencies>
 
     <build>

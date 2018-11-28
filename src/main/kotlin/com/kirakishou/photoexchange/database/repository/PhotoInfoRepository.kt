@@ -118,7 +118,7 @@ open class PhotoInfoRepository(
   ): List<ReceivedPhotosResponse.ReceivedPhotoResponseData> {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        val myPhotos = photoInfoDao.findPage(userId, lastUploadedOn, count).awaitFirst()
+        val myPhotos = photoInfoDao.findPageOfExchangedPhotos(userId, lastUploadedOn, count).awaitFirst()
         val theirPhotoIds = myPhotos
           .map { it.exchangedPhotoId }
 
