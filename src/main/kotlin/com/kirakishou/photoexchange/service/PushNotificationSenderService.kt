@@ -22,7 +22,7 @@ import java.time.Duration
 import kotlin.coroutines.CoroutineContext
 
 
-class PushNotificationSenderService(
+open class PushNotificationSenderService(
   private val client: WebClient,
   private val userInfoRepository: UserInfoRepository,
   private val jsonConverterService: JsonConverterService
@@ -33,6 +33,8 @@ class PushNotificationSenderService(
   private val chunkSize = 4
   private val maxTimeoutSeconds = 10L
   private val dispatcher = newFixedThreadPoolContext(chunkSize, "push-sender")
+
+  //these are just notifications not some important data so it's not a problem if we loose them due to a server crash
   private val requests = LinkedHashSet<String>(1024)
 
   private val googleCredential = GoogleCredential
@@ -48,7 +50,7 @@ class PushNotificationSenderService(
     }
   }
 
-  fun enqueue(photoInfo: PhotoInfo) {
+  open fun enqueue(photoInfo: PhotoInfo) {
     launch {
       mutex.withLock { requests.add(photoInfo.userId) }
       requestActor.offer(Unit)
@@ -105,6 +107,7 @@ class PushNotificationSenderService(
     val packet = Packet(Message(userToken, TestData("test1", "test2")))
     val body = jsonConverterService.toJson(packet)
 
+    //TODO: find out whether there is a way to send notifications in batches not by one at a time
     val response = try {
       client.post()
         .uri(url)
