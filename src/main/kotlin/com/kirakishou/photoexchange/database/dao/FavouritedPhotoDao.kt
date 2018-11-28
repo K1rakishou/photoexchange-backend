@@ -1,6 +1,6 @@
 package com.kirakishou.photoexchange.database.dao
 
-import com.kirakishou.photoexchange.model.repo.FavouritedPhoto
+import com.kirakishou.photoexchange.database.entity.FavouritedPhoto
 import org.slf4j.LoggerFactory
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria

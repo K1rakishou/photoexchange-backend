@@ -1,4 +1,4 @@
-package com.kirakishou.photoexchange.model.repo
+package com.kirakishou.photoexchange.database.entity
 
 import com.kirakishou.photoexchange.database.dao.UserInfoDao
 import org.springframework.data.annotation.Id
@@ -17,6 +17,9 @@ class UserInfo(
 	@Field(Mongo.Field.USER_ID)
 	var userId: String,
 
+  @Field(Mongo.Field.FIREBASE_TOKEN)
+	var firebaseToken: String,
+
 	@Field(Mongo.Field.PASSWORD)
 	var password: String
 ) {
@@ -26,11 +29,11 @@ class UserInfo(
 
 	companion object {
 		fun empty(): UserInfo {
-			return UserInfo(-1L, "", "")
+			return UserInfo(-1L, "", "", "")
 		}
 
 		fun create(userId: String, password: String = ""): UserInfo {
-			return UserInfo(-1L, userId, password)
+			return UserInfo(-1L, userId, "", password)
 		}
 	}
 
@@ -38,6 +41,7 @@ class UserInfo(
 		object Field {
 			const val ID = "_id"
 			const val USER_ID = "user_id"
+      const val FIREBASE_TOKEN = "firebase_token"
 			const val PASSWORD = "password"
 		}
 

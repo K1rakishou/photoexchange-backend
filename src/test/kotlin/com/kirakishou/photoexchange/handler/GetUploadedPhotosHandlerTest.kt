@@ -2,7 +2,7 @@ package com.kirakishou.photoexchange.handler
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
-import com.kirakishou.photoexchange.model.repo.PhotoInfo
+import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import junit.framework.Assert.assertEquals

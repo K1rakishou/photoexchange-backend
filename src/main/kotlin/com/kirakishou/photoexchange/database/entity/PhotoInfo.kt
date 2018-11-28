@@ -1,4 +1,4 @@
-package com.kirakishou.photoexchange.model.repo
+package com.kirakishou.photoexchange.database.entity
 
 import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import org.springframework.data.annotation.Id
@@ -42,7 +42,7 @@ data class PhotoInfo(
 	val uploadedOn: Long
 ) {
 	fun isEmpty(): Boolean {
-		return photoId == -1L
+		return photoId == EMPTY_PHOTO_ID
 	}
 
 	companion object {

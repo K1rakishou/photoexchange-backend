@@ -1,7 +1,7 @@
 package com.kirakishou.photoexchange.database.dao
 
-import com.kirakishou.photoexchange.model.repo.GalleryPhoto
-import com.kirakishou.photoexchange.model.repo.PhotoInfo
+import com.kirakishou.photoexchange.database.entity.GalleryPhoto
+import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate

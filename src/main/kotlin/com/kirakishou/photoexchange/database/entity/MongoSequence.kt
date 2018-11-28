@@ -1,4 +1,4 @@
-package com.kirakishou.photoexchange.model.repo
+package com.kirakishou.photoexchange.database.entity
 
 import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import org.springframework.data.annotation.Id
@@ -8,10 +8,10 @@ import org.springframework.data.mongodb.core.mapping.Field
 @Document(collection = MongoSequenceDao.COLLECTION_NAME)
 class MongoSequence(
 	@Id
-	@Field(MongoSequence.Mongo.Field.SEQUENCE_NAME)
+	@Field(Mongo.Field.SEQUENCE_NAME)
 	val sequenceName: String,
 
-	@Field(MongoSequence.Mongo.Field.SEQUENCE_ID)
+	@Field(Mongo.Field.SEQUENCE_ID)
 	val id: Long
 ) {
 	object Mongo {

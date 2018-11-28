@@ -24,3 +24,5 @@ nbdist/
 .nb-gradle/
 /src/main/resources/keys.properties
 /src/test/resources/test_photos
+/src/main/resources/service-account.json
+.mvn/

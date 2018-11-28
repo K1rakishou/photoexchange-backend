@@ -2,7 +2,7 @@ package com.kirakishou.photoexchange.database.repository
 
 import com.kirakishou.photoexchange.database.dao.LocationMapDao
 import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
-import com.kirakishou.photoexchange.model.repo.LocationMap
+import com.kirakishou.photoexchange.database.entity.LocationMap
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

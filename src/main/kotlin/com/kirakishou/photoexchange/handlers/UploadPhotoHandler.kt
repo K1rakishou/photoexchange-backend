@@ -11,8 +11,10 @@ import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
 import com.kirakishou.photoexchange.model.exception.EmptyPacket
-import com.kirakishou.photoexchange.model.repo.PhotoInfo
+import com.kirakishou.photoexchange.database.entity.PhotoInfo
+import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.service.PushNotificationSenderService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.ImageUtils
@@ -40,7 +42,9 @@ import java.io.IOException
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
-	private val staticMapDownloaderService: StaticMapDownloaderService
+  private val userInfoRepository: UserInfoRepository,
+	private val staticMapDownloaderService: StaticMapDownloaderService,
+  private val pushNotificationSenderService: PushNotificationSenderService
 ) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
@@ -62,8 +66,6 @@ class UploadPhotoHandler(
 				}
 
 				val packetParts = collectPart(multiValueMap, PACKET_PART_KEY).awaitSingle()
-				val photoParts = collectPart(multiValueMap, PHOTO_PART_KEY).awaitSingle()
-
 				val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
 				if (!packet.isPacketOk()) {
 					logger.error("One or more of the packet's fields are incorrect")
@@ -71,7 +73,16 @@ class UploadPhotoHandler(
 						UploadPhotoResponse.fail(ErrorCode.BadRequest))
 				}
 
-				if (!checkPhotoTotalSize(photoParts)) {
+        //user should not be able to send photo without creating default account with firebase token first
+        val token = userInfoRepository.getFirebaseToken(packet.userId)
+        if (token.isNullOrEmpty()) {
+          logger.error("User does not have firebase token yet!")
+          return@mono formatResponse(HttpStatus.BAD_REQUEST,
+            UploadPhotoResponse.fail(ErrorCode.UserDoesNotHaveFirebaseToken))
+        }
+
+        val photoParts = collectPart(multiValueMap, PHOTO_PART_KEY).awaitSingle()
+        if (!checkPhotoTotalSize(photoParts)) {
 					logger.error("Bad photo size")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						UploadPhotoResponse.fail(ErrorCode.BadRequest))
@@ -122,7 +133,7 @@ class UploadPhotoHandler(
 					logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
 				}
 
-				try {
+				val exchangedPhoto = try {
 					photoInfoRepo.tryDoExchange(packet.userId, newUploadingPhoto)
 				} catch (error: Throwable) {
 					logger.error("Unknown error while trying to do photo exchange", error)
@@ -133,6 +144,10 @@ class UploadPhotoHandler(
 				}
 
 				logger.debug("Photo has been successfully uploaded")
+
+				if (!exchangedPhoto.isEmpty()) {
+          pushNotificationSenderService.enqueue(exchangedPhoto)
+        }
 
         val response = UploadPhotoResponse.success(
           newUploadingPhoto.photoId,

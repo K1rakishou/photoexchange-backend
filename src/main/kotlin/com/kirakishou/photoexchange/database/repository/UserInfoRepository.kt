@@ -2,7 +2,7 @@ package com.kirakishou.photoexchange.database.repository
 
 import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.UserInfoDao
-import com.kirakishou.photoexchange.model.repo.UserInfo
+import com.kirakishou.photoexchange.database.entity.UserInfo
 import com.kirakishou.photoexchange.service.GeneratorService
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.sync.Mutex
@@ -49,4 +49,20 @@ class UserInfoRepository(
 			}
 		}
 	}
+
+	suspend fun getFirebaseToken(userId: String): String {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        return@withLock userInfoDao.getUser(userId).awaitFirst().firebaseToken
+      }
+    }
+  }
+
+  suspend fun updateFirebaseToken(userId: String, newToken: String): Boolean {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        return@withLock userInfoDao.updateFirebaseToken(userId, newToken).awaitFirst()
+      }
+    }
+  }
 }
