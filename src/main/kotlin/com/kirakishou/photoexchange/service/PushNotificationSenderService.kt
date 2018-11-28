@@ -86,15 +86,18 @@ open class PushNotificationSenderService(
   private suspend fun processChunk(chunk: List<String>, url: String, accessToken: String): List<String> {
     return chunk
       .map { userId -> userInfoRepository.getFirebaseToken(userId) to userId }
-      //filter empty tokens
-      .filter { (token, _) -> token.isEmpty() }
-      //send push notifications in parallel
+      /**
+       * Filter empty tokens and NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN.
+       * User may not have google play services installed, so in this case we just won't send them any push notifications
+       * */
+      .filter { (token, _) -> token.isEmpty() || token == NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN }
+      //Send push notifications in parallel
       .map { (token, userId) -> async { sendPushNotification(url, userId, accessToken, token) } }
-      //await for their completion
+      //Await for their completion
       .map { result -> result.await() }
-      //filter all unsuccessful
+      //Filter all unsuccessful
       .filter { (result, _) -> result }
-      //return successful's userIds
+      //Return successful's userIds
       .map { (_, userId) -> userId }
   }
 
@@ -174,5 +177,7 @@ open class PushNotificationSenderService(
 
     private val MESSAGING_SCOPE = "https://www.googleapis.com/auth/firebase.messaging"
     private val SCOPES = listOf(MESSAGING_SCOPE)
+
+    const val NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN = "NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN"
   }
 }
