@@ -94,10 +94,7 @@ open class PushNotificationSenderService(
     return chunk
       //TODO: change to getManyFirebaseTokens
       .map { userId -> userInfoRepository.getFirebaseToken(userId) to userId }
-      /**
-       * Filter empty tokens and NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN.
-       * User may not have google play services installed, so in this case we just won't send them any push notifications
-       * */
+      //filter empty tokens
       .filter { (token, _) -> token.isNotEmpty() }
       //Send push notifications in parallel
       .map { (token, userId) -> async { sendPushNotification(url, userId, accessToken, token) } }
@@ -115,7 +112,10 @@ open class PushNotificationSenderService(
     accessToken: String,
     userToken: String
   ): Pair<Boolean, String> {
-    //if token is NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN then stop this request and return true immediately
+    /**
+     * Filter NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN tokens.
+     * User may not have google play services installed, so in this case we just won't send them any push notifications
+     * */
     if (userToken == NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
       return true to userId
     }
@@ -186,7 +186,7 @@ open class PushNotificationSenderService(
   data class PhotoExchangedData(
     @Expose
     @SerializedName("photo_exchanged")
-    val value: Boolean = true
+    val value: String = "true"
   ) : AbstractData()
 
   companion object {
