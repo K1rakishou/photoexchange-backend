@@ -36,7 +36,7 @@ object ServerSettings {
 	const val SMALL_PHOTO_SUFFIX = "_s"
 	const val PHOTO_MAP_SUFFIX = "_map"
 
-	val PHOTO_SIZES = arrayOf(VERY_BIG_PHOTO_SUFFIX, BIG_PHOTO_SUFFIX, MEDIUM_PHOTO_SUFFIX, SMALL_PHOTO_SUFFIX)
+	val PHOTO_SIZES = arrayOf("vb", "b", "m", "s")
 
 	object DatabaseInfo {
 		const val HOST = "192.168.99.100"
