@@ -3,7 +3,9 @@ package com.kirakishou.photoexchange.config
 import org.springframework.core.io.ClassPathResource
 
 object ServerSettings {
-	val GOOGLE_MAPS_KEY by lazy { getPropertyByName("GOOGLE_MAPS_KEY") }
+	//use your mapbox access token here (https://www.mapbox.com/help/how-access-tokens-work/)
+	val MAPBOX_ACCESS_TOKEN by lazy { getPropertyByName("MAPBOX_ACCESS_TOKEN") }
+	//use your firebase project id here (https://support.google.com/googleapi/answer/7014113?hl=en)
 	val PROJECT_ID by lazy { getPropertyByName("FIREBASE_PROJECT_ID") }
 
 	const val FILE_DIR_PATH = "D:\\projects\\data\\photos"
@@ -24,6 +26,7 @@ object ServerSettings {
 	const val MIN_RECEIVED_PHOTOS_PER_REQUEST_COUNT = 5
 	const val MAX_RECEIVED_PHOTOS_PER_REQUEST_COUNT = 50
 
+	//TODO: probably should add here one more size, like 2000px+ ?
 	const val BIG_PHOTO_SIZE = 768
 	const val MEDIUM_PHOTO_SIZE = 512
 	const val SMALL_PHOTO_SIZE = 256
