@@ -71,6 +71,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
   //TODO: add a test case when static photo haven't been downloaded yet
   //TODO: add a test case with a few photos when some of them do not have static map downloaded
+  //TODO: add a test case when getFirebaseToken returns empty token
 
   @Test
   fun `test should exchange two photos`() {
@@ -84,6 +85,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
     runBlocking {
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
+      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
     }
 
     kotlin.run {
@@ -171,6 +173,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
     runBlocking {
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
+      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
     }
 
     kotlin.run {
@@ -253,6 +256,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
     runBlocking {
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
+      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
     }
 
     kotlin.run {
@@ -422,6 +426,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
     runBlocking {
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
+      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
     }
 
     fun uploadPhoto(packet: SendPhotoPacket): Mono<Unit> {

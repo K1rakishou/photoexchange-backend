@@ -27,12 +27,13 @@ open class PushNotificationSenderService(
   private val userInfoRepository: UserInfoRepository,
   private val jsonConverterService: JsonConverterService
 ) : CoroutineScope {
-  private val logger = LoggerFactory.getLogger(StaticMapDownloaderService::class.java)
+  private val logger = LoggerFactory.getLogger(PushNotificationSenderService::class.java)
   private val job = Job()
   private val mutex = Mutex()
   private val chunkSize = 4
-  private val maxTimeoutSeconds = 10L
   private val dispatcher = newFixedThreadPoolContext(chunkSize, "push-sender")
+  private val maxTimeoutSeconds = 10L
+  private val minExpiresInSeconds = 30L
 
   //these are just notifications not some important data so it's not a problem if we loose them due to a server crash
   private val requests = LinkedHashSet<String>(1024)
@@ -65,7 +66,6 @@ open class PushNotificationSenderService(
     }
 
     val url = BASE_URL + FCM_SEND_ENDPOINT
-
     val chunked = mutex.withLock {
       val copyOfRequests = requests.clone() as LinkedHashSet<String>
       copyOfRequests.chunked(chunkSize)
@@ -73,12 +73,18 @@ open class PushNotificationSenderService(
 
     val toBeRemoveList = mutableListOf<String>()
 
-    for (chunk in chunked) {
-      //only requests that were executed successfully will be removed from the requests set
-      toBeRemoveList.addAll(processChunk(chunk, url, accessToken))
+    try {
+      for (chunk in chunked) {
+        //only requests that were executed successfully will be removed from the requests set
+        try {
+          toBeRemoveList.addAll(processChunk(chunk, url, accessToken))
+        } catch (error: Throwable) {
+          logger.error("Error while processing chunk of notifications", error)
+        }
+      }
+    } finally {
+      mutex.withLock { requests.removeAll(toBeRemoveList) }
     }
-
-    mutex.withLock { requests.removeAll(toBeRemoveList) }
   }
 
   /**
@@ -86,12 +92,10 @@ open class PushNotificationSenderService(
    * */
   private suspend fun processChunk(chunk: List<String>, url: String, accessToken: String): List<String> {
     return chunk
+      //TODO: change to getManyFirebaseTokens
       .map { userId -> userInfoRepository.getFirebaseToken(userId) to userId }
-      /**
-       * Filter empty tokens and NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN.
-       * User may not have google play services installed, so in this case we just won't send them any push notifications
-       * */
-      .filter { (token, _) -> token.isEmpty() || token == NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN }
+      //filter empty tokens
+      .filter { (token, _) -> token.isNotEmpty() }
       //Send push notifications in parallel
       .map { (token, userId) -> async { sendPushNotification(url, userId, accessToken, token) } }
       //Await for their completion
@@ -108,7 +112,15 @@ open class PushNotificationSenderService(
     accessToken: String,
     userToken: String
   ): Pair<Boolean, String> {
-    val packet = Packet(Message(userToken, TestData("test1", "test2")))
+    /**
+     * Filter NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN tokens.
+     * User may not have google play services installed, so in this case we just won't send them any push notifications
+     * */
+    if (userToken == NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
+      return true to userId
+    }
+
+    val packet = Packet(Message(userToken, PhotoExchangedData()))
     val body = jsonConverterService.toJson(packet)
 
     //TODO: find out whether there is a way to send notifications in batches and not one at a time
@@ -131,11 +143,20 @@ open class PushNotificationSenderService(
       return false to userId
     }
 
+    logger.debug("PushNotification sent")
     return true to userId
   }
 
   private fun getAccessToken(): String {
     return try {
+      //if expiresInSeconds is not null and accessToken is not null and we have 30 more seconds before token expires - return old token
+      //otherwise - refresh token
+      if (googleCredential.expiresInSeconds != null
+        && googleCredential.accessToken != null
+        && googleCredential.expiresInSeconds > minExpiresInSeconds) {
+        return googleCredential.accessToken
+      }
+
       googleCredential.refreshToken()
       googleCredential.accessToken
     } catch (error: Throwable) {
@@ -162,14 +183,10 @@ open class PushNotificationSenderService(
     val data: AbstractData
   )
 
-  data class TestData(
+  data class PhotoExchangedData(
     @Expose
-    @SerializedName("string1")
-    val string1: String,
-
-    @Expose
-    @SerializedName("string2")
-    val string2: String
+    @SerializedName("photo_exchanged")
+    val value: String = "true"
   ) : AbstractData()
 
   companion object {

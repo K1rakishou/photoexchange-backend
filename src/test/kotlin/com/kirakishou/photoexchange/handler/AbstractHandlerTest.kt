@@ -59,7 +59,7 @@ abstract class AbstractHandlerTest {
 		jsonConverterService = JsonConverterService(gson)
 
 		template = ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(
-			ConnectionString("mongodb://${ServerSettings.DatabaseInfo.HOST}:${ServerSettings.DatabaseInfo.PORT}/photoexchange_test"))
+			ConnectionString("mongodb://${ServerSettings.TestDatabaseInfo.HOST}:${ServerSettings.TestDatabaseInfo.PORT}/${ServerSettings.TestDatabaseInfo.DB_NAME}"))
 		)
 
 		mongoSequenceDao = MongoSequenceDao(template).also {
@@ -104,17 +104,12 @@ abstract class AbstractHandlerTest {
 			generator
 		)
 
-    userInfoRepository = UserInfoRepository(
-      mongoSequenceDao,
-      userInfoDao,
-      generator
-    )
-
 		locationMapRepository = LocationMapRepository(
 			mongoSequenceDao,
 			locationMapDao
 		)
 
+		userInfoRepository = Mockito.mock(UserInfoRepository::class.java)
 		staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)
     pushNotificationSenderService = Mockito.mock(PushNotificationSenderService::class.java)
 	}
