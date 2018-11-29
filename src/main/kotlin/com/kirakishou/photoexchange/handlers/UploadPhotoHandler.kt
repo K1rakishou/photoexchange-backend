@@ -8,6 +8,8 @@ import com.kirakishou.photoexchange.config.ServerSettings.MEDIUM_PHOTO_SIZE
 import com.kirakishou.photoexchange.config.ServerSettings.MEDIUM_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SIZE
 import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SUFFIX
+import com.kirakishou.photoexchange.config.ServerSettings.VERY_BIG_PHOTO_SIZE
+import com.kirakishou.photoexchange.config.ServerSettings.VERY_BIG_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
 import com.kirakishou.photoexchange.model.exception.EmptyPacket
@@ -172,6 +174,11 @@ class UploadPhotoHandler(
 	}
 
 	private fun resizeAndSavePhotos(tempFile: File, newUploadingPhoto: PhotoInfo) {
+		//save resized (very big) version of the image
+		val veryBigDimension = Dimension(VERY_BIG_PHOTO_SIZE, VERY_BIG_PHOTO_SIZE)
+		ImageUtils.resizeAndSaveImageOnDisk(tempFile, veryBigDimension, VERY_BIG_PHOTO_SUFFIX,
+			ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
+
 		//save resized (big) version of the image
 		val bigDimension = Dimension(BIG_PHOTO_SIZE, BIG_PHOTO_SIZE)
 		ImageUtils.resizeAndSaveImageOnDisk(tempFile, bigDimension, BIG_PHOTO_SUFFIX,

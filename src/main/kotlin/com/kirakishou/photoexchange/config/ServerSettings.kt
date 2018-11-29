@@ -26,16 +26,17 @@ object ServerSettings {
 	const val MIN_RECEIVED_PHOTOS_PER_REQUEST_COUNT = 5
 	const val MAX_RECEIVED_PHOTOS_PER_REQUEST_COUNT = 50
 
-	//TODO: probably should add here one more size, like 2000px+ ?
-	const val BIG_PHOTO_SIZE = 768
+  const val VERY_BIG_PHOTO_SIZE = 2014
+	const val BIG_PHOTO_SIZE = 1024
 	const val MEDIUM_PHOTO_SIZE = 512
 	const val SMALL_PHOTO_SIZE = 256
+  const val VERY_BIG_PHOTO_SUFFIX = "_vb"
 	const val BIG_PHOTO_SUFFIX = "_b"
 	const val MEDIUM_PHOTO_SUFFIX = "_m"
 	const val SMALL_PHOTO_SUFFIX = "_s"
 	const val PHOTO_MAP_SUFFIX = "_map"
 
-	val PHOTO_SIZES = arrayOf("b", "s", "m")
+	val PHOTO_SIZES = arrayOf(VERY_BIG_PHOTO_SUFFIX, BIG_PHOTO_SUFFIX, MEDIUM_PHOTO_SUFFIX, SMALL_PHOTO_SUFFIX)
 
 	object DatabaseInfo {
 		const val HOST = "192.168.99.100"
