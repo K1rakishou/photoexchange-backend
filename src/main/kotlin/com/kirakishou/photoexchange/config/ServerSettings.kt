@@ -44,6 +44,12 @@ object ServerSettings {
 		const val DB_NAME = "photoexchange"
 	}
 
+	object TestDatabaseInfo {
+		const val HOST = "192.168.99.100"
+		const val PORT = 27017
+		const val DB_NAME = "photoexchange_test"
+	}
+
 	private fun getPropertyByName(propertyName: String): String {
 		val fileResource = ClassPathResource("keys.properties")
 

@@ -9,7 +9,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class UserInfoRepository(
+open class UserInfoRepository(
 	private val mongoSequenceDao: MongoSequenceDao,
 	private val userInfoDao: UserInfoDao,
 	private val generator: GeneratorService
@@ -50,7 +50,7 @@ class UserInfoRepository(
 		}
 	}
 
-	suspend fun getFirebaseToken(userId: String): String {
+	open suspend fun getFirebaseToken(userId: String): String {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         return@withLock userInfoDao.getUser(userId).awaitFirst().firebaseToken
