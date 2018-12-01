@@ -165,7 +165,7 @@ open class PhotoInfoRepository(
             throw RuntimeException("Something is wrong with the database. Could not reset photo exchange id for photo with id (${oldestPhoto.photoId})")
           }
 
-          return@withLock oldestPhoto
+          return@withLock PhotoInfo.empty()
         }
 
         try {
@@ -176,6 +176,9 @@ open class PhotoInfoRepository(
           if (!photoInfoDao.updatePhotoSetReceiverId(newUploadingPhoto.photoId, oldestPhoto.photoId).awaitFirst()) {
             throw ExchangeException()
           }
+
+          return@withLock oldestPhoto
+            .copy(exchangedPhotoId = newUploadingPhoto.photoId)
         } catch (exception: ExchangeException) {
           if (!photoInfoDao.resetPhotoReceiverId(newUploadingPhoto.photoId).awaitFirst()) {
             throw RuntimeException("Something is wrong with the database. Could not reset photo receiver id for photo with id (${newUploadingPhoto.photoId})")
@@ -191,8 +194,6 @@ open class PhotoInfoRepository(
 
           return@withLock PhotoInfo.empty()
         }
-
-        return@withLock oldestPhoto
       }
     }
   }
