@@ -55,7 +55,7 @@ fun myBeans() = beans {
 	//service
 	bean<GeneratorService>()
 	bean { StaticMapDownloaderService(ref(), ref(), ref()).also { it.init() } }
-	bean { PushNotificationSenderService(ref(), ref(), ref()) }
+	bean { PushNotificationSenderService(ref(), ref(), ref(), ref()) }
 
 	//handler
 	bean<UploadPhotoHandler>()

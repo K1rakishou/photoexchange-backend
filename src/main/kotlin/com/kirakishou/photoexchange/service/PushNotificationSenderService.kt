@@ -5,6 +5,7 @@ import com.google.gson.annotations.Expose
 import com.google.gson.annotations.SerializedName
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
+import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -18,6 +19,7 @@ import org.springframework.core.io.ClassPathResource
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
+import java.lang.RuntimeException
 import java.time.Duration
 import kotlin.coroutines.CoroutineContext
 
@@ -25,6 +27,7 @@ import kotlin.coroutines.CoroutineContext
 open class PushNotificationSenderService(
   private val client: WebClient,
   private val userInfoRepository: UserInfoRepository,
+  private val photoInfoRepository: PhotoInfoRepository,
   private val jsonConverterService: JsonConverterService
 ) : CoroutineScope {
   private val logger = LoggerFactory.getLogger(PushNotificationSenderService::class.java)
@@ -33,17 +36,24 @@ open class PushNotificationSenderService(
   private val chunkSize = 4
   private val dispatcher = newFixedThreadPoolContext(chunkSize, "push-sender")
   private val maxTimeoutSeconds = 10L
-  private val minExpiresInSeconds = 30L
+  private val minTimeUntilRefresh = 30L
 
   //these are just notifications not some important data so it's not a problem if we loose them due to a server crash
-  private val requests = LinkedHashSet<String>(1024)
+  private val requests = LinkedHashSet<PhotoInfo>(1024)
 
   private val googleCredential = GoogleCredential
+    //your service-account.json should be in the resources directory (https://cloud.google.com/iam/docs/creating-managing-service-account-keys)
     .fromStream(ClassPathResource("service-account.json").inputStream)
     .createScoped(SCOPES)
 
   override val coroutineContext: CoroutineContext
     get() = job + dispatcher
+
+  init {
+    if (!ClassPathResource("service-account.json").exists()) {
+      throw RuntimeException("\"service-account.json\" should exist in the resources directory")
+    }
+  }
 
   private val requestActor = actor<Unit>(capacity = Channel.RENDEZVOUS, context = dispatcher) {
     consumeEach {
@@ -53,12 +63,21 @@ open class PushNotificationSenderService(
 
   open fun enqueue(photoInfo: PhotoInfo) {
     launch {
-      mutex.withLock { requests.add(photoInfo.userId) }
+      val token = userInfoRepository.getFirebaseToken(photoInfo.userId)
+      if (token.isNotEmpty() && token != NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
+        mutex.withLock { requests.add(photoInfo) }
+      }
+
       requestActor.offer(Unit)
     }
   }
 
   private suspend fun startSendingPushNotifications() {
+    if (requests.isEmpty()) {
+      logger.debug("No requests")
+      return
+    }
+
     val accessToken = getAccessToken()
     if (accessToken.isEmpty()) {
       logger.debug("Access token is empty")
@@ -66,61 +85,60 @@ open class PushNotificationSenderService(
     }
 
     val url = BASE_URL + FCM_SEND_ENDPOINT
-    val chunked = mutex.withLock {
-      val copyOfRequests = requests.clone() as LinkedHashSet<String>
-      copyOfRequests.chunked(chunkSize)
-    }
-
-    val toBeRemoveList = mutableListOf<String>()
+    val requestsCopy = mutex.withLock { requests.clone() as LinkedHashSet<PhotoInfo> }
 
     try {
-      for (chunk in chunked) {
+      for (chunk in requestsCopy.chunked(chunkSize)) {
         //only requests that were executed successfully will be removed from the requests set
         try {
-          toBeRemoveList.addAll(processChunk(chunk, url, accessToken))
+          chunk
+            .map { photo -> async { processRequest(photo, url, accessToken) } }
+            .forEach { it.await() }
         } catch (error: Throwable) {
           logger.error("Error while processing chunk of notifications", error)
         }
       }
     } finally {
-      mutex.withLock { requests.removeAll(toBeRemoveList) }
+      //clear request regardless of the result
+      mutex.withLock { requests.clear() }
     }
   }
 
-  /**
-   * Returns a list of userIds which requests were successful
-   * */
-  private suspend fun processChunk(chunk: List<String>, url: String, accessToken: String): List<String> {
-    return chunk
-      //TODO: change to getManyFirebaseTokens
-      .map { userId -> userInfoRepository.getFirebaseToken(userId) to userId }
-      //filter empty tokens
-      .filter { (token, _) -> token.isNotEmpty() }
-      //Send push notifications in parallel
-      .map { (token, userId) -> async { sendPushNotification(url, userId, accessToken, token) } }
-      //Await for their completion
-      .map { result -> result.await() }
-      //Filter all unsuccessful
-      .filter { (result, _) -> result }
-      //Return successful's userIds
-      .map { (_, userId) -> userId }
+  private suspend fun processRequest(myPhoto: PhotoInfo, url: String, accessToken: String) {
+    val theirPhoto = photoInfoRepository.findOneById(myPhoto.exchangedPhotoId)
+    if (theirPhoto.isEmpty()) {
+      logger.debug("No photo with id ${myPhoto.exchangedPhotoId}, photoName = ${myPhoto.photoName}")
+      return
+    }
+
+    val firebaseToken = userInfoRepository.getFirebaseToken(myPhoto.userId)
+    if (firebaseToken.isEmpty()) {
+      logger.debug("Firebase token is empty")
+      return
+    }
+
+    if (firebaseToken == NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
+      throw RuntimeException("firebase token is $NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN. This should not happen here!!!")
+    }
+
+    val packet = PhotoExchangedData(
+      myPhoto.photoName,
+      theirPhoto.photoName,
+      theirPhoto.lon.toString(),
+      theirPhoto.lat.toString(),
+      theirPhoto.uploadedOn.toString()
+    )
+
+    sendPushNotification(url, accessToken, firebaseToken, packet)
   }
 
   private suspend fun sendPushNotification(
     url: String,
-    userId: String,
     accessToken: String,
-    userToken: String
-  ): Pair<Boolean, String> {
-    /**
-     * Filter NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN tokens.
-     * User may not have google play services installed, so in this case we just won't send them any push notifications
-     * */
-    if (userToken == NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
-      return true to userId
-    }
-
-    val packet = Packet(Message(userToken, PhotoExchangedData()))
+    firebaseToken: String,
+    data: PhotoExchangedData
+  ) {
+    val packet = Packet(Message(firebaseToken, data))
     val body = jsonConverterService.toJson(packet)
 
     //TODO: find out whether there is a way to send notifications in batches and not one at a time
@@ -135,16 +153,16 @@ open class PushNotificationSenderService(
         .awaitFirst()
     } catch (error: Throwable) {
       logger.error("Exception while executing web request", error)
-      return false to userId
+      return
     }
 
     if (!response.statusCode().is2xxSuccessful) {
       logger.debug("Status code is not 2xxSuccessful (${response.statusCode()})")
-      return false to userId
+      return
     }
 
     logger.debug("PushNotification sent")
-    return true to userId
+    return
   }
 
   private fun getAccessToken(): String {
@@ -153,11 +171,14 @@ open class PushNotificationSenderService(
       //otherwise - refresh token
       if (googleCredential.expiresInSeconds != null
         && googleCredential.accessToken != null
-        && googleCredential.expiresInSeconds > minExpiresInSeconds) {
+        && googleCredential.expiresInSeconds > minTimeUntilRefresh) {
         return googleCredential.accessToken
       }
 
+      logger.debug("Refreshing token...")
       googleCredential.refreshToken()
+      logger.debug("Done refreshing token...")
+
       googleCredential.accessToken
     } catch (error: Throwable) {
       logger.error("Could not acquire access token", error)
@@ -176,7 +197,7 @@ open class PushNotificationSenderService(
   data class Message(
     @Expose
     @SerializedName("token")
-    val token: String,
+    val firebaseToken: String,
 
     @Expose
     @SerializedName("data")
@@ -185,8 +206,24 @@ open class PushNotificationSenderService(
 
   data class PhotoExchangedData(
     @Expose
-    @SerializedName("photo_exchanged")
-    val value: String = "true"
+    @SerializedName("uploaded_photo_name")
+    val uploadedPhotoName: String,
+
+    @Expose
+    @SerializedName("received_photo_name")
+    val receivedPhotoName: String,
+
+    @Expose
+    @SerializedName("lon")
+    val lon: String,
+
+    @Expose
+    @SerializedName("lat")
+    val lat: String,
+
+    @Expose
+    @SerializedName("uploaded_on")
+    val uploadedOn: String
   ) : AbstractData()
 
   companion object {
