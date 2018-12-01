@@ -122,8 +122,8 @@ open class PushNotificationSenderService(
     }
 
     val packet = PhotoExchangedData(
-      theirPhoto.photoName,
       myPhoto.photoName,
+      theirPhoto.photoName,
       theirPhoto.lon.toString(),
       theirPhoto.lat.toString(),
       theirPhoto.uploadedOn.toString()
