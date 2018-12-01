@@ -65,6 +65,8 @@ open class PushNotificationSenderService(
       return
     }
 
+    //TODO: check whether the owner of this photo has NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN firebase token and filter them out
+
     val url = BASE_URL + FCM_SEND_ENDPOINT
     val chunked = mutex.withLock {
       val copyOfRequests = requests.clone() as LinkedHashSet<String>
@@ -112,9 +114,10 @@ open class PushNotificationSenderService(
     accessToken: String,
     userToken: String
   ): Pair<Boolean, String> {
+    //TODO: remove this in the future
     /**
      * Filter NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN tokens.
-     * User may not have google play services installed, so in this case we just won't send them any push notifications
+     * User may not have google play services installed, so in this case we just won't send them any push notifications.
      * */
     if (userToken == NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
       return true to userId
