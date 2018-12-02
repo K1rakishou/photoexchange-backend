@@ -27,15 +27,14 @@ open class BanListDao(
       .onErrorReturn(false)
   }
 
-  fun contains(ipHash: String): Mono<Boolean> {
+  fun find(ipHash: String): Mono<BanEntry> {
     val query = Query()
       .addCriteria(Criteria.where(BanEntry.Mongo.Field.IP_HASH).`is`(ipHash))
 
     return template.findOne(query, BanEntry::class.java)
       .defaultIfEmpty(BanEntry.empty())
-      .map { true }
       .doOnError { error -> logger.error("DB error", error) }
-      .onErrorReturn(false)
+      .onErrorReturn(BanEntry.empty())
   }
 
   companion object {

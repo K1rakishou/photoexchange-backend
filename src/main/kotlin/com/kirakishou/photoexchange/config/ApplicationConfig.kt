@@ -46,11 +46,13 @@ fun myBeans() = beans {
 	bean { ReportedPhotoDao(ref()).also { it.create() } }
 	bean { UserInfoDao(ref()).also { it.create() } }
 	bean { LocationMapDao(ref()).also { it.create() } }
+	bean { BanListDao(ref()).also { it.create() } }
 
 	//repository
 	bean<PhotoInfoRepository>()
 	bean<UserInfoRepository>()
 	bean<LocationMapRepository>()
+	bean<BanListRepository>()
 
 	//service
 	bean<GeneratorService>()

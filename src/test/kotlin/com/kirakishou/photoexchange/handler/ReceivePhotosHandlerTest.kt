@@ -54,16 +54,16 @@ class ReceivePhotosHandlerTest : AbstractHandlerTest() {
     val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
 
     runBlocking {
-      photoInfoDao.save(PhotoInfo(1, 6, 1, "111", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(2, 7, 2, "111", "photo2", true, 11.1, 11.1, 6L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(3, 8, 3, "111", "photo3", true, 11.1, 11.1, 5L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(4, 9, 4, "111", "photo4", true, 11.1, 11.1, 6L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(5, 10, 5, "111", "photo5", true, 11.1, 11.1, 5L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(6, 1, 6, "222", "photo6", true, 22.2, 22.2, 6L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(7, 2, 7, "222", "photo7", true, 22.2, 22.2, 5L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(8, 3, 8, "222", "photo8", true, 22.2, 22.2, 6L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(9, 4, 9, "222", "photo9", true, 22.2, 22.2, 5L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(10, 5, 10, "222", "photo10", true, 22.2, 22.2, 6L)).awaitFirst()
+      photoInfoDao.save(PhotoInfo(1, 6, 1, "111", "photo1", true, 11.1, 11.1, 5L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(2, 7, 2, "111", "photo2", true, 11.1, 11.1, 6L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(3, 8, 3, "111", "photo3", true, 11.1, 11.1, 5L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(4, 9, 4, "111", "photo4", true, 11.1, 11.1, 6L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(5, 10, 5, "111", "photo5", true, 11.1, 11.1, 5L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(6, 1, 6, "222", "photo6", true, 22.2, 22.2, 6L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(7, 2, 7, "222", "photo7", true, 22.2, 22.2, 5L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(8, 3, 8, "222", "photo8", true, 22.2, 22.2, 6L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(9, 4, 9, "222", "photo9", true, 22.2, 22.2, 5L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(10, 5, 10, "222", "photo10", true, 22.2, 22.2, 6L, "123")).awaitFirst()
     }
 
     kotlin.run {
@@ -158,16 +158,16 @@ class ReceivePhotosHandlerTest : AbstractHandlerTest() {
     val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
 
     runBlocking {
-      photoInfoDao.save(PhotoInfo(1, 6, -1, "111", "photo1", true, 11.1, 11.1, 5L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(2, 7, -1, "111", "photo2", true, 11.1, 11.1, 6L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(3, 8, -1, "111", "photo3", true, 11.1, 11.1, 5L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(4, 9, -1, "111", "photo4", true, 11.1, 11.1, 6L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(5, 10, -1, "111", "photo5", true, 11.1, 11.1, 5L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(6, 1, -1, "222", "photo6", true, 22.2, 22.2, 6L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(7, 2, -1, "222", "photo7", true, 22.2, 22.2, 5L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(8, 3, -1, "222", "photo8", true, 22.2, 22.2, 6L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(9, 4, -1, "222", "photo9", true, 22.2, 22.2, 5L)).awaitFirst()
-      photoInfoDao.save(PhotoInfo(10, 5, -1, "222", "photo10", true, 22.2, 22.2, 6L)).awaitFirst()
+      photoInfoDao.save(PhotoInfo(1, 6, -1, "111", "photo1", true, 11.1, 11.1, 5L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(2, 7, -1, "111", "photo2", true, 11.1, 11.1, 6L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(3, 8, -1, "111", "photo3", true, 11.1, 11.1, 5L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(4, 9, -1, "111", "photo4", true, 11.1, 11.1, 6L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(5, 10, -1, "111", "photo5", true, 11.1, 11.1, 5L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(6, 1, -1, "222", "photo6", true, 22.2, 22.2, 6L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(7, 2, -1, "222", "photo7", true, 22.2, 22.2, 5L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(8, 3, -1, "222", "photo8", true, 22.2, 22.2, 6L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(9, 4, -1, "222", "photo9", true, 22.2, 22.2, 5L, "123")).awaitFirst()
+      photoInfoDao.save(PhotoInfo(10, 5, -1, "222", "photo10", true, 22.2, 22.2, 6L, "123")).awaitFirst()
     }
 
     kotlin.run {

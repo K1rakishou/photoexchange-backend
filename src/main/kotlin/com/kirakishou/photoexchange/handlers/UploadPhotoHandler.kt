@@ -70,6 +70,7 @@ class UploadPhotoHandler(
 			try {
         val ipHash = getIpAddressHash(request.remoteAddress())
         if (banListRepository.isBanned(ipHash)) {
+          logger.error("User is banned. ipHash = $ipHash")
           return@mono formatResponse(HttpStatus.FORBIDDEN,
             UploadPhotoResponse.fail(ErrorCode.YouAreBanned))
         }
@@ -105,7 +106,7 @@ class UploadPhotoHandler(
 				}
 
 				val photoInfoName = photoInfoRepo.generatePhotoInfoName()
-				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(photoInfoName, packet))
+				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(photoInfoName, packet, ipHash))
 
 				if (newUploadingPhoto.isEmpty()) {
 					logger.error("Could not save a photoInfo")
@@ -193,7 +194,10 @@ class UploadPhotoHandler(
       else -> throw IllegalArgumentException("Unknown type of inetAddress: ${inetAddress::class}")
     }
 
-    return SecurityUtils.Hashing.sha3(ipAddress)
+    val hash = SecurityUtils.Hashing.sha3(ipAddress)
+
+    logger.debug("ip = $ipAddress, hash = $hash")
+    return hash
   }
 
   private suspend fun cleanup(photoInfo: PhotoInfo) {
@@ -283,14 +287,16 @@ class UploadPhotoHandler(
 		return true
 	}
 
-	private fun createPhotoInfo(photoName: String, packet: SendPhotoPacket): PhotoInfo {
+	private fun createPhotoInfo(photoName: String, packet: SendPhotoPacket, ipHash: String): PhotoInfo {
 		return PhotoInfo.create(
 			packet.userId,
 			photoName,
 			packet.isPublic,
 			packet.lon,
 			packet.lat,
-			TimeUtils.getTimeFast())
+			TimeUtils.getTimeFast(),
+      ipHash
+    )
 	}
 
 	private fun collectPart(map: MultiValueMap<String, Part>, partName: String): Mono<MutableList<DataBuffer>> {
