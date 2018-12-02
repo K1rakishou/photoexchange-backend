@@ -18,6 +18,7 @@ import com.kirakishou.photoexchange.database.repository.BanListRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.PushNotificationSenderService
+import com.kirakishou.photoexchange.service.RemoteAddressExtractorService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.ImageUtils
@@ -54,7 +55,8 @@ class UploadPhotoHandler(
   private val userInfoRepository: UserInfoRepository,
   private val banListRepository: BanListRepository,
 	private val staticMapDownloaderService: StaticMapDownloaderService,
-  private val pushNotificationSenderService: PushNotificationSenderService
+  private val pushNotificationSenderService: PushNotificationSenderService,
+  private val remoteAddressExtractorService: RemoteAddressExtractorService
 ) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
@@ -68,7 +70,7 @@ class UploadPhotoHandler(
 			logger.debug("New UploadPhoto request")
 
 			try {
-        val ipHash = getIpAddressHash(request.remoteAddress())
+        val ipHash = getIpAddressHash(remoteAddressExtractorService.extractRemoteAddress(request))
         if (banListRepository.isBanned(ipHash)) {
           logger.error("User is banned. ipHash = $ipHash")
           return@mono formatResponse(HttpStatus.FORBIDDEN,
@@ -181,19 +183,7 @@ class UploadPhotoHandler(
 		}.flatMap { it }
 	}
 
-  private fun getIpAddressHash(remoteAddress: Optional<InetSocketAddress>): String {
-    if (!remoteAddress.isPresent) {
-      throw RuntimeException("Request does not contain remote address!")
-    }
-
-    val inetAddress = remoteAddress.get().address
-
-    val ipAddress = when (inetAddress) {
-      is Inet4Address -> inetAddress.hostAddress
-      is Inet6Address -> inetAddress.hostAddress
-      else -> throw IllegalArgumentException("Unknown type of inetAddress: ${inetAddress::class}")
-    }
-
+  private fun getIpAddressHash(ipAddress: String): String {
     val hash = SecurityUtils.Hashing.sha3(ipAddress)
 
     logger.debug("ip = $ipAddress, hash = $hash")

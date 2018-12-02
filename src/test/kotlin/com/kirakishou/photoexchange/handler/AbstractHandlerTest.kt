@@ -7,10 +7,7 @@ import com.kirakishou.photoexchange.database.repository.BanListRepository
 import com.kirakishou.photoexchange.database.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
-import com.kirakishou.photoexchange.service.GeneratorService
-import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.PushNotificationSenderService
-import com.kirakishou.photoexchange.service.StaticMapDownloaderService
+import com.kirakishou.photoexchange.service.*
 import com.mongodb.ConnectionString
 import net.request.SendPhotoPacket
 import net.response.UploadPhotoResponse
@@ -37,6 +34,8 @@ abstract class AbstractHandlerTest {
 	val PHOTO5 = "test_photos/photo_5.jpg"
 	val PHOTO6 = "test_photos/photo_6.jpg"
 
+	val ipAddress = "127.0.0.1"
+
 	lateinit var template: ReactiveMongoTemplate
 
 	lateinit var jsonConverterService: JsonConverterService
@@ -51,6 +50,7 @@ abstract class AbstractHandlerTest {
 
 	lateinit var staticMapDownloaderService: StaticMapDownloaderService
 	lateinit var pushNotificationSenderService: PushNotificationSenderService
+	lateinit var remoteAddressExtractorService: RemoteAddressExtractorService
 
 	lateinit var locationMapRepository: LocationMapRepository
 	lateinit var photoInfoRepository: PhotoInfoRepository
@@ -115,6 +115,7 @@ abstract class AbstractHandlerTest {
 		banListRepository = Mockito.mock(BanListRepository::class.java)
 		staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)
     pushNotificationSenderService = Mockito.mock(PushNotificationSenderService::class.java)
+		remoteAddressExtractorService = Mockito.mock(RemoteAddressExtractorService::class.java)
 	}
 
 	fun clear() {
