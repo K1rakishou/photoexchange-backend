@@ -102,7 +102,7 @@ class UploadPhotoHandler(
         if (!checkPhotoTotalSize(photoParts)) {
 					logger.error("Bad photo size")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						UploadPhotoResponse.fail(ErrorCode.BadRequest))
+						UploadPhotoResponse.fail(ErrorCode.BadRequest)) //TODO: add errorCode ExceededMaxPhotoSize
 				}
 
 				val photoInfoName = photoInfoRepo.generatePhotoInfoName()
@@ -128,7 +128,7 @@ class UploadPhotoHandler(
 
 					cleanup(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
+						UploadPhotoResponse.fail(ErrorCode.DatabaseError)) //TODO: add errorCode ServerDiskError
 				}
 
 				try {
@@ -137,7 +137,7 @@ class UploadPhotoHandler(
 					logger.error("Unknown error", error)
 					photoInfoRepo.delete(newUploadingPhoto.userId, photoInfoName)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
+						UploadPhotoResponse.fail(ErrorCode.DatabaseError)) //TODO: add errorCode ServerResizeError
 				} finally {
 					if (tempFile.exists()) {
 						tempFile.delete()
