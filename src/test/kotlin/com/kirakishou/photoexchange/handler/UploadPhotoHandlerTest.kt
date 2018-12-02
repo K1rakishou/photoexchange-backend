@@ -3,10 +3,13 @@ package com.kirakishou.photoexchange.handler
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
+import com.kirakishou.photoexchange.database.repository.BanListRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.PushNotificationSenderService
+import com.kirakishou.photoexchange.service.RemoteAddressExtractorService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
+import com.nhaarman.mockito_kotlin.any
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.reactive.awaitFirst
@@ -36,14 +39,18 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
   private fun getWebTestClient(jsonConverterService: JsonConverterService,
                                photoInfoRepository: PhotoInfoRepository,
                                userInfoRepository: UserInfoRepository,
+                               banListRepository: BanListRepository,
                                staticMapDownloaderService: StaticMapDownloaderService,
-                               pushNotificationSenderService: PushNotificationSenderService): WebTestClient {
+                               pushNotificationSenderService: PushNotificationSenderService,
+                               remoteAddressExtractorService: RemoteAddressExtractorService): WebTestClient {
     val handler = UploadPhotoHandler(
       jsonConverterService,
       photoInfoRepository,
       userInfoRepository,
+      banListRepository,
       staticMapDownloaderService,
-      pushNotificationSenderService
+      pushNotificationSenderService,
+      remoteAddressExtractorService
     )
 
     return WebTestClient.bindToRouterFunction(router {
@@ -55,7 +62,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
         }
       }
     })
-      .configureClient().responseTimeout(Duration.ofMillis(1_000_000))
+      .configureClient()
+      .responseTimeout(Duration.ofMillis(1_000_000))
       .build()
   }
 
@@ -72,6 +80,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
   //TODO: add a test case when static photo haven't been downloaded yet
   //TODO: add a test case with a few photos when some of them do not have static map downloaded
   //TODO: add a test case when getFirebaseToken returns empty token
+  //TODO: add test cases with ban lists
 
   @Test
   fun `test should exchange two photos`() {
@@ -79,11 +88,15 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       jsonConverterService,
       photoInfoRepository,
       userInfoRepository,
+      banListRepository,
       staticMapDownloaderService,
-      pushNotificationSenderService
+      pushNotificationSenderService,
+      remoteAddressExtractorService
     )
 
     runBlocking {
+      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
+      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
       Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
     }
@@ -167,11 +180,15 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       jsonConverterService,
       photoInfoRepository,
       userInfoRepository,
+      banListRepository,
       staticMapDownloaderService,
-      pushNotificationSenderService
+      pushNotificationSenderService,
+      remoteAddressExtractorService
     )
 
     runBlocking {
+      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
+      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
       Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
     }
@@ -250,11 +267,15 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       jsonConverterService,
       photoInfoRepository,
       userInfoRepository,
+      banListRepository,
       staticMapDownloaderService,
-      pushNotificationSenderService
+      pushNotificationSenderService,
+      remoteAddressExtractorService
     )
 
     runBlocking {
+      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
+      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
       Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
     }
@@ -420,11 +441,15 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       jsonConverterService,
       photoInfoRepository,
       userInfoRepository,
+      banListRepository,
       staticMapDownloaderService,
-      pushNotificationSenderService
+      pushNotificationSenderService,
+      remoteAddressExtractorService
     )
 
     runBlocking {
+      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
+      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
       Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
     }

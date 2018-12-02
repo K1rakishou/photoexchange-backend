@@ -12,10 +12,7 @@ import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHand
 import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
 import com.kirakishou.photoexchange.routers.Router
-import com.kirakishou.photoexchange.service.GeneratorService
-import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.PushNotificationSenderService
-import com.kirakishou.photoexchange.service.StaticMapDownloaderService
+import com.kirakishou.photoexchange.service.*
 import com.mongodb.ConnectionString
 import com.samskivert.mustache.Mustache
 import org.springframework.boot.autoconfigure.mustache.MustacheResourceTemplateLoader
@@ -46,14 +43,17 @@ fun myBeans() = beans {
 	bean { ReportedPhotoDao(ref()).also { it.create() } }
 	bean { UserInfoDao(ref()).also { it.create() } }
 	bean { LocationMapDao(ref()).also { it.create() } }
+	bean { BanListDao(ref()).also { it.create() } }
 
 	//repository
 	bean<PhotoInfoRepository>()
 	bean<UserInfoRepository>()
 	bean<LocationMapRepository>()
+	bean<BanListRepository>()
 
 	//service
 	bean<GeneratorService>()
+	bean<RemoteAddressExtractorService>()
 	bean { StaticMapDownloaderService(ref(), ref(), ref()).also { it.init() } }
 	bean { PushNotificationSenderService(ref(), ref(), ref(), ref()) }
 

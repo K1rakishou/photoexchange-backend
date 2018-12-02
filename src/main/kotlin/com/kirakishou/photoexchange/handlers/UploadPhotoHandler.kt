@@ -14,12 +14,15 @@ import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
 import com.kirakishou.photoexchange.model.exception.EmptyPacket
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
+import com.kirakishou.photoexchange.database.repository.BanListRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.PushNotificationSenderService
+import com.kirakishou.photoexchange.service.RemoteAddressExtractorService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.ImageUtils
+import com.kirakishou.photoexchange.util.SecurityUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import core.ErrorCode
 import kotlinx.coroutines.reactive.awaitSingle
@@ -40,13 +43,20 @@ import reactor.core.publisher.Mono
 import java.awt.Dimension
 import java.io.File
 import java.io.IOException
+import java.lang.IllegalArgumentException
+import java.net.Inet4Address
+import java.net.Inet6Address
+import java.net.InetSocketAddress
+import java.util.*
 
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
   private val userInfoRepository: UserInfoRepository,
+  private val banListRepository: BanListRepository,
 	private val staticMapDownloaderService: StaticMapDownloaderService,
-  private val pushNotificationSenderService: PushNotificationSenderService
+  private val pushNotificationSenderService: PushNotificationSenderService,
+  private val remoteAddressExtractorService: RemoteAddressExtractorService
 ) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
@@ -60,6 +70,13 @@ class UploadPhotoHandler(
 			logger.debug("New UploadPhoto request")
 
 			try {
+        val ipHash = getIpAddressHash(remoteAddressExtractorService.extractRemoteAddress(request))
+        if (banListRepository.isBanned(ipHash)) {
+          logger.error("User is banned. ipHash = $ipHash")
+          return@mono formatResponse(HttpStatus.FORBIDDEN,
+            UploadPhotoResponse.fail(ErrorCode.YouAreBanned))
+        }
+
 				val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitSingle()
 				if (!multiValueMap.containsAllParts(PACKET_PART_KEY, PHOTO_PART_KEY)) {
 					logger.error("Request does not contain one of the required path variables")
@@ -77,7 +94,7 @@ class UploadPhotoHandler(
 
         //user should not be able to send photo without creating default account with firebase token first
         val token = userInfoRepository.getFirebaseToken(packet.userId)
-        if (token.isNullOrEmpty()) {
+        if (token.isEmpty()) {
           logger.error("User does not have firebase token yet!")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
             UploadPhotoResponse.fail(ErrorCode.UserDoesNotHaveFirebaseToken))
@@ -87,11 +104,11 @@ class UploadPhotoHandler(
         if (!checkPhotoTotalSize(photoParts)) {
 					logger.error("Bad photo size")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						UploadPhotoResponse.fail(ErrorCode.BadRequest))
+						UploadPhotoResponse.fail(ErrorCode.BadRequest)) //TODO: add errorCode ExceededMaxPhotoSize
 				}
 
 				val photoInfoName = photoInfoRepo.generatePhotoInfoName()
-				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(photoInfoName, packet))
+				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(photoInfoName, packet, ipHash))
 
 				if (newUploadingPhoto.isEmpty()) {
 					logger.error("Could not save a photoInfo")
@@ -113,7 +130,7 @@ class UploadPhotoHandler(
 
 					cleanup(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
+						UploadPhotoResponse.fail(ErrorCode.DatabaseError)) //TODO: add errorCode ServerDiskError
 				}
 
 				try {
@@ -122,7 +139,7 @@ class UploadPhotoHandler(
 					logger.error("Unknown error", error)
 					photoInfoRepo.delete(newUploadingPhoto.userId, photoInfoName)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
+						UploadPhotoResponse.fail(ErrorCode.DatabaseError)) //TODO: add errorCode ServerResizeError
 				} finally {
 					if (tempFile.exists()) {
 						tempFile.delete()
@@ -166,7 +183,14 @@ class UploadPhotoHandler(
 		}.flatMap { it }
 	}
 
-	private suspend fun cleanup(photoInfo: PhotoInfo) {
+  private fun getIpAddressHash(ipAddress: String): String {
+    val hash = SecurityUtils.Hashing.sha3(ipAddress)
+
+    logger.debug("ip = $ipAddress, hash = $hash")
+    return hash
+  }
+
+  private suspend fun cleanup(photoInfo: PhotoInfo) {
 		photoInfoRepo.deleteAll(listOf(photoInfo.photoId))
 
 		val photoPath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
@@ -253,14 +277,16 @@ class UploadPhotoHandler(
 		return true
 	}
 
-	private fun createPhotoInfo(photoName: String, packet: SendPhotoPacket): PhotoInfo {
+	private fun createPhotoInfo(photoName: String, packet: SendPhotoPacket, ipHash: String): PhotoInfo {
 		return PhotoInfo.create(
 			packet.userId,
 			photoName,
 			packet.isPublic,
 			packet.lon,
 			packet.lat,
-			TimeUtils.getTimeFast())
+			TimeUtils.getTimeFast(),
+      ipHash
+    )
 	}
 
 	private fun collectPart(map: MultiValueMap<String, Part>, partName: String): Mono<MutableList<DataBuffer>> {

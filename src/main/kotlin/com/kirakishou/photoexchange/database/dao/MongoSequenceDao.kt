@@ -17,6 +17,7 @@ open class MongoSequenceDao(
 	private val REPORTED_PHOTO_SEQUENCE_NAME = "reported_photo_sequence"
 	private val USER_INFO_SEQUENCE_NAME = "user_info_sequence"
 	private val LOCATION_MAP_SEQUENCE_NAME = "location_map_sequence"
+	private val BAN_LIST_SEQUENCE_NAME = "ban_list_sequence"
 
 	override fun create() {
 		createCollectionIfNotExists(COLLECTION_NAME)
@@ -63,7 +64,11 @@ open class MongoSequenceDao(
 		return getNextId(LOCATION_MAP_SEQUENCE_NAME)
 	}
 
-	companion object {
+	fun getNextBanEntryId(): Mono<Long> {
+		return getNextId(BAN_LIST_SEQUENCE_NAME)
+	}
+
+  companion object {
 	  const val COLLECTION_NAME = "mongo_sequence"
 	}
 }
