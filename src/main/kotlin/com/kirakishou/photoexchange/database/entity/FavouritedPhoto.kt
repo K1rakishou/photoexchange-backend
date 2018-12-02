@@ -7,7 +7,7 @@ import org.springframework.data.mongodb.core.mapping.Document
 import org.springframework.data.mongodb.core.mapping.Field
 
 @Document(collection = FavouritedPhotoDao.COLLECTION_NAME)
-class FavouritedPhoto(
+data class FavouritedPhoto(
 	@Id
 	@Field(Mongo.Field.ID)
 	var id: Long,

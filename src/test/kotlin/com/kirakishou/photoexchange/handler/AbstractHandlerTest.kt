@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.handler
 import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.dao.*
+import com.kirakishou.photoexchange.database.repository.BanListRepository
 import com.kirakishou.photoexchange.database.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
@@ -54,6 +55,7 @@ abstract class AbstractHandlerTest {
 	lateinit var locationMapRepository: LocationMapRepository
 	lateinit var photoInfoRepository: PhotoInfoRepository
   lateinit var userInfoRepository: UserInfoRepository
+	lateinit var banListRepository: BanListRepository
 
 	fun init() {
 		jsonConverterService = JsonConverterService(gson)
@@ -110,6 +112,7 @@ abstract class AbstractHandlerTest {
 		)
 
 		userInfoRepository = Mockito.mock(UserInfoRepository::class.java)
+		banListRepository = Mockito.mock(BanListRepository::class.java)
 		staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)
     pushNotificationSenderService = Mockito.mock(PushNotificationSenderService::class.java)
 	}

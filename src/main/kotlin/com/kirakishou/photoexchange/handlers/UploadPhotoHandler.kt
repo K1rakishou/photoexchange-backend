@@ -14,12 +14,14 @@ import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
 import com.kirakishou.photoexchange.model.exception.EmptyPacket
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
+import com.kirakishou.photoexchange.database.repository.BanListRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.service.PushNotificationSenderService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.ImageUtils
+import com.kirakishou.photoexchange.util.SecurityUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import core.ErrorCode
 import kotlinx.coroutines.reactive.awaitSingle
@@ -40,11 +42,17 @@ import reactor.core.publisher.Mono
 import java.awt.Dimension
 import java.io.File
 import java.io.IOException
+import java.lang.IllegalArgumentException
+import java.net.Inet4Address
+import java.net.Inet6Address
+import java.net.InetSocketAddress
+import java.util.*
 
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
   private val userInfoRepository: UserInfoRepository,
+  private val banListRepository: BanListRepository,
 	private val staticMapDownloaderService: StaticMapDownloaderService,
   private val pushNotificationSenderService: PushNotificationSenderService
 ) : AbstractWebHandler(jsonConverter) {
@@ -60,6 +68,12 @@ class UploadPhotoHandler(
 			logger.debug("New UploadPhoto request")
 
 			try {
+        val ipHash = getIpAddressHash(request.remoteAddress())
+        if (banListRepository.isBanned(ipHash)) {
+          return@mono formatResponse(HttpStatus.FORBIDDEN,
+            UploadPhotoResponse.fail(ErrorCode.YouAreBanned))
+        }
+
 				val multiValueMap = request.body(BodyExtractors.toMultipartData()).awaitSingle()
 				if (!multiValueMap.containsAllParts(PACKET_PART_KEY, PHOTO_PART_KEY)) {
 					logger.error("Request does not contain one of the required path variables")
@@ -77,7 +91,7 @@ class UploadPhotoHandler(
 
         //user should not be able to send photo without creating default account with firebase token first
         val token = userInfoRepository.getFirebaseToken(packet.userId)
-        if (token.isNullOrEmpty()) {
+        if (token.isEmpty()) {
           logger.error("User does not have firebase token yet!")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
             UploadPhotoResponse.fail(ErrorCode.UserDoesNotHaveFirebaseToken))
@@ -166,7 +180,23 @@ class UploadPhotoHandler(
 		}.flatMap { it }
 	}
 
-	private suspend fun cleanup(photoInfo: PhotoInfo) {
+  private fun getIpAddressHash(remoteAddress: Optional<InetSocketAddress>): String {
+    if (!remoteAddress.isPresent) {
+      throw RuntimeException("Request does not contain remote address!")
+    }
+
+    val inetAddress = remoteAddress.get().address
+
+    val ipAddress = when (inetAddress) {
+      is Inet4Address -> inetAddress.hostAddress
+      is Inet6Address -> inetAddress.hostAddress
+      else -> throw IllegalArgumentException("Unknown type of inetAddress: ${inetAddress::class}")
+    }
+
+    return SecurityUtils.Hashing.sha3(ipAddress)
+  }
+
+  private suspend fun cleanup(photoInfo: PhotoInfo) {
 		photoInfoRepo.deleteAll(listOf(photoInfo.photoId))
 
 		val photoPath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
