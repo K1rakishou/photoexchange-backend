@@ -21,7 +21,8 @@ class Router(
 	private val getReceivedPhotosHandler: GetReceivedPhotosHandler,
 	private val getStaticMapHandler: GetStaticMapHandler,
 	private val checkAccountExistsHandler: CheckAccountExistsHandler,
-  private val updateFirebaseTokenHandler: UpdateFirebaseTokenHandler
+  private val updateFirebaseTokenHandler: UpdateFirebaseTokenHandler,
+	private val hasGalleryFreshPhotosHandler: HasFreshGalleryPhotosHandler
 ) {
 	fun setUpRouter() = router {
 		"/v1".nest {
@@ -43,6 +44,7 @@ class Router(
 					GET("/get_page_of_received_photos/{user_id}/{last_uploaded_on}/{count}", getReceivedPhotosHandler::handle)
 
 					GET("/check_account_exists/{user_id}", checkAccountExistsHandler::handle)
+					GET("/has_fresh_gallery_photos/{time}", hasGalleryFreshPhotosHandler::handle)
 
 					PUT("/favourite", favouritePhotoHandler::handle)
 					PUT("/report", reportPhotoHandler::handle)

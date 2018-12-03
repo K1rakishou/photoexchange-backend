@@ -407,6 +407,14 @@ open class PhotoInfoRepository(
     }
   }
 
+  suspend fun countFreshGalleryPhotoSince(time: Long): Int {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        return@withLock galleryPhotoDao.countFreshGalleryPhotoSince(time).awaitFirst()
+      }
+    }
+  }
+
   data class GalleryPhotoInfoDto(
     var galleryPhotoName: String,
     var isFavourited: Boolean = false,

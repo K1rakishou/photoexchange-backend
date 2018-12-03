@@ -71,6 +71,7 @@ fun myBeans() = beans {
 	bean<GetStaticMapHandler>()
 	bean<CheckAccountExistsHandler>()
   bean<UpdateFirebaseTokenHandler>()
+	bean<HasFreshGalleryPhotosHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }

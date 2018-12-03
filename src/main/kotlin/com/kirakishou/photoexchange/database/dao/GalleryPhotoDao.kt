@@ -42,6 +42,18 @@ open class GalleryPhotoDao(
       .onErrorReturn(emptyList())
   }
 
+  fun countFreshGalleryPhotoSince(time: Long): Mono<Int> {
+    val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).gt(0L))
+      .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).gt(time))
+
+    return template.count(query, GalleryPhoto::class.java)
+      .defaultIfEmpty(0L)
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(0L)
+      .map { it.toInt() }
+  }
+
   fun deleteById(photoId: Long): Mono<Boolean> {
     val query = Query()
       .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))

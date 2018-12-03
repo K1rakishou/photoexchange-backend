@@ -17,7 +17,7 @@ abstract class AbstractWebHandler(
 ) : CoroutineScope {
   private val job = Job()
 
-  override val coroutineContext: CoroutineContext
+  final override val coroutineContext: CoroutineContext
     get() = job  + Dispatchers.Default
 
   abstract fun handle(request: ServerRequest): Mono<ServerResponse>
