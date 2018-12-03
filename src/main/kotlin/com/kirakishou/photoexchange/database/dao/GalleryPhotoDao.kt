@@ -1,7 +1,6 @@
 package com.kirakishou.photoexchange.database.dao
 
 import com.kirakishou.photoexchange.database.entity.GalleryPhoto
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
@@ -31,7 +30,7 @@ open class GalleryPhotoDao(
 
   fun findPage(lastUploadedOn: Long, count: Int): Mono<List<GalleryPhoto>> {
     val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).gt(0L))
+      .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_ID).gt(0L))
       .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).lt(lastUploadedOn))
       .limit(count)
 
@@ -40,6 +39,18 @@ open class GalleryPhotoDao(
       .defaultIfEmpty(emptyList())
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(emptyList())
+  }
+
+  fun countFreshGalleryPhotosSince(time: Long): Mono<Int> {
+    val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
+      .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_ID).gt(0L))
+      .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).gt(time))
+
+    return template.count(query, GalleryPhoto::class.java)
+      .defaultIfEmpty(0L)
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(0L)
+      .map { it.toInt() }
   }
 
   fun deleteById(photoId: Long): Mono<Boolean> {

@@ -41,7 +41,6 @@ class GetStaticMapHandler(
 					return@mono ServerResponse.notFound().build()
 				}
 
-				//TODO: may not work
 				val photoStreamFlux = DataBufferUtils.read(FileSystemResource(file),
 					DefaultDataBufferFactory(false, readChuckSize), readChuckSize)
 

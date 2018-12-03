@@ -58,7 +58,6 @@ class UploadPhotoHandler(
   private val pushNotificationSenderService: PushNotificationSenderService,
   private val remoteAddressExtractorService: RemoteAddressExtractorService
 ) : AbstractWebHandler(jsonConverter) {
-
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
 	private val PACKET_PART_KEY = "packet"
 	private val PHOTO_PART_KEY = "photo"

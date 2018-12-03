@@ -98,7 +98,7 @@ open class PhotoInfoRepository(
 
         for (myPhoto in myPhotos) {
           val theirPhoto = theirPhotos.firstOrNull { it.photoId == myPhoto.exchangedPhotoId }
-          val receiverInfo = theirPhoto?.let { GetUploadedPhotosResponse.ReceiverInfoResponseData(it.lon, it.lat) }
+          val receiverInfo = theirPhoto?.let { GetUploadedPhotosResponse.ReceiverInfoResponseData(it.photoName, it.lon, it.lat) }
 
           result += GetUploadedPhotosResponse.UploadedPhotoResponseData(
             myPhoto.photoId,
@@ -403,6 +403,14 @@ open class PhotoInfoRepository(
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         return@withLock photoInfoDao.updateSetLocationMapId(photoId, locationMapId).awaitFirst()
+      }
+    }
+  }
+
+  suspend fun countFreshGalleryPhotosSince(time: Long): Int {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        return@withLock galleryPhotoDao.countFreshGalleryPhotosSince(time).awaitFirst()
       }
     }
   }
