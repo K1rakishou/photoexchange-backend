@@ -17,7 +17,7 @@ class HasFreshGalleryPhotosHandler(
   jsonConverter: JsonConverterService,
   private val photoInfoRepo: PhotoInfoRepository
 ) : AbstractWebHandler(jsonConverter) {
-  private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
+  private val logger = LoggerFactory.getLogger(HasFreshGalleryPhotosHandler::class.java)
   private val TIME_PATH_VARIABLE = "time"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
@@ -41,8 +41,9 @@ class HasFreshGalleryPhotosHandler(
             HasFreshGalleryPhotosResponse.fail(ErrorCode.BadRequest))
         }
 
-        val freshPhotosCount = photoInfoRepo.countFreshGalleryPhotoSince(time)
+        val freshPhotosCount = photoInfoRepo.countFreshGalleryPhotosSince(time)
 
+        logger.debug("Found ${freshPhotosCount} fresh gallery photos")
         return@mono formatResponse(HttpStatus.OK,
           HasFreshGalleryPhotosResponse.success(freshPhotosCount))
       } catch (error: Throwable) {

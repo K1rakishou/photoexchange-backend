@@ -407,10 +407,10 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun countFreshGalleryPhotoSince(time: Long): Int {
+  suspend fun countFreshGalleryPhotosSince(time: Long): Int {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        return@withLock galleryPhotoDao.countFreshGalleryPhotoSince(time).awaitFirst()
+        return@withLock galleryPhotoDao.countFreshGalleryPhotosSince(time).awaitFirst()
       }
     }
   }
