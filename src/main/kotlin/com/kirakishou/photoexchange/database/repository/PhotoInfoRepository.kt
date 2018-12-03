@@ -98,7 +98,7 @@ open class PhotoInfoRepository(
 
         for (myPhoto in myPhotos) {
           val theirPhoto = theirPhotos.firstOrNull { it.photoId == myPhoto.exchangedPhotoId }
-          val receiverInfo = theirPhoto?.let { GetUploadedPhotosResponse.ReceiverInfoResponseData(it.lon, it.lat) }
+          val receiverInfo = theirPhoto?.let { GetUploadedPhotosResponse.ReceiverInfoResponseData(it.photoName, it.lon, it.lat) }
 
           result += GetUploadedPhotosResponse.UploadedPhotoResponseData(
             myPhoto.photoId,
