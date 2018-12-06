@@ -147,7 +147,6 @@ open class PhotoInfoDao(
       .onErrorReturn(emptyList())
   }
 
-
   fun getPhotoIdByName(photoName: String): Mono<Long> {
     val query = Query()
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
@@ -234,6 +233,32 @@ open class PhotoInfoDao(
     return template.exists(query, PhotoInfo::class.java)
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)
+  }
+
+  fun countFreshUploadedPhotosSince(userId: String, time: Long): Mono<Int> {
+    val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).gt(0L))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).gt(time))
+
+    return template.count(query, PhotoInfo::class.java)
+      .defaultIfEmpty(0L)
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(0L)
+      .map { it.toInt() }
+  }
+
+  fun countFreshExchangedPhotos(userId: String, time: Long): Mono<Int> {
+    val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.UPLOADED_ON))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).gt(0L))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).gt(time))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+
+    return template.count(query, PhotoInfo::class.java)
+      .defaultIfEmpty(0L)
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(0L)
+      .map { it.toInt() }
   }
 
 
