@@ -5,6 +5,9 @@ import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoH
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
+import com.kirakishou.photoexchange.handlers.count.GetFreshGalleryPhotosCountHandler
+import com.kirakishou.photoexchange.handlers.count.GetFreshReceivedPhotosCountHandler
+import com.kirakishou.photoexchange.handlers.count.GetFreshUploadedPhotosCountHandler
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.server.router
 
@@ -22,7 +25,9 @@ class Router(
 	private val getStaticMapHandler: GetStaticMapHandler,
 	private val checkAccountExistsHandler: CheckAccountExistsHandler,
   private val updateFirebaseTokenHandler: UpdateFirebaseTokenHandler,
-	private val hasGalleryFreshPhotosHandler: HasFreshGalleryPhotosHandler
+	private val getFreshGalleryPhotosCountHandler: GetFreshGalleryPhotosCountHandler,
+  private val getFreshUploadedPhotosCountHandler: GetFreshUploadedPhotosCountHandler,
+  private val getFreshReceivedPhotosCountHandler: GetFreshReceivedPhotosCountHandler
 ) {
 	fun setUpRouter() = router {
 		"/v1".nest {
@@ -44,10 +49,12 @@ class Router(
 					GET("/get_page_of_received_photos/{user_id}/{last_uploaded_on}/{count}", getReceivedPhotosHandler::handle)
 
 					GET("/check_account_exists/{user_id}", checkAccountExistsHandler::handle)
-					GET("/has_fresh_gallery_photos/{time}", hasGalleryFreshPhotosHandler::handle)
-
 					PUT("/favourite", favouritePhotoHandler::handle)
 					PUT("/report", reportPhotoHandler::handle)
+
+          GET("/get_fresh_uploaded_photos_count/{user_id}/{time}", getFreshUploadedPhotosCountHandler::handle)
+          GET("/get_fresh_received_photos_count/{user_id}/{time}", getFreshReceivedPhotosCountHandler::handle)
+          GET("/get_fresh_gallery_photos_count/{time}", getFreshGalleryPhotosCountHandler::handle)
 				}
 
 				accept(MediaType.parseMediaType("image/*")).nest {

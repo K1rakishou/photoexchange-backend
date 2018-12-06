@@ -415,6 +415,22 @@ open class PhotoInfoRepository(
     }
   }
 
+  suspend fun countFreshReceivedPhotosSince(userId: String, time: Long): Int {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        return@withLock photoInfoDao.countFreshUploadedPhotosSince(userId, time).awaitFirst()
+      }
+    }
+  }
+
+  suspend fun countFreshUploadedPhotosSince(userId: String, time: Long): Int {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        return@withLock photoInfoDao.countFreshExchangedPhotos(userId, time).awaitFirst()
+      }
+    }
+  }
+
   data class GalleryPhotoInfoDto(
     var galleryPhotoName: String,
     var isFavourited: Boolean = false,

@@ -66,6 +66,8 @@ open class PushNotificationSenderService(
       val token = userInfoRepository.getFirebaseToken(photoInfo.userId)
       if (token.isNotEmpty() && token != NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
         mutex.withLock { requests.add(photoInfo) }
+      } else {
+        logger.debug("FirebaseToken is $NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN, skipping it")
       }
 
       requestActor.offer(Unit)

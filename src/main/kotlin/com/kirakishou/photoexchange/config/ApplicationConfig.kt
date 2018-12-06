@@ -11,6 +11,9 @@ import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoH
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
+import com.kirakishou.photoexchange.handlers.count.GetFreshGalleryPhotosCountHandler
+import com.kirakishou.photoexchange.handlers.count.GetFreshReceivedPhotosCountHandler
+import com.kirakishou.photoexchange.handlers.count.GetFreshUploadedPhotosCountHandler
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.*
 import com.mongodb.ConnectionString
@@ -71,7 +74,9 @@ fun myBeans() = beans {
 	bean<GetStaticMapHandler>()
 	bean<CheckAccountExistsHandler>()
   bean<UpdateFirebaseTokenHandler>()
-	bean<HasFreshGalleryPhotosHandler>()
+	bean<GetFreshGalleryPhotosCountHandler>()
+	bean<GetFreshUploadedPhotosCountHandler>()
+	bean<GetFreshReceivedPhotosCountHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }
