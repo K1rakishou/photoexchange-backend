@@ -105,7 +105,7 @@ class UploadPhotoHandler(
 				if (!staticMapDownloaderService.enqueue(newUploadingPhoto.photoId)) {
 					logger.error("Could not enqueue photo in locationMapReceiverService")
 
-					cleanup(newUploadingPhoto)
+          deletePhotoWithFile(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
 				}
@@ -114,7 +114,7 @@ class UploadPhotoHandler(
 				if (tempFile == null) {
 					logger.error("Could not save file to disk")
 
-					cleanup(newUploadingPhoto)
+          deletePhotoWithFile(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.ServerDiskError))
 				}
@@ -143,7 +143,7 @@ class UploadPhotoHandler(
 				} catch (error: Throwable) {
 					logger.error("Unknown error while trying to do photo exchange", error)
 
-					cleanup(newUploadingPhoto)
+          deletePhotoWithFile(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
 				}
@@ -176,13 +176,6 @@ class UploadPhotoHandler(
     return hash
   }
 
-  private suspend fun cleanup(photoInfo: PhotoInfo) {
-		photoInfoRepo.deleteAll(listOf(photoInfo.photoId))
-
-		val photoPath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
-		IOUtils.deleteAllPhotoFiles(photoPath)
-	}
-
 	//TODO: move to repository
 	private suspend fun deleteOldPhotos() {
 		mutex.withLock {
@@ -211,16 +204,26 @@ class UploadPhotoHandler(
 		}
 
 		val ids = photosToDelete.map { it.photoId }
-		if (!photoInfoRepo.deleteAll(ids)) {
+		if (!photoInfoRepo.cleanUp(ids)) {
 			return
 		}
 
-		logger.debug("Found ${ids.size} photo ids to delete")
+		logger.debug("Found ${ids.size} photo ids to deletePhotoWithFile")
 
 		for (photo in photosToDelete) {
-			cleanup(photo)
+      deletePhotoWithFile(photo)
 		}
 	}
+
+  private suspend fun deletePhotoWithFile(photoInfo: PhotoInfo) {
+    if (!photoInfoRepo.delete(photoInfo)) {
+      logger.error("Could not deletePhotoWithFile photo ${photoInfo.photoName}")
+      return
+    }
+
+    val photoPath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
+    IOUtils.deleteAllPhotoFiles(photoPath)
+  }
 
 	private fun saveTempFile(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): File? {
 		val filePath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"

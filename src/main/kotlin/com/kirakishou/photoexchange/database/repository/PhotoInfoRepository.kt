@@ -218,7 +218,15 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun deleteAll(ids: List<Long>): Boolean {
+  suspend fun delete(photoInfo: PhotoInfo): Boolean {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        return@withLock deletePhotoInternal(photoInfo)
+      }
+    }
+  }
+
+  suspend fun cleanUp(ids: List<Long>): Boolean {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val photoInfoList = photoInfoDao.findPhotosToDeleteByIds(ids).awaitFirst()
