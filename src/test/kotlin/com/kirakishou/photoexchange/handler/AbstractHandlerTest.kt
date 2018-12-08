@@ -51,6 +51,8 @@ abstract class AbstractHandlerTest {
 	lateinit var staticMapDownloaderService: StaticMapDownloaderService
 	lateinit var pushNotificationSenderService: PushNotificationSenderService
 	lateinit var remoteAddressExtractorService: RemoteAddressExtractorService
+	lateinit var diskManipulationService: DiskManipulationService
+	lateinit var cleanupService: CleanupService
 
 	lateinit var locationMapRepository: LocationMapRepository
 	lateinit var photoInfoRepository: PhotoInfoRepository
@@ -96,6 +98,7 @@ abstract class AbstractHandlerTest {
 		val generator = GeneratorService()
 
 		photoInfoRepository = PhotoInfoRepository(
+			template,
 			mongoSequenceDao,
 			photoInfoDao,
 			galleryPhotoDao,
@@ -116,6 +119,8 @@ abstract class AbstractHandlerTest {
 		staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)
     pushNotificationSenderService = Mockito.mock(PushNotificationSenderService::class.java)
 		remoteAddressExtractorService = Mockito.mock(RemoteAddressExtractorService::class.java)
+		diskManipulationService = Mockito.mock(DiskManipulationService::class.java)
+		cleanupService = Mockito.mock(CleanupService::class.java)
 	}
 
 	fun clear() {

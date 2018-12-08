@@ -1,34 +1,18 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.config.ServerSettings.BIG_PHOTO_SIZE
-import com.kirakishou.photoexchange.config.ServerSettings.BIG_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.config.ServerSettings.MAX_PHOTO_SIZE
-import com.kirakishou.photoexchange.config.ServerSettings.MEDIUM_PHOTO_SIZE
-import com.kirakishou.photoexchange.config.ServerSettings.MEDIUM_PHOTO_SUFFIX
-import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SIZE
-import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SUFFIX
-import com.kirakishou.photoexchange.config.ServerSettings.VERY_BIG_PHOTO_SIZE
-import com.kirakishou.photoexchange.config.ServerSettings.VERY_BIG_PHOTO_SUFFIX
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.extensions.containsAllParts
-import com.kirakishou.photoexchange.model.exception.EmptyPacket
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.repository.BanListRepository
+import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
-import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.PushNotificationSenderService
-import com.kirakishou.photoexchange.service.RemoteAddressExtractorService
-import com.kirakishou.photoexchange.service.StaticMapDownloaderService
-import com.kirakishou.photoexchange.util.IOUtils
-import com.kirakishou.photoexchange.util.ImageUtils
+import com.kirakishou.photoexchange.exception.EmptyPacket
+import com.kirakishou.photoexchange.extensions.containsAllParts
+import com.kirakishou.photoexchange.service.*
 import com.kirakishou.photoexchange.util.SecurityUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import core.ErrorCode
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.mono
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import net.request.SendPhotoPacket
 import net.response.UploadPhotoResponse
 import org.slf4j.LoggerFactory
@@ -40,29 +24,21 @@ import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
-import java.awt.Dimension
-import java.io.File
-import java.io.IOException
-import java.lang.IllegalArgumentException
-import java.net.Inet4Address
-import java.net.Inet6Address
-import java.net.InetSocketAddress
-import java.util.*
 
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
-  private val userInfoRepository: UserInfoRepository,
-  private val banListRepository: BanListRepository,
+	private val userInfoRepository: UserInfoRepository,
+	private val banListRepository: BanListRepository,
 	private val staticMapDownloaderService: StaticMapDownloaderService,
-  private val pushNotificationSenderService: PushNotificationSenderService,
-  private val remoteAddressExtractorService: RemoteAddressExtractorService
+	private val pushNotificationSenderService: PushNotificationSenderService,
+	private val remoteAddressExtractorService: RemoteAddressExtractorService,
+	private val diskManipulationService: DiskManipulationService,
+	private val cleanupService: CleanupService
 ) : AbstractWebHandler(jsonConverter) {
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
 	private val PACKET_PART_KEY = "packet"
 	private val PHOTO_PART_KEY = "photo"
-	private val mutex = Mutex()
-	private var lastTimeCheck = 0L
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		return mono {
@@ -103,7 +79,7 @@ class UploadPhotoHandler(
         if (!checkPhotoTotalSize(photoParts)) {
 					logger.error("Bad photo size")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						UploadPhotoResponse.fail(ErrorCode.BadRequest)) //TODO: add errorCode ExceededMaxPhotoSize
+						UploadPhotoResponse.fail(ErrorCode.ExceededMaxPhotoSize))
 				}
 
 				val photoInfoName = photoInfoRepo.generatePhotoInfoName()
@@ -118,27 +94,27 @@ class UploadPhotoHandler(
 				if (!staticMapDownloaderService.enqueue(newUploadingPhoto.photoId)) {
 					logger.error("Could not enqueue photo in locationMapReceiverService")
 
-					cleanup(newUploadingPhoto)
+          deletePhotoWithFile(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
 				}
 
-				val tempFile = saveTempFile(photoParts, newUploadingPhoto)
+				val tempFile = diskManipulationService.saveTempFile(photoParts, newUploadingPhoto)
 				if (tempFile == null) {
 					logger.error("Could not save file to disk")
 
-					cleanup(newUploadingPhoto)
+          deletePhotoWithFile(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.DatabaseError)) //TODO: add errorCode ServerDiskError
+						UploadPhotoResponse.fail(ErrorCode.ServerDiskError))
 				}
 
 				try {
-					resizeAndSavePhotos(tempFile, newUploadingPhoto)
+					diskManipulationService.resizeAndSavePhotos(tempFile, newUploadingPhoto)
 				} catch (error: Throwable) {
 					logger.error("Unknown error", error)
 					photoInfoRepo.delete(newUploadingPhoto.userId, photoInfoName)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.DatabaseError)) //TODO: add errorCode ServerResizeError
+						UploadPhotoResponse.fail(ErrorCode.ServerResizeError))
 				} finally {
 					if (tempFile.exists()) {
 						tempFile.delete()
@@ -146,7 +122,7 @@ class UploadPhotoHandler(
 				}
 
 				try {
-					deleteOldPhotos()
+					cleanupService.tryToStartCleaningRoutine(false)
 				} catch (error: Throwable) {
 					logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
 				}
@@ -156,7 +132,7 @@ class UploadPhotoHandler(
 				} catch (error: Throwable) {
 					logger.error("Unknown error while trying to do photo exchange", error)
 
-					cleanup(newUploadingPhoto)
+          deletePhotoWithFile(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
 				}
@@ -189,84 +165,6 @@ class UploadPhotoHandler(
     return hash
   }
 
-  private suspend fun cleanup(photoInfo: PhotoInfo) {
-		photoInfoRepo.deleteAll(listOf(photoInfo.photoId))
-
-		val photoPath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
-		IOUtils.deleteAllPhotoFiles(photoPath)
-	}
-
-	private fun resizeAndSavePhotos(tempFile: File, newUploadingPhoto: PhotoInfo) {
-		//save resized (very big) version of the image
-		val veryBigDimension = Dimension(VERY_BIG_PHOTO_SIZE, VERY_BIG_PHOTO_SIZE)
-		ImageUtils.resizeAndSaveImageOnDisk(tempFile, veryBigDimension, VERY_BIG_PHOTO_SUFFIX,
-			ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
-
-		//save resized (big) version of the image
-		val bigDimension = Dimension(BIG_PHOTO_SIZE, BIG_PHOTO_SIZE)
-		ImageUtils.resizeAndSaveImageOnDisk(tempFile, bigDimension, BIG_PHOTO_SUFFIX,
-			ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
-
-		//save resized (medium) version of the image
-		val mediumDimension = Dimension(MEDIUM_PHOTO_SIZE, MEDIUM_PHOTO_SIZE)
-		ImageUtils.resizeAndSaveImageOnDisk(tempFile, mediumDimension, MEDIUM_PHOTO_SUFFIX,
-			ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
-
-		//save resized (small) version of the image
-		val smallDimension = Dimension(SMALL_PHOTO_SIZE, SMALL_PHOTO_SIZE)
-		ImageUtils.resizeAndSaveImageOnDisk(tempFile, smallDimension, SMALL_PHOTO_SUFFIX,
-			ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
-	}
-
-	private suspend fun deleteOldPhotos() {
-		mutex.withLock {
-			val now = TimeUtils.getTimeFast()
-
-			//execute every hour
-			if (now - lastTimeCheck > ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL) {
-				logger.debug("Start cleanDatabaseAndPhotos routine")
-
-				lastTimeCheck = now
-				cleanDatabaseAndPhotos(now - ServerSettings.DELETE_PHOTOS_OLDER_THAN)
-
-				logger.debug("End cleanDatabaseAndPhotos routine")
-			}
-		}
-	}
-
-	private suspend fun cleanDatabaseAndPhotos(time: Long) {
-		val photosToDelete = photoInfoRepo.findOlderThan(time)
-		if (photosToDelete.isEmpty()) {
-			return
-		}
-
-		val ids = photosToDelete.map { it.photoId }
-		if (!photoInfoRepo.deleteAll(ids)) {
-			return
-		}
-
-		logger.debug("Found ${ids.size} photo ids to delete")
-
-		for (photo in photosToDelete) {
-			cleanup(photo)
-		}
-	}
-
-	private fun saveTempFile(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): File? {
-		val filePath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
-		val outFile = File(filePath)
-
-		try {
-			IOUtils.copyDataBuffersToFile(photoChunks, outFile)
-		} catch (e: IOException) {
-			logger.error("Error while trying to save file to the disk", e)
-
-			return null
-		}
-
-		return outFile
-	}
-
 	private fun checkPhotoTotalSize(photo: MutableList<DataBuffer>): Boolean {
 		val totalLength = photo.sumBy { it.readableByteCount() }
 		if (totalLength > MAX_PHOTO_SIZE) {
@@ -298,6 +196,15 @@ class UploadPhotoHandler(
 			}
 			.buffer()
 			.single()
+	}
+
+	private suspend fun deletePhotoWithFile(photoInfo: PhotoInfo) {
+		if (!photoInfoRepo.delete(photoInfo)) {
+			logger.error("Could not deletePhotoWithFile photo ${photoInfo.photoName}")
+			return
+		}
+
+		diskManipulationService.deleteAllPhotoFiles(photoInfo.photoName)
 	}
 }
 

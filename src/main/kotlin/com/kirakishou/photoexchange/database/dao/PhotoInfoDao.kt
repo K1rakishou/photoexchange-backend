@@ -33,6 +33,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).ne(userId))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).`is`(PhotoInfo.EMPTY_PHOTO_ID))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.LOCATION_MAP_ID).gt(0L))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
 
     val update = Update()
       .set(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID, PhotoInfo.PHOTO_IS_EXCHANGING)
@@ -82,6 +83,17 @@ open class PhotoInfoDao(
       .onErrorReturn(false)
   }
 
+  fun findAllByUserId(userId: String): Mono<List<PhotoInfo>> {
+    val query = Query()
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+
+    return template.find(query, PhotoInfo::class.java)
+      .collectList()
+      .defaultIfEmpty(emptyList())
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(emptyList())
+  }
+
   fun findPhotosByNames(userId: String, photoNameList: List<String>): Mono<List<PhotoInfo>> {
     val query = Query()
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
@@ -111,6 +123,7 @@ open class PhotoInfoDao(
     }
 
     query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
       .limit(photoIdList.size)
 
     return template.find(query, PhotoInfo::class.java)
@@ -124,6 +137,7 @@ open class PhotoInfoDao(
     val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.UPLOADED_ON))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(lastUploadedOn))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
       .limit(count)
 
     return template.find(query, PhotoInfo::class.java)
@@ -137,6 +151,7 @@ open class PhotoInfoDao(
     val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.UPLOADED_ON))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).gt(0L))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(lastUploadedOn))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
       .limit(count)
 
@@ -161,6 +176,17 @@ open class PhotoInfoDao(
   fun findById(uploaderPhotoId: Long): Mono<PhotoInfo> {
     val query = Query()
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(uploaderPhotoId))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
+
+    return template.findOne(query, PhotoInfo::class.java)
+      .defaultIfEmpty(PhotoInfo.empty())
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(PhotoInfo.empty())
+  }
+
+  fun findByPhotoName(photoName: String): Mono<PhotoInfo> {
+    val query = Query()
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
     return template.findOne(query, PhotoInfo::class.java)
       .defaultIfEmpty(PhotoInfo.empty())
@@ -179,10 +205,28 @@ open class PhotoInfoDao(
       .onErrorReturn(PhotoInfo.empty())
   }
 
-  fun findOlderThan(time: Long): Mono<List<PhotoInfo>> {
-    val query = Query()
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(time))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).ne(PhotoInfo.EMPTY_PHOTO_ID))
+  fun markAsDeletedPhotosOlderThan(olderThanTime: Long, now: Long, count: Int): Mono<Boolean> {
+    val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.UPLOADED_ON))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(olderThanTime))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).gt(0L))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
+      .limit(count)
+
+    val update = Update()
+      .set(PhotoInfo.Mongo.Field.DELETED_ON, now)
+
+    return template.updateMulti(query, update, PhotoInfo::class.java)
+      .map { updateResult -> updateResult.wasAcknowledged() }
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(false)
+  }
+
+  fun findOlderThan(olderThanTime: Long, count: Int): Mono<List<PhotoInfo>> {
+    val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.UPLOADED_ON))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).lt(olderThanTime)
+        .andOperator(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).gt(0L)))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).gt(0L))
+      .limit(count)
 
     return template.find(query, PhotoInfo::class.java)
       .collectList()
@@ -190,7 +234,6 @@ open class PhotoInfoDao(
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(emptyList())
   }
-
 
   fun updateSetLocationMapId(photoId: Long, locationMapId: Long): Mono<Boolean> {
     val query = Query()
@@ -240,6 +283,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).gt(0L))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).gt(time))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
 
     return template.count(query, PhotoInfo::class.java)
       .defaultIfEmpty(0L)
@@ -252,6 +296,7 @@ open class PhotoInfoDao(
     val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.UPLOADED_ON))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).gt(0L))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).gt(time))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
 
     return template.count(query, PhotoInfo::class.java)

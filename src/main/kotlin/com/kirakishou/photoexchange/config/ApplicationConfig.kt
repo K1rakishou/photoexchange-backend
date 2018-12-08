@@ -11,6 +11,9 @@ import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoH
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
+import com.kirakishou.photoexchange.handlers.admin.BanPhotoHandler
+import com.kirakishou.photoexchange.handlers.admin.BanUserHandler
+import com.kirakishou.photoexchange.handlers.admin.StartCleanupHandler
 import com.kirakishou.photoexchange.handlers.count.GetFreshGalleryPhotosCountHandler
 import com.kirakishou.photoexchange.handlers.count.GetFreshReceivedPhotosCountHandler
 import com.kirakishou.photoexchange.handlers.count.GetFreshUploadedPhotosCountHandler
@@ -28,7 +31,7 @@ import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.server.HandlerStrategies
 import org.springframework.web.reactive.function.server.RouterFunctions
 
-fun myBeans() = beans {
+fun myBeans(adminToken: String) = beans {
 	//router
 	bean<Router>()
 
@@ -39,6 +42,7 @@ fun myBeans() = beans {
 	bean { ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(ConnectionString("mongodb://$HOST:$PORT/$DB_NAME"))) }
 
 	//dao
+	bean { AdminInfoRepository(adminToken) }
 	bean { MongoSequenceDao(ref()).also { it.create() } }
 	bean { PhotoInfoDao(ref()).also { it.create() } }
 	bean { GalleryPhotoDao(ref()).also { it.create() } }
@@ -55,10 +59,12 @@ fun myBeans() = beans {
 	bean<BanListRepository>()
 
 	//service
+	bean { StaticMapDownloaderService(ref(), ref(), ref()).also { it.init() } }
 	bean<GeneratorService>()
 	bean<RemoteAddressExtractorService>()
-	bean { StaticMapDownloaderService(ref(), ref(), ref()).also { it.init() } }
-	bean { PushNotificationSenderService(ref(), ref(), ref(), ref()) }
+	bean<PushNotificationSenderService>()
+	bean<DiskManipulationService>()
+  bean<CleanupService>()
 
 	//handler
 	bean<UploadPhotoHandler>()
@@ -77,6 +83,9 @@ fun myBeans() = beans {
 	bean<GetFreshGalleryPhotosCountHandler>()
 	bean<GetFreshUploadedPhotosCountHandler>()
 	bean<GetFreshReceivedPhotosCountHandler>()
+	bean<BanPhotoHandler>()
+	bean<BanUserHandler>()
+	bean<StartCleanupHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }

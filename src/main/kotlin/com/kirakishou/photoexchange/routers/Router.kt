@@ -1,14 +1,19 @@
 package com.kirakishou.photoexchange.routers
 
+import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.handlers.*
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoHandler
 import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
+import com.kirakishou.photoexchange.handlers.admin.BanPhotoHandler
+import com.kirakishou.photoexchange.handlers.admin.BanUserHandler
+import com.kirakishou.photoexchange.handlers.admin.StartCleanupHandler
 import com.kirakishou.photoexchange.handlers.count.GetFreshGalleryPhotosCountHandler
 import com.kirakishou.photoexchange.handlers.count.GetFreshReceivedPhotosCountHandler
 import com.kirakishou.photoexchange.handlers.count.GetFreshUploadedPhotosCountHandler
 import org.springframework.http.MediaType
+import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.router
 
 class Router(
@@ -27,8 +32,15 @@ class Router(
   private val updateFirebaseTokenHandler: UpdateFirebaseTokenHandler,
 	private val getFreshGalleryPhotosCountHandler: GetFreshGalleryPhotosCountHandler,
   private val getFreshUploadedPhotosCountHandler: GetFreshUploadedPhotosCountHandler,
-  private val getFreshReceivedPhotosCountHandler: GetFreshReceivedPhotosCountHandler
+  private val getFreshReceivedPhotosCountHandler: GetFreshReceivedPhotosCountHandler,
+	private val banPhotoHandler: BanPhotoHandler,
+	private val banUserHandler: BanUserHandler,
+	private val startCleanupHandler: StartCleanupHandler
 ) {
+	private fun hasAuthHeaderPredicate() = { headers: ServerRequest.Headers ->
+		headers.header(ServerSettings.authTokenHeaderName).isNotEmpty()
+	}
+
 	fun setUpRouter() = router {
 		"/v1".nest {
 			"/api".nest {
@@ -55,6 +67,13 @@ class Router(
           GET("/get_fresh_uploaded_photos_count/{user_id}/{time}", getFreshUploadedPhotosCountHandler::handle)
           GET("/get_fresh_received_photos_count/{user_id}/{time}", getFreshReceivedPhotosCountHandler::handle)
           GET("/get_fresh_gallery_photos_count/{time}", getFreshGalleryPhotosCountHandler::handle)
+				}
+
+				headers(hasAuthHeaderPredicate()).nest {
+					PUT("/ban_photo/{photo_name}", banPhotoHandler::handle)
+					PUT("/ban_user/{photo_name}", banUserHandler::handle)
+					//used to forcefully start cleaning up of old photos
+					GET("/start_cleanup", startCleanupHandler::handle)
 				}
 
 				accept(MediaType.parseMediaType("image/*")).nest {

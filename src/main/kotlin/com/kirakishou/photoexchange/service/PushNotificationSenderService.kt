@@ -86,7 +86,6 @@ open class PushNotificationSenderService(
       return
     }
 
-    val url = BASE_URL + FCM_SEND_ENDPOINT
     val requestsCopy = mutex.withLock { requests.clone() as LinkedHashSet<PhotoInfo> }
 
     try {
@@ -94,7 +93,7 @@ open class PushNotificationSenderService(
         //only requests that were executed successfully will be removed from the requests set
         try {
           chunk
-            .map { photo -> async { processRequest(photo, url, accessToken) } }
+            .map { photo -> async { processRequest(photo, URL, accessToken) } }
             .forEach { it.await() }
         } catch (error: Throwable) {
           logger.error("Error while processing chunk of notifications", error)
@@ -231,6 +230,7 @@ open class PushNotificationSenderService(
   companion object {
     private val BASE_URL = "https://fcm.googleapis.com"
     private val FCM_SEND_ENDPOINT = "/v1/projects/${ServerSettings.PROJECT_ID}/messages:send"
+    private val URL = BASE_URL + FCM_SEND_ENDPOINT
 
     private val MESSAGING_SCOPE = "https://www.googleapis.com/auth/firebase.messaging"
     private val SCOPES = listOf(MESSAGING_SCOPE)
