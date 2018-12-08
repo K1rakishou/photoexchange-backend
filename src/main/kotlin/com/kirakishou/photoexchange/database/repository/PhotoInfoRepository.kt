@@ -88,6 +88,15 @@ open class PhotoInfoRepository(
     }
   }
 
+  suspend fun findAllIpHashesByUserId(userId: String): List<String> {
+    return withContext(coroutineContext) {
+      return@withContext photoInfoDao.findAllByUserId(userId).awaitFirst()
+        .map { it.ipHash }
+        .toSet()  //remove duplicates
+        .toList()
+    }
+  }
+
   suspend fun findPageOfUploadedPhotos(
     userId: String,
     lastUploadedOn: Long,

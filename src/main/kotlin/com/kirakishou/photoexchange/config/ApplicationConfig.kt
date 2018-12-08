@@ -12,6 +12,7 @@ import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHand
 import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
 import com.kirakishou.photoexchange.handlers.admin.BanPhotoHandler
+import com.kirakishou.photoexchange.handlers.admin.BanUserHandler
 import com.kirakishou.photoexchange.handlers.count.GetFreshGalleryPhotosCountHandler
 import com.kirakishou.photoexchange.handlers.count.GetFreshReceivedPhotosCountHandler
 import com.kirakishou.photoexchange.handlers.count.GetFreshUploadedPhotosCountHandler
@@ -81,6 +82,7 @@ fun myBeans(adminToken: String) = beans {
 	bean<GetFreshUploadedPhotosCountHandler>()
 	bean<GetFreshReceivedPhotosCountHandler>()
 	bean<BanPhotoHandler>()
+	bean<BanUserHandler>()
 
 	//etc
 	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }

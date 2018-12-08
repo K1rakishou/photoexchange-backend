@@ -83,6 +83,17 @@ open class PhotoInfoDao(
       .onErrorReturn(false)
   }
 
+  fun findAllByUserId(userId: String): Mono<List<PhotoInfo>> {
+    val query = Query()
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
+
+    return template.find(query, PhotoInfo::class.java)
+      .collectList()
+      .defaultIfEmpty(emptyList())
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(emptyList())
+  }
+
   fun findPhotosByNames(userId: String, photoNameList: List<String>): Mono<List<PhotoInfo>> {
     val query = Query()
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))

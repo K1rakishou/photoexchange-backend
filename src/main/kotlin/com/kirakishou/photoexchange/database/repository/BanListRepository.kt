@@ -21,7 +21,9 @@ open class BanListRepository(
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val id = mongoSequenceDao.getNextBanEntryId().awaitFirst()
-        return@withLock banListDao.save(BanEntry.create(id, ipHash, TimeUtils.getTimeFast())).awaitFirst()
+        val banEntry = BanEntry.create(id, ipHash, TimeUtils.getTimeFast())
+
+        return@withLock banListDao.save(banEntry).awaitFirst()
       }
     }
   }
@@ -30,6 +32,19 @@ open class BanListRepository(
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         return@withLock !banListDao.find(ipHash).awaitFirst().isEmpty()
+      }
+    }
+  }
+
+  open suspend fun banMany(ipHashList: List<String>): Boolean {
+    return withContext(coroutineContext) {
+      return@withContext mutex.withLock {
+        val banEntryList = ipHashList.map { ipHash ->
+          val id = mongoSequenceDao.getNextBanEntryId().awaitFirst()
+          return@map BanEntry.create(id, ipHash, TimeUtils.getTimeFast())
+        }
+
+        return@withLock banListDao.saveMany(banEntryList).awaitFirst()
       }
     }
   }
