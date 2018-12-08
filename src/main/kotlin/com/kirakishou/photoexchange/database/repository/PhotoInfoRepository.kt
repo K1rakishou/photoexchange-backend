@@ -5,6 +5,7 @@ import com.kirakishou.photoexchange.database.entity.FavouritedPhoto
 import com.kirakishou.photoexchange.database.entity.GalleryPhoto
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.entity.ReportedPhoto
+import com.kirakishou.photoexchange.exception.DatabaseTransactionException
 import com.kirakishou.photoexchange.exception.ExchangeException
 import com.kirakishou.photoexchange.service.GeneratorService
 import kotlinx.coroutines.reactive.awaitFirst
@@ -245,15 +246,6 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun cleanUp(ids: List<Long>): Boolean {
-    return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        val photoInfoList = photoInfoDao.findPhotosToDeleteByIds(ids).awaitFirst()
-        return@withLock deletePhotosInternal(photoInfoList)
-      }
-    }
-  }
-
   private suspend fun deletePhotoInternal(photoInfo: PhotoInfo): Boolean {
     if (photoInfo.isEmpty()) {
       return false
@@ -263,46 +255,37 @@ open class PhotoInfoRepository(
       return@execute mono {
         val results = mutableListOf<Mono<Boolean>>()
         results += photoInfoDao.deleteById(photoInfo.photoId)
-        results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
-        results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
-        results += locationMapDao.deleteById(photoInfo.photoId)
-        results += galleryPhotoDao.deleteById(photoInfo.photoId)
-
-        return@mono results.map { it.awaitFirst() }
-          .any { !it }
-      }
-    }
-      .single()
-      .awaitFirst()
-  }
-
-  private suspend fun deletePhotosInternal(photoInfoList: List<PhotoInfo>): Boolean {
-    val filteredPhotoInfoList = photoInfoList.filter { !it.isEmpty() }
-    if (filteredPhotoInfoList.isEmpty()) {
-      return false
-    }
-
-    val photoIds = filteredPhotoInfoList.map { it.photoId }
-
-    return template.inTransaction().execute {
-      return@execute mono {
-        for (photoId in photoIds) {
-          val results = mutableListOf<Mono<Boolean>>()
-
-          results += photoInfoDao.deleteAll(photoIds)
-          results += favouritedPhotoDao.deleteAll(photoIds)
-          results += reportedPhotoDao.deleteAll(photoIds)
-          results += locationMapDao.deleteAll(photoIds)
-          results += galleryPhotoDao.deleteAll(photoIds)
-
-          val hasFailResults = results.map { it.awaitFirst() }
-            .any { !it }
-
-          if (hasFailResults) {
-            throw IllegalStateException("Couldn't execute one of the transaction's steps")
+          .doOnNext { result ->
+            if (!result) {
+              throw DatabaseTransactionException("photoInfoDao: Could not delete photo by id ${photoInfo.photoId}")
+            }
           }
-        }
+        results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+          .doOnNext { result ->
+            if (!result) {
+              throw DatabaseTransactionException("favouritedPhotoDao: Could not delete photo by id ${photoInfo.photoId}")
+            }
+          }
+        results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+          .doOnNext { result ->
+            if (!result) {
+              throw DatabaseTransactionException("reportedPhotoDao: Could not delete photo by id ${photoInfo.photoId}")
+            }
+          }
+        results += locationMapDao.deleteById(photoInfo.photoId)
+          .doOnNext { result ->
+            if (!result) {
+              throw DatabaseTransactionException("locationMapDao: Could not delete location map by id ${photoInfo.photoId}")
+            }
+          }
+        results += galleryPhotoDao.deleteById(photoInfo.photoId)
+          .doOnNext { result ->
+            if (!result) {
+              throw DatabaseTransactionException("galleryPhotoDao: Could not delete gallery photo by id ${photoInfo.photoId}")
+            }
+          }
 
+        results.forEach { it.awaitFirst() }
         return@mono true
       }
     }

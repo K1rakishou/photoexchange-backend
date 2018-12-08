@@ -132,6 +132,13 @@ open class DiskManipulationService {
 				}
 			}
 
+			val veryBigPhotoFile = File("$photoPath${ServerSettings.VERY_BIG_PHOTO_SUFFIX}")
+			if (veryBigPhotoFile.exists()) {
+				if (!veryBigPhotoFile.delete()) {
+					logger.warn("Could not delete file with path: ${veryBigPhotoFile.absolutePath}")
+				}
+			}
+
 			val mapPhotoFile = File("$photoPath${ServerSettings.PHOTO_MAP_SUFFIX}")
 			if (mapPhotoFile.exists()) {
 				if (!mapPhotoFile.delete()) {

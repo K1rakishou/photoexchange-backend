@@ -122,7 +122,7 @@ class UploadPhotoHandler(
 				}
 
 				try {
-					cleanupService.deleteOldPhotos()
+					cleanupService.tryToStartCleaningRoutine(false)
 				} catch (error: Throwable) {
 					logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
 				}
