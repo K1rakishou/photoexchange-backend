@@ -122,6 +122,29 @@ open class PhotoInfoDao(
       .onErrorReturn(emptyList())
   }
 
+  fun findPhotosToDeleteByIds(photoIdList: List<Long>, sortOrder: SortOrder = SortOrder.Unsorted): Mono<List<PhotoInfo>> {
+    val query = when (sortOrder) {
+      PhotoInfoDao.SortOrder.Descending -> {
+        Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.PHOTO_ID))
+
+      }
+      PhotoInfoDao.SortOrder.Ascending -> {
+        Query().with(Sort(Sort.Direction.ASC, PhotoInfo.Mongo.Field.PHOTO_ID))
+      }
+      PhotoInfoDao.SortOrder.Unsorted -> Query()
+    }
+
+    query.addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(photoIdList))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).gt(0L))
+      .limit(photoIdList.size)
+
+    return template.find(query, PhotoInfo::class.java)
+      .collectList()
+      .defaultIfEmpty(emptyList())
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(emptyList())
+  }
+
   fun findPage(userId: String, lastUploadedOn: Long, count: Int): Mono<List<PhotoInfo>> {
     val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.UPLOADED_ON))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(lastUploadedOn))

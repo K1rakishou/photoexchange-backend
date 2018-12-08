@@ -209,7 +209,7 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun delete(userId: String, photoName: String, isUploader: Boolean = true): Boolean {
+  suspend fun delete(userId: String, photoName: String): Boolean {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val photoInfo = photoInfoDao.findOneByUserIdAndPhotoName(userId, photoName).awaitFirst()
@@ -221,8 +221,7 @@ open class PhotoInfoRepository(
   suspend fun deleteAll(ids: List<Long>): Boolean {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        //FIXME: use another findManyByIds!!!
-        val photoInfoList = photoInfoDao.findManyByIds(ids).awaitFirst()
+        val photoInfoList = photoInfoDao.findPhotosToDeleteByIds(ids).awaitFirst()
         return@withLock deletePhotosInternal(photoInfoList)
       }
     }
