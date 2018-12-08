@@ -1,7 +1,7 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
-import com.kirakishou.photoexchange.model.exception.EmptyPacket
+import com.kirakishou.photoexchange.exception.EmptyPacket
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import kotlinx.coroutines.reactive.awaitFirst

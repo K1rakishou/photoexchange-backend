@@ -5,7 +5,7 @@ import com.kirakishou.photoexchange.database.entity.FavouritedPhoto
 import com.kirakishou.photoexchange.database.entity.GalleryPhoto
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.entity.ReportedPhoto
-import com.kirakishou.photoexchange.model.exception.ExchangeException
+import com.kirakishou.photoexchange.exception.ExchangeException
 import com.kirakishou.photoexchange.service.GeneratorService
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.sync.Mutex
@@ -82,6 +82,12 @@ open class PhotoInfoRepository(
     }
   }
 
+  suspend fun findOneByPhotoName(photoName: String): PhotoInfo {
+    return withContext(coroutineContext) {
+      return@withContext photoInfoDao.findByPhotoName(photoName).awaitFirst()
+    }
+  }
+
   suspend fun findPageOfUploadedPhotos(
     userId: String,
     lastUploadedOn: Long,
@@ -98,7 +104,8 @@ open class PhotoInfoRepository(
 
         for (myPhoto in myPhotos) {
           val theirPhoto = theirPhotos.firstOrNull { it.photoId == myPhoto.exchangedPhotoId }
-          val receiverInfo = theirPhoto?.let { GetUploadedPhotosResponse.ReceiverInfoResponseData(it.photoName, it.lon, it.lat) }
+          val receiverInfo = theirPhoto
+            ?.let { GetUploadedPhotosResponse.ReceiverInfoResponseData(it.photoName, it.lon, it.lat) }
 
           result += GetUploadedPhotosResponse.UploadedPhotoResponseData(
             myPhoto.photoId,
@@ -162,7 +169,8 @@ open class PhotoInfoRepository(
           //no photos to exchange with, set newUploadingPhoto's exchangeId to PhotoInfo.EMPTY_PHOTO_ID
           //so it can be found by other's upon uploading
           if (!photoInfoDao.resetVacantPhoto(newUploadingPhoto.photoId).awaitFirst()) {
-            throw RuntimeException("Something is wrong with the database. Could not reset photo exchange id for photo with id (${oldestPhoto.photoId})")
+            throw RuntimeException("Something is wrong with the database. " +
+              "Could not reset photo exchange id for photo with id (${oldestPhoto.photoId})")
           }
 
           return@withLock PhotoInfo.empty()
@@ -181,15 +189,18 @@ open class PhotoInfoRepository(
             .copy(exchangedPhotoId = newUploadingPhoto.photoId)
         } catch (exception: ExchangeException) {
           if (!photoInfoDao.resetPhotoReceiverId(newUploadingPhoto.photoId).awaitFirst()) {
-            throw RuntimeException("Something is wrong with the database. Could not reset photo receiver id for photo with id (${newUploadingPhoto.photoId})")
+            throw RuntimeException("Something is wrong with the database. " +
+              "Could not reset photo receiver id for photo with id (${newUploadingPhoto.photoId})")
           }
 
           if (!photoInfoDao.resetPhotoReceiverId(oldestPhoto.photoId).awaitFirst()) {
-            throw RuntimeException("Something is wrong with the database. Could not reset photo receiver id for photo with id (${oldestPhoto.photoId})")
+            throw RuntimeException("Something is wrong with the database. " +
+              "Could not reset photo receiver id for photo with id (${oldestPhoto.photoId})")
           }
 
           if (!photoInfoDao.resetVacantPhoto(oldestPhoto.photoId).awaitFirst()) {
-            throw RuntimeException("Something is wrong with the database. Could not reset photo exchange id for photo with id (${oldestPhoto.photoId})")
+            throw RuntimeException("Something is wrong with the database. " +
+              "Could not reset photo exchange id for photo with id (${oldestPhoto.photoId})")
           }
 
           return@withLock PhotoInfo.empty()
@@ -210,6 +221,7 @@ open class PhotoInfoRepository(
   suspend fun deleteAll(ids: List<Long>): Boolean {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
+        //FIXME: use another findManyByIds!!!
         val photoInfoList = photoInfoDao.findManyByIds(ids).awaitFirst()
         return@withLock deletePhotosInternal(photoInfoList)
       }

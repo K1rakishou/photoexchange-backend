@@ -8,6 +8,10 @@ object ServerSettings {
 	//use your firebase project id here (https://support.google.com/googleapi/answer/7014113?hl=en)
 	val PROJECT_ID by lazy { getPropertyByName("FIREBASE_PROJECT_ID") }
 
+	//used for verification that you are really is an admin when you want to do some admin stuff
+	//see: handlers/admin
+	const val authTokenHeaderName = "X-Auth-Token"
+
 	const val FILE_DIR_PATH = "D:\\projects\\data\\photos"
 	const val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
 	//TODO: change in production
@@ -20,13 +24,13 @@ object ServerSettings {
 	const val PHOTOS_DELIMITER = ','
 
   const val MIN_GALLERY_PHOTOS_PER_REQUEST_COUNT = 5
-	const val MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT = 50
+	const val MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT = 200
 	const val MIN_UPLOADED_PHOTOS_PER_REQUEST_COUNT = 5
-	const val MAX_UPLOADED_PHOTOS_PER_REQUEST_COUNT = 50
+	const val MAX_UPLOADED_PHOTOS_PER_REQUEST_COUNT = 200
 	const val MIN_RECEIVED_PHOTOS_PER_REQUEST_COUNT = 5
-	const val MAX_RECEIVED_PHOTOS_PER_REQUEST_COUNT = 50
+	const val MAX_RECEIVED_PHOTOS_PER_REQUEST_COUNT = 200
 
-  const val VERY_BIG_PHOTO_SIZE = 2014
+  const val VERY_BIG_PHOTO_SIZE = 2048
 	const val BIG_PHOTO_SIZE = 1024
 	const val MEDIUM_PHOTO_SIZE = 512
 	const val SMALL_PHOTO_SIZE = 256

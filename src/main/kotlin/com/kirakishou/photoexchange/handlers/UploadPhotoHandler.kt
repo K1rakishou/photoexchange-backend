@@ -1,18 +1,10 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.config.ServerSettings.BIG_PHOTO_SIZE
-import com.kirakishou.photoexchange.config.ServerSettings.BIG_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.config.ServerSettings.MAX_PHOTO_SIZE
-import com.kirakishou.photoexchange.config.ServerSettings.MEDIUM_PHOTO_SIZE
-import com.kirakishou.photoexchange.config.ServerSettings.MEDIUM_PHOTO_SUFFIX
-import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SIZE
-import com.kirakishou.photoexchange.config.ServerSettings.SMALL_PHOTO_SUFFIX
-import com.kirakishou.photoexchange.config.ServerSettings.VERY_BIG_PHOTO_SIZE
-import com.kirakishou.photoexchange.config.ServerSettings.VERY_BIG_PHOTO_SUFFIX
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
-import com.kirakishou.photoexchange.model.exception.EmptyPacket
+import com.kirakishou.photoexchange.exception.EmptyPacket
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.repository.BanListRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
@@ -21,7 +13,7 @@ import com.kirakishou.photoexchange.service.PushNotificationSenderService
 import com.kirakishou.photoexchange.service.RemoteAddressExtractorService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.kirakishou.photoexchange.util.IOUtils
-import com.kirakishou.photoexchange.util.ImageUtils
+import com.kirakishou.photoexchange.service.ImageManipulationService
 import com.kirakishou.photoexchange.util.SecurityUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import core.ErrorCode
@@ -40,14 +32,8 @@ import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
-import java.awt.Dimension
 import java.io.File
 import java.io.IOException
-import java.lang.IllegalArgumentException
-import java.net.Inet4Address
-import java.net.Inet6Address
-import java.net.InetSocketAddress
-import java.util.*
 
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
@@ -56,7 +42,8 @@ class UploadPhotoHandler(
   private val banListRepository: BanListRepository,
 	private val staticMapDownloaderService: StaticMapDownloaderService,
   private val pushNotificationSenderService: PushNotificationSenderService,
-  private val remoteAddressExtractorService: RemoteAddressExtractorService
+  private val remoteAddressExtractorService: RemoteAddressExtractorService,
+	private val imageManipulationService: ImageManipulationService
 ) : AbstractWebHandler(jsonConverter) {
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
 	private val PACKET_PART_KEY = "packet"
@@ -103,7 +90,7 @@ class UploadPhotoHandler(
         if (!checkPhotoTotalSize(photoParts)) {
 					logger.error("Bad photo size")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
-						UploadPhotoResponse.fail(ErrorCode.BadRequest)) //TODO: add errorCode ExceededMaxPhotoSize
+						UploadPhotoResponse.fail(ErrorCode.ExceededMaxPhotoSize))
 				}
 
 				val photoInfoName = photoInfoRepo.generatePhotoInfoName()
@@ -129,16 +116,16 @@ class UploadPhotoHandler(
 
 					cleanup(newUploadingPhoto)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.DatabaseError)) //TODO: add errorCode ServerDiskError
+						UploadPhotoResponse.fail(ErrorCode.ServerDiskError))
 				}
 
 				try {
-					resizeAndSavePhotos(tempFile, newUploadingPhoto)
+					imageManipulationService.resizeAndSavePhotos(tempFile, newUploadingPhoto)
 				} catch (error: Throwable) {
 					logger.error("Unknown error", error)
 					photoInfoRepo.delete(newUploadingPhoto.userId, photoInfoName)
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.DatabaseError)) //TODO: add errorCode ServerResizeError
+						UploadPhotoResponse.fail(ErrorCode.ServerResizeError))
 				} finally {
 					if (tempFile.exists()) {
 						tempFile.delete()
@@ -196,28 +183,7 @@ class UploadPhotoHandler(
 		IOUtils.deleteAllPhotoFiles(photoPath)
 	}
 
-	private fun resizeAndSavePhotos(tempFile: File, newUploadingPhoto: PhotoInfo) {
-		//save resized (very big) version of the image
-		val veryBigDimension = Dimension(VERY_BIG_PHOTO_SIZE, VERY_BIG_PHOTO_SIZE)
-		ImageUtils.resizeAndSaveImageOnDisk(tempFile, veryBigDimension, VERY_BIG_PHOTO_SUFFIX,
-			ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
-
-		//save resized (big) version of the image
-		val bigDimension = Dimension(BIG_PHOTO_SIZE, BIG_PHOTO_SIZE)
-		ImageUtils.resizeAndSaveImageOnDisk(tempFile, bigDimension, BIG_PHOTO_SUFFIX,
-			ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
-
-		//save resized (medium) version of the image
-		val mediumDimension = Dimension(MEDIUM_PHOTO_SIZE, MEDIUM_PHOTO_SIZE)
-		ImageUtils.resizeAndSaveImageOnDisk(tempFile, mediumDimension, MEDIUM_PHOTO_SUFFIX,
-			ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
-
-		//save resized (small) version of the image
-		val smallDimension = Dimension(SMALL_PHOTO_SIZE, SMALL_PHOTO_SIZE)
-		ImageUtils.resizeAndSaveImageOnDisk(tempFile, smallDimension, SMALL_PHOTO_SUFFIX,
-			ServerSettings.FILE_DIR_PATH, newUploadingPhoto.photoName)
-	}
-
+	//TODO: move to repository
 	private suspend fun deleteOldPhotos() {
 		mutex.withLock {
 			val now = TimeUtils.getTimeFast()
@@ -234,6 +200,10 @@ class UploadPhotoHandler(
 		}
 	}
 
+	//TODO: move to repository?
+	//TODO: make deletion in two passes
+	//1. First pass should mark old photos with deleteOn = currentTime()
+	//2. Second pass should find all photos with deletedOn that already marked more than n days
 	private suspend fun cleanDatabaseAndPhotos(time: Long) {
 		val photosToDelete = photoInfoRepo.findOlderThan(time)
 		if (photosToDelete.isEmpty()) {

@@ -41,6 +41,10 @@ data class PhotoInfo(
 	@Field(Mongo.Field.UPLOADED_ON)
 	val uploadedOn: Long,
 
+	@Indexed(name = Mongo.Index.DELETED_ON, direction = IndexDirection.DESCENDING)
+	@Field(Mongo.Field.DELETED_ON)
+	val deletedOn: Long,
+
 	@Indexed(name = Mongo.Index.IP_HASH)
 	@Field(Mongo.Field.IP_HASH)
 	val ipHash: String
@@ -59,11 +63,42 @@ data class PhotoInfo(
 		const val EMPTY_LOCATION_MAP_ID = -1L
 
 		fun empty(): PhotoInfo {
-			return PhotoInfo(EMPTY_PHOTO_ID, EMPTY_PHOTO_ID, EMPTY_LOCATION_MAP_ID, "", "", false, 0.0, 0.0, 0L, "")
+			return PhotoInfo(
+				EMPTY_PHOTO_ID,
+				EMPTY_PHOTO_ID,
+				EMPTY_LOCATION_MAP_ID,
+				"",
+				"",
+				false,
+				0.0,
+				0.0,
+				0L,
+				0L,
+				""
+			)
 		}
 
-		fun create(userId: String, photoName: String, isPublic: Boolean, lon: Double, lat: Double, time: Long, ipHash: String): PhotoInfo {
-			return PhotoInfo(EMPTY_PHOTO_ID, PHOTO_IS_EXCHANGING, EMPTY_LOCATION_MAP_ID, userId, photoName, isPublic, lon, lat, time, ipHash)
+		fun create(
+			userId: String,
+			photoName: String,
+			isPublic: Boolean,
+			lon: Double,
+			lat: Double,
+			uploadedOn: Long,
+			ipHash: String
+		): PhotoInfo {
+			return PhotoInfo(
+				EMPTY_PHOTO_ID,
+				PHOTO_IS_EXCHANGING,
+				EMPTY_LOCATION_MAP_ID,
+				userId,
+				photoName,
+				isPublic,
+				lon,
+				lat,
+				uploadedOn,
+				0L,
+				ipHash)
 		}
 	}
 
@@ -78,6 +113,7 @@ data class PhotoInfo(
 			const val LONGITUDE = "longitude"
 			const val LATITUDE = "latitude"
 			const val UPLOADED_ON = "uploaded_on"
+			const val DELETED_ON = "deleted_on"
 			const val IP_HASH = "ip_hash"
 		}
 
@@ -86,6 +122,7 @@ data class PhotoInfo(
 			const val USER_ID = "user_id_index"
 			const val PHOTO_NAME = "photo_name_index"
 			const val UPLOADED_ON = "uploaded_on_index"
+			const val DELETED_ON = "deleted_on_index"
 			const val IP_HASH = "ip_hash_index"
 		}
 	}

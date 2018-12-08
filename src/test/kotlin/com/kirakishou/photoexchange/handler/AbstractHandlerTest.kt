@@ -51,6 +51,7 @@ abstract class AbstractHandlerTest {
 	lateinit var staticMapDownloaderService: StaticMapDownloaderService
 	lateinit var pushNotificationSenderService: PushNotificationSenderService
 	lateinit var remoteAddressExtractorService: RemoteAddressExtractorService
+	lateinit var imageManipulationService: ImageManipulationService
 
 	lateinit var locationMapRepository: LocationMapRepository
 	lateinit var photoInfoRepository: PhotoInfoRepository
@@ -116,6 +117,7 @@ abstract class AbstractHandlerTest {
 		staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)
     pushNotificationSenderService = Mockito.mock(PushNotificationSenderService::class.java)
 		remoteAddressExtractorService = Mockito.mock(RemoteAddressExtractorService::class.java)
+		imageManipulationService = Mockito.mock(ImageManipulationService::class.java)
 	}
 
 	fun clear() {

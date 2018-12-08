@@ -5,10 +5,7 @@ import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.repository.BanListRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
-import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.PushNotificationSenderService
-import com.kirakishou.photoexchange.service.RemoteAddressExtractorService
-import com.kirakishou.photoexchange.service.StaticMapDownloaderService
+import com.kirakishou.photoexchange.service.*
 import com.nhaarman.mockito_kotlin.any
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
@@ -42,7 +39,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
                                banListRepository: BanListRepository,
                                staticMapDownloaderService: StaticMapDownloaderService,
                                pushNotificationSenderService: PushNotificationSenderService,
-                               remoteAddressExtractorService: RemoteAddressExtractorService): WebTestClient {
+                               remoteAddressExtractorService: RemoteAddressExtractorService,
+                               imageManipulationService: ImageManipulationService): WebTestClient {
     val handler = UploadPhotoHandler(
       jsonConverterService,
       photoInfoRepository,
@@ -50,7 +48,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       banListRepository,
       staticMapDownloaderService,
       pushNotificationSenderService,
-      remoteAddressExtractorService
+      remoteAddressExtractorService,
+      imageManipulationService
     )
 
     return WebTestClient.bindToRouterFunction(router {
@@ -91,7 +90,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       banListRepository,
       staticMapDownloaderService,
       pushNotificationSenderService,
-      remoteAddressExtractorService
+      remoteAddressExtractorService,
+      imageManipulationService
     )
 
     runBlocking {
@@ -183,7 +183,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       banListRepository,
       staticMapDownloaderService,
       pushNotificationSenderService,
-      remoteAddressExtractorService
+      remoteAddressExtractorService,
+      imageManipulationService
     )
 
     runBlocking {
@@ -270,7 +271,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       banListRepository,
       staticMapDownloaderService,
       pushNotificationSenderService,
-      remoteAddressExtractorService
+      remoteAddressExtractorService,
+      imageManipulationService
     )
 
     runBlocking {
@@ -444,7 +446,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       banListRepository,
       staticMapDownloaderService,
       pushNotificationSenderService,
-      remoteAddressExtractorService
+      remoteAddressExtractorService,
+      imageManipulationService
     )
 
     runBlocking {
