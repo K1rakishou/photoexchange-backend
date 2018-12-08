@@ -62,7 +62,8 @@ fun myBeans(adminToken: String) = beans {
 	bean<GeneratorService>()
 	bean<RemoteAddressExtractorService>()
 	bean<PushNotificationSenderService>()
-	bean<ImageManipulationService>()
+	bean<DiskManipulationService>()
+  bean<CleanupService>()
 
 	//handler
 	bean<UploadPhotoHandler>()

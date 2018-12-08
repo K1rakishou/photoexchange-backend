@@ -1,11 +1,7 @@
 package com.kirakishou.photoexchange.handler
 
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
-import com.kirakishou.photoexchange.database.repository.BanListRepository
-import com.kirakishou.photoexchange.database.repository.UserInfoRepository
-import com.kirakishou.photoexchange.service.*
+import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.nhaarman.mockito_kotlin.any
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
@@ -33,14 +29,7 @@ import java.util.concurrent.Executors
 @RunWith(SpringJUnit4ClassRunner::class)
 class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
-  private fun getWebTestClient(jsonConverterService: JsonConverterService,
-                               photoInfoRepository: PhotoInfoRepository,
-                               userInfoRepository: UserInfoRepository,
-                               banListRepository: BanListRepository,
-                               staticMapDownloaderService: StaticMapDownloaderService,
-                               pushNotificationSenderService: PushNotificationSenderService,
-                               remoteAddressExtractorService: RemoteAddressExtractorService,
-                               imageManipulationService: ImageManipulationService): WebTestClient {
+  private fun getWebTestClient(): WebTestClient {
     val handler = UploadPhotoHandler(
       jsonConverterService,
       photoInfoRepository,
@@ -49,7 +38,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       staticMapDownloaderService,
       pushNotificationSenderService,
       remoteAddressExtractorService,
-      imageManipulationService
+      diskManipulationService,
+      cleanupService
     )
 
     return WebTestClient.bindToRouterFunction(router {
@@ -83,16 +73,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
   @Test
   fun `test should exchange two photos`() {
-    val webClient = getWebTestClient(
-      jsonConverterService,
-      photoInfoRepository,
-      userInfoRepository,
-      banListRepository,
-      staticMapDownloaderService,
-      pushNotificationSenderService,
-      remoteAddressExtractorService,
-      imageManipulationService
-    )
+    val webClient = getWebTestClient()
 
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
@@ -176,16 +157,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
   @Test
   fun `test should not exchange two photos with the same user id`() {
-    val webClient = getWebTestClient(
-      jsonConverterService,
-      photoInfoRepository,
-      userInfoRepository,
-      banListRepository,
-      staticMapDownloaderService,
-      pushNotificationSenderService,
-      remoteAddressExtractorService,
-      imageManipulationService
-    )
+    val webClient = getWebTestClient()
 
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
@@ -264,16 +236,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
   @Test
   fun `test should exchange 4 photos`() {
-    val webClient = getWebTestClient(
-      jsonConverterService,
-      photoInfoRepository,
-      userInfoRepository,
-      banListRepository,
-      staticMapDownloaderService,
-      pushNotificationSenderService,
-      remoteAddressExtractorService,
-      imageManipulationService
-    )
+    val webClient = getWebTestClient()
 
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
@@ -439,16 +402,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
   @Test
   fun `test 100 concurrent uploadings at the same time`() {
     val concurrency = 100
-    val webClient = getWebTestClient(
-      jsonConverterService,
-      photoInfoRepository,
-      userInfoRepository,
-      banListRepository,
-      staticMapDownloaderService,
-      pushNotificationSenderService,
-      remoteAddressExtractorService,
-      imageManipulationService
-    )
+    val webClient = getWebTestClient()
 
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)

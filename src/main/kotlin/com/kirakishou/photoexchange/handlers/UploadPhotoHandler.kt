@@ -1,26 +1,18 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.config.ServerSettings.MAX_PHOTO_SIZE
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.extensions.containsAllParts
-import com.kirakishou.photoexchange.exception.EmptyPacket
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.repository.BanListRepository
+import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
-import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.service.PushNotificationSenderService
-import com.kirakishou.photoexchange.service.RemoteAddressExtractorService
-import com.kirakishou.photoexchange.service.StaticMapDownloaderService
-import com.kirakishou.photoexchange.util.IOUtils
-import com.kirakishou.photoexchange.service.ImageManipulationService
+import com.kirakishou.photoexchange.exception.EmptyPacket
+import com.kirakishou.photoexchange.extensions.containsAllParts
+import com.kirakishou.photoexchange.service.*
 import com.kirakishou.photoexchange.util.SecurityUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import core.ErrorCode
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.mono
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import net.request.SendPhotoPacket
 import net.response.UploadPhotoResponse
 import org.slf4j.LoggerFactory
@@ -32,24 +24,21 @@ import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
-import java.io.File
-import java.io.IOException
 
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
 	private val photoInfoRepo: PhotoInfoRepository,
-  private val userInfoRepository: UserInfoRepository,
-  private val banListRepository: BanListRepository,
+	private val userInfoRepository: UserInfoRepository,
+	private val banListRepository: BanListRepository,
 	private val staticMapDownloaderService: StaticMapDownloaderService,
-  private val pushNotificationSenderService: PushNotificationSenderService,
-  private val remoteAddressExtractorService: RemoteAddressExtractorService,
-	private val imageManipulationService: ImageManipulationService
+	private val pushNotificationSenderService: PushNotificationSenderService,
+	private val remoteAddressExtractorService: RemoteAddressExtractorService,
+	private val diskManipulationService: DiskManipulationService,
+	private val cleanupService: CleanupService
 ) : AbstractWebHandler(jsonConverter) {
 	private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
 	private val PACKET_PART_KEY = "packet"
 	private val PHOTO_PART_KEY = "photo"
-	private val mutex = Mutex()
-	private var lastTimeCheck = 0L
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		return mono {
@@ -110,7 +99,7 @@ class UploadPhotoHandler(
 						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
 				}
 
-				val tempFile = saveTempFile(photoParts, newUploadingPhoto)
+				val tempFile = diskManipulationService.saveTempFile(photoParts, newUploadingPhoto)
 				if (tempFile == null) {
 					logger.error("Could not save file to disk")
 
@@ -120,7 +109,7 @@ class UploadPhotoHandler(
 				}
 
 				try {
-					imageManipulationService.resizeAndSavePhotos(tempFile, newUploadingPhoto)
+					diskManipulationService.resizeAndSavePhotos(tempFile, newUploadingPhoto)
 				} catch (error: Throwable) {
 					logger.error("Unknown error", error)
 					photoInfoRepo.delete(newUploadingPhoto.userId, photoInfoName)
@@ -133,7 +122,7 @@ class UploadPhotoHandler(
 				}
 
 				try {
-					deleteOldPhotos()
+					cleanupService.deleteOldPhotos()
 				} catch (error: Throwable) {
 					logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
 				}
@@ -176,70 +165,6 @@ class UploadPhotoHandler(
     return hash
   }
 
-	//TODO: move to repository
-	private suspend fun deleteOldPhotos() {
-		mutex.withLock {
-			val now = TimeUtils.getTimeFast()
-
-			//execute every hour
-			if (now - lastTimeCheck > ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL) {
-				logger.debug("Start cleanDatabaseAndPhotos routine")
-
-				lastTimeCheck = now
-				cleanDatabaseAndPhotos(now - ServerSettings.DELETE_PHOTOS_OLDER_THAN)
-
-				logger.debug("End cleanDatabaseAndPhotos routine")
-			}
-		}
-	}
-
-	//TODO: move to repository?
-	//TODO: make deletion in two passes
-	//1. First pass should mark old photos with deleteOn = currentTime()
-	//2. Second pass should find all photos with deletedOn that already marked more than n days
-	private suspend fun cleanDatabaseAndPhotos(time: Long) {
-		val photosToDelete = photoInfoRepo.findOlderThan(time)
-		if (photosToDelete.isEmpty()) {
-			return
-		}
-
-		val ids = photosToDelete.map { it.photoId }
-		if (!photoInfoRepo.cleanUp(ids)) {
-			return
-		}
-
-		logger.debug("Found ${ids.size} photo ids to deletePhotoWithFile")
-
-		for (photo in photosToDelete) {
-      deletePhotoWithFile(photo)
-		}
-	}
-
-  private suspend fun deletePhotoWithFile(photoInfo: PhotoInfo) {
-    if (!photoInfoRepo.delete(photoInfo)) {
-      logger.error("Could not deletePhotoWithFile photo ${photoInfo.photoName}")
-      return
-    }
-
-    val photoPath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
-    IOUtils.deleteAllPhotoFiles(photoPath)
-  }
-
-	private fun saveTempFile(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): File? {
-		val filePath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
-		val outFile = File(filePath)
-
-		try {
-			IOUtils.copyDataBuffersToFile(photoChunks, outFile)
-		} catch (e: IOException) {
-			logger.error("Error while trying to save file to the disk", e)
-
-			return null
-		}
-
-		return outFile
-	}
-
 	private fun checkPhotoTotalSize(photo: MutableList<DataBuffer>): Boolean {
 		val totalLength = photo.sumBy { it.readableByteCount() }
 		if (totalLength > MAX_PHOTO_SIZE) {
@@ -271,6 +196,15 @@ class UploadPhotoHandler(
 			}
 			.buffer()
 			.single()
+	}
+
+	private suspend fun deletePhotoWithFile(photoInfo: PhotoInfo) {
+		if (!photoInfoRepo.delete(photoInfo)) {
+			logger.error("Could not deletePhotoWithFile photo ${photoInfo.photoName}")
+			return
+		}
+
+		diskManipulationService.deleteAllPhotoFiles(photoInfo.photoName)
 	}
 }
 

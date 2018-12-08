@@ -61,6 +61,7 @@ abstract class AbstractRepositoryTest {
 		val generator = Mockito.spy(GeneratorService())
 
 		photoInfoRepository = Mockito.spy(PhotoInfoRepository(
+			template,
 			mongoSequenceDao,
 			photoInfoDao,
 			galleryPhotoDao,

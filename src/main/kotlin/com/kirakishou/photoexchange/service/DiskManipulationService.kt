@@ -2,16 +2,21 @@ package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
+import com.kirakishou.photoexchange.util.IOUtils
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import net.coobird.thumbnailator.Thumbnails
+import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
+import org.springframework.core.io.buffer.DataBuffer
 import java.awt.Dimension
 import java.io.File
+import java.io.IOException
 import java.lang.RuntimeException
 import javax.imageio.ImageIO
 
-open class ImageManipulationService {
+open class DiskManipulationService {
+	private val logger = LoggerFactory.getLogger(DiskManipulationService::class.java)
 	private val mutex = Mutex()
 	private val photoRemovedPlaceHolderName = "photo_has_been_removed"
 
@@ -100,6 +105,55 @@ open class ImageManipulationService {
 			//replace very big photo with placeholder
 			replaceFile(photoName, ServerSettings.VERY_BIG_PHOTO_SUFFIX)
 		}
+	}
+
+	open suspend fun deleteAllPhotoFiles(photoName: String) {
+		val photoPath = "${ServerSettings.FILE_DIR_PATH}\\${photoName}"
+
+		mutex.withLock {
+			val smallPhotoFile = File("$photoPath${ServerSettings.SMALL_PHOTO_SUFFIX}")
+			if (smallPhotoFile.exists()) {
+				if (!smallPhotoFile.delete()) {
+					logger.warn("Could not delete file with path: ${smallPhotoFile.absolutePath}")
+				}
+			}
+
+			val mediumPhotoFile = File("$photoPath${ServerSettings.MEDIUM_PHOTO_SUFFIX}")
+			if (mediumPhotoFile.exists()) {
+				if (!mediumPhotoFile.delete()) {
+					logger.warn("Could not delete file with path: ${mediumPhotoFile.absolutePath}")
+				}
+			}
+
+			val bigPhotoFile = File("$photoPath${ServerSettings.BIG_PHOTO_SUFFIX}")
+			if (bigPhotoFile.exists()) {
+				if (!bigPhotoFile.delete()) {
+					logger.warn("Could not delete file with path: ${bigPhotoFile.absolutePath}")
+				}
+			}
+
+			val mapPhotoFile = File("$photoPath${ServerSettings.PHOTO_MAP_SUFFIX}")
+			if (mapPhotoFile.exists()) {
+				if (!mapPhotoFile.delete()) {
+					logger.warn("Could not delete file with path: ${mapPhotoFile.absolutePath}")
+				}
+			}
+		}
+	}
+
+	open suspend fun saveTempFile(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): File? {
+		val filePath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
+		val outFile = File(filePath)
+
+		try {
+			IOUtils.copyDataBuffersToFile(photoChunks, outFile)
+		} catch (e: IOException) {
+			logger.error("Error while trying to save file to the disk", e)
+
+			return null
+		}
+
+		return outFile
 	}
 
 }

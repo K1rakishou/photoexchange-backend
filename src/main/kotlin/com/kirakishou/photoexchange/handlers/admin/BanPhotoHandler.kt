@@ -5,7 +5,7 @@ import com.kirakishou.photoexchange.database.repository.AdminInfoRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.handlers.AbstractWebHandler
-import com.kirakishou.photoexchange.service.ImageManipulationService
+import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import kotlinx.coroutines.reactor.mono
@@ -20,7 +20,7 @@ class BanPhotoHandler(
   jsonConverter: JsonConverterService,
   private val photoInfoRepository: PhotoInfoRepository,
   private val adminInfoRepository: AdminInfoRepository,
-  private val imageManipulationService: ImageManipulationService
+  private val diskManipulationService: DiskManipulationService
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(JsonConverterService::class.java)
   private val PHOTO_NAME_VARIABLE_PATH = "photo_name"
@@ -61,7 +61,7 @@ class BanPhotoHandler(
         }
 
         try {
-          imageManipulationService.replaceImagesOnDiskWithRemovedImagePlaceholder(photoName)
+          diskManipulationService.replaceImagesOnDiskWithRemovedImagePlaceholder(photoName)
         } catch (error: Throwable) {
           logger.error("Error while trying to replace photo with removed photo placeholder", error)
           return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,

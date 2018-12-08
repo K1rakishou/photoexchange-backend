@@ -8,14 +8,18 @@ import com.kirakishou.photoexchange.database.entity.ReportedPhoto
 import com.kirakishou.photoexchange.exception.ExchangeException
 import com.kirakishou.photoexchange.service.GeneratorService
 import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.reactor.mono
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import net.response.*
 import org.slf4j.LoggerFactory
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import reactor.core.publisher.Mono
+import java.lang.IllegalStateException
 
 open class PhotoInfoRepository(
+  private val template: ReactiveMongoTemplate,
   private val mongoSequenceDao: MongoSequenceDao,
   private val photoInfoDao: PhotoInfoDao,
   private val galleryPhotoDao: GalleryPhotoDao,
@@ -162,11 +166,17 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun findOlderThan(time: Long): List<PhotoInfo> {
+  suspend fun markAsDeletedPhotosOlderThan(olderThanTime: Long, now: Long, count: Int): Boolean {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        return@withLock photoInfoDao.findOlderThan(time).awaitFirst()
+        return@withLock photoInfoDao.markAsDeletedPhotosOlderThan(olderThanTime, now, count).awaitFirst()
       }
+    }
+  }
+
+  suspend fun findOlderThan(olderThanTime: Long, count: Int): List<PhotoInfo> {
+    return withContext(coroutineContext) {
+      return@withContext photoInfoDao.findOlderThan(olderThanTime, count).awaitFirst()
     }
   }
 
@@ -249,15 +259,21 @@ open class PhotoInfoRepository(
       return false
     }
 
-    val results = mutableListOf<Mono<Boolean>>()
-    results += photoInfoDao.deleteById(photoInfo.photoId)
-    results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
-    results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
-    results += locationMapDao.deleteById(photoInfo.photoId)
-    results += galleryPhotoDao.deleteById(photoInfo.photoId)
+    return template.inTransaction().execute {
+      return@execute mono {
+        val results = mutableListOf<Mono<Boolean>>()
+        results += photoInfoDao.deleteById(photoInfo.photoId)
+        results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+        results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+        results += locationMapDao.deleteById(photoInfo.photoId)
+        results += galleryPhotoDao.deleteById(photoInfo.photoId)
 
-    return results.map { it.awaitFirst() }
-      .any { !it }
+        return@mono results.map { it.awaitFirst() }
+          .any { !it }
+      }
+    }
+      .single()
+      .awaitFirst()
   }
 
   private suspend fun deletePhotosInternal(photoInfoList: List<PhotoInfo>): Boolean {
@@ -267,16 +283,32 @@ open class PhotoInfoRepository(
     }
 
     val photoIds = filteredPhotoInfoList.map { it.photoId }
-    val results = mutableListOf<Mono<Boolean>>()
 
-    results += photoInfoDao.deleteAll(photoIds)
-    results += favouritedPhotoDao.deleteAll(photoIds)
-    results += reportedPhotoDao.deleteAll(photoIds)
-    results += locationMapDao.deleteAll(photoIds)
-    results += galleryPhotoDao.deleteAll(photoIds)
+    return template.inTransaction().execute {
+      return@execute mono {
+        for (photoId in photoIds) {
+          val results = mutableListOf<Mono<Boolean>>()
 
-    return results.map { it.awaitFirst() }
-      .any { !it }
+          results += photoInfoDao.deleteAll(photoIds)
+          results += favouritedPhotoDao.deleteAll(photoIds)
+          results += reportedPhotoDao.deleteAll(photoIds)
+          results += locationMapDao.deleteAll(photoIds)
+          results += galleryPhotoDao.deleteAll(photoIds)
+
+          val hasFailResults = results.map { it.awaitFirst() }
+            .any { !it }
+
+          if (hasFailResults) {
+            throw IllegalStateException("Couldn't execute one of the transaction's steps")
+          }
+        }
+
+        return@mono true
+      }
+    }
+      .single()
+      .onErrorReturn(false)
+      .awaitFirst()
   }
 
   suspend fun favouritePhoto(userId: String, photoName: String): FavouritePhotoResult {
