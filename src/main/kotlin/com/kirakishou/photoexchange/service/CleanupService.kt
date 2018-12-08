@@ -12,7 +12,7 @@ class CleanupService(
   private val diskManipulationService: DiskManipulationService
 ) {
   private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
-  private val lastTimeCheck = AtomicLong(0)
+  private val lastTimeCheck = AtomicLong(TimeUtils.getTimeFast())
   private val photosPerQuery = 100
 
   suspend fun deleteOldPhotos() {
@@ -21,7 +21,15 @@ class CleanupService(
 
     if (now - lastTimeCheck.get() > ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL) {
       if (lastTimeCheck.compareAndSet(oldTime, now)) {
-        cleanDatabaseAndPhotos(now)
+        logger.debug("Start cleanDatabaseAndPhotos routine")
+
+        try {
+          cleanDatabaseAndPhotos(now)
+        } catch (error: Throwable) {
+          logger.error("Error while cleaning up", error)
+        } finally {
+          logger.debug("End cleanDatabaseAndPhotos routine")
+        }
       }
     }
   }
@@ -43,8 +51,6 @@ class CleanupService(
     if (!photoInfoRepository.cleanUp(ids)) {
       return
     }
-
-    logger.debug("Found ${ids.size} photo ids to deletePhotoWithFile")
 
     for (photoInfo in photosToDelete) {
       if (!photoInfoRepository.delete(photoInfo)) {

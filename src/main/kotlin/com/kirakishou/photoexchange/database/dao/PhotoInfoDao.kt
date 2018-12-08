@@ -231,7 +231,7 @@ open class PhotoInfoDao(
   fun markAsDeletedPhotosOlderThan(olderThanTime: Long, now: Long, count: Int): Mono<Boolean> {
     val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.UPLOADED_ON))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(olderThanTime))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).ne(PhotoInfo.EMPTY_PHOTO_ID))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).gt(0L))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
       .limit(count)
 
@@ -246,9 +246,9 @@ open class PhotoInfoDao(
 
   fun findOlderThan(olderThanTime: Long, count: Int): Mono<List<PhotoInfo>> {
     val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.UPLOADED_ON))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).lt(olderThanTime))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).gt(0L))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).ne(PhotoInfo.EMPTY_PHOTO_ID))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).lt(olderThanTime)
+        .andOperator(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).gt(0L)))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).gt(0L))
       .limit(count)
 
     return template.find(query, PhotoInfo::class.java)
