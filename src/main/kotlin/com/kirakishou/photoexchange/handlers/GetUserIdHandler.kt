@@ -1,6 +1,7 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
+import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import kotlinx.coroutines.reactor.mono

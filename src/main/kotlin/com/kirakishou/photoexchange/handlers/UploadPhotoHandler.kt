@@ -7,6 +7,7 @@ import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.exception.EmptyPacket
 import com.kirakishou.photoexchange.extensions.containsAllParts
+import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.*
 import com.kirakishou.photoexchange.util.SecurityUtils
 import com.kirakishou.photoexchange.util.TimeUtils

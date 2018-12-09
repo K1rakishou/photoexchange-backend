@@ -2,6 +2,7 @@ package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
+import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import kotlinx.coroutines.reactor.mono
 import org.slf4j.LoggerFactory

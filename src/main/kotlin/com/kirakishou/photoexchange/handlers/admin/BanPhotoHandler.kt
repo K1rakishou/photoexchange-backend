@@ -4,7 +4,7 @@ import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.AdminInfoRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
-import com.kirakishou.photoexchange.handlers.AbstractWebHandler
+import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
@@ -22,7 +22,7 @@ class BanPhotoHandler(
   private val adminInfoRepository: AdminInfoRepository,
   private val diskManipulationService: DiskManipulationService
 ) : AbstractWebHandler(jsonConverter) {
-  private val logger = LoggerFactory.getLogger(JsonConverterService::class.java)
+  private val logger = LoggerFactory.getLogger(BanPhotoHandler::class.java)
   private val PHOTO_NAME_VARIABLE_PATH = "photo_name"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
