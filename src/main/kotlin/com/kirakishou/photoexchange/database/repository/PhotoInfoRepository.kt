@@ -109,30 +109,28 @@ open class PhotoInfoRepository(
     count: Int
   ): List<GetUploadedPhotosResponse.UploadedPhotoResponseData> {
     return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        val myPhotos = photoInfoDao.findPage(userId, lastUploadedOn, count).awaitFirst()
+      val myPhotos = photoInfoDao.findPage(userId, lastUploadedOn, count).awaitFirst()
 
-        val exchangeIds = myPhotos.map { it.exchangedPhotoId }
-        val theirPhotos = photoInfoDao.findManyByIds(exchangeIds).awaitFirst()
+      val exchangeIds = myPhotos.map { it.exchangedPhotoId }
+      val theirPhotos = photoInfoDao.findManyByIds(exchangeIds).awaitFirst()
 
-        val result = mutableListOf<GetUploadedPhotosResponse.UploadedPhotoResponseData>()
+      val result = mutableListOf<GetUploadedPhotosResponse.UploadedPhotoResponseData>()
 
-        for (myPhoto in myPhotos) {
-          val theirPhoto = theirPhotos.firstOrNull { it.photoId == myPhoto.exchangedPhotoId }
-          val receiverInfo = theirPhoto
-            ?.let { GetUploadedPhotosResponse.ReceiverInfoResponseData(it.photoName, it.lon, it.lat) }
+      for (myPhoto in myPhotos) {
+        val theirPhoto = theirPhotos.firstOrNull { it.photoId == myPhoto.exchangedPhotoId }
+        val receiverInfo = theirPhoto
+          ?.let { GetUploadedPhotosResponse.ReceiverInfoResponseData(it.photoName, it.lon, it.lat) }
 
-          result += GetUploadedPhotosResponse.UploadedPhotoResponseData(
-            myPhoto.photoId,
-            myPhoto.photoName,
-            myPhoto.lon,
-            myPhoto.lat,
-            receiverInfo,
-            myPhoto.uploadedOn)
-        }
-
-        return@withLock result
+        result += GetUploadedPhotosResponse.UploadedPhotoResponseData(
+          myPhoto.photoId,
+          myPhoto.photoName,
+          myPhoto.lon,
+          myPhoto.lat,
+          receiverInfo,
+          myPhoto.uploadedOn)
       }
+
+      return@withContext result
     }
   }
 
@@ -142,29 +140,27 @@ open class PhotoInfoRepository(
     count: Int
   ): List<ReceivedPhotosResponse.ReceivedPhotoResponseData> {
     return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        val myPhotos = photoInfoDao.findPageOfExchangedPhotos(userId, lastUploadedOn, count).awaitFirst()
-        val theirPhotoIds = myPhotos
-          .map { it.exchangedPhotoId }
+      val myPhotos = photoInfoDao.findPageOfExchangedPhotos(userId, lastUploadedOn, count).awaitFirst()
+      val theirPhotoIds = myPhotos
+        .map { it.exchangedPhotoId }
 
-        val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds, PhotoInfoDao.SortOrder.Descending).awaitFirst()
-        val result = mutableListOf<ReceivedPhotosResponse.ReceivedPhotoResponseData>()
+      val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds, PhotoInfoDao.SortOrder.Descending).awaitFirst()
+      val result = mutableListOf<ReceivedPhotosResponse.ReceivedPhotoResponseData>()
 
-        for (theirPhoto in theirPhotos) {
-          val myPhoto = myPhotos.first { it.photoId == theirPhoto.exchangedPhotoId }
+      for (theirPhoto in theirPhotos) {
+        val myPhoto = myPhotos.first { it.photoId == theirPhoto.exchangedPhotoId }
 
-          result += ReceivedPhotosResponse.ReceivedPhotoResponseData(
-            theirPhoto.photoId,
-            myPhoto.photoName,
-            theirPhoto.photoName,
-            theirPhoto.lon,
-            theirPhoto.lat,
-            theirPhoto.uploadedOn
-          )
-        }
-
-        return@withLock result
+        result += ReceivedPhotosResponse.ReceivedPhotoResponseData(
+          theirPhoto.photoId,
+          myPhoto.photoName,
+          theirPhoto.photoName,
+          theirPhoto.lon,
+          theirPhoto.lat,
+          theirPhoto.uploadedOn
+        )
       }
+
+      return@withContext result
     }
   }
 
@@ -197,6 +193,7 @@ open class PhotoInfoRepository(
 
           if (photo.value.photoId != exchangedPhoto.exchangedPhotoId
             || photo.value.exchangedPhotoId != exchangedPhoto.photoId) {
+
             logger.debug("exchanged photos does not have each other's ids: " +
               "photo.value.photoId = ${photo.value.photoId}, " +
               "exchangedPhoto.exchangedPhotoId = ${exchangedPhoto.exchangedPhotoId}, " +
@@ -206,7 +203,9 @@ open class PhotoInfoRepository(
           }
 
           //if both of the photos were uploaded earlier than "uploadedEarlierThan" - mark them as deleted
-          if (photo.value.uploadedOn < uploadedEarlierThan && exchangedPhoto.uploadedOn < uploadedEarlierThan) {
+          if (photo.value.uploadedOn < uploadedEarlierThan
+            && exchangedPhoto.uploadedOn < uploadedEarlierThan) {
+
             toBeUpdated.add(photo.key)
             toBeUpdated.add(exchangedPhoto.photoId)
           }
@@ -255,6 +254,7 @@ open class PhotoInfoRepository(
     }
   }
 
+  //TODO: rewrite to use transactions
   suspend fun tryDoExchange(userId: String, newUploadingPhoto: PhotoInfo): PhotoInfo {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
@@ -305,18 +305,14 @@ open class PhotoInfoRepository(
 
   suspend fun delete(userId: String, photoName: String): Boolean {
     return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        val photoInfo = photoInfoDao.findOneByUserIdAndPhotoName(userId, photoName).awaitFirst()
-        return@withLock deletePhotoInternalInTransaction(photoInfo)
-      }
+      val photoInfo = photoInfoDao.findOneByUserIdAndPhotoName(userId, photoName).awaitFirst()
+      return@withContext deletePhotoInternalInTransaction(photoInfo)
     }
   }
 
   suspend fun delete(photoInfo: PhotoInfo): Boolean {
     return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        return@withLock deletePhotoInternalInTransaction(photoInfo)
-      }
+      return@withContext deletePhotoInternalInTransaction(photoInfo)
     }
   }
 
@@ -325,42 +321,44 @@ open class PhotoInfoRepository(
       return false
     }
 
-    return template.inTransaction().execute {
-      return@execute mono {
-        val results = mutableListOf<Mono<Boolean>>()
-        results += photoInfoDao.deleteById(photoInfo.photoId)
-          .doOnNext { result ->
-            if (!result) {
-              throw DatabaseTransactionException("photoInfoDao: Could not delete photo by id ${photoInfo.photoId}")
+    return mutex.withLock {
+      return@withLock template.inTransaction().execute {
+        return@execute mono {
+          val results = mutableListOf<Mono<Boolean>>()
+          results += photoInfoDao.deleteById(photoInfo.photoId)
+            .doOnNext { result ->
+              if (!result) {
+                throw DatabaseTransactionException("photoInfoDao: Could not delete photo by id ${photoInfo.photoId}")
+              }
             }
-          }
-        results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
-          .doOnNext { result ->
-            if (!result) {
-              throw DatabaseTransactionException("favouritedPhotoDao: Could not delete photo by id ${photoInfo.photoId}")
+          results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+            .doOnNext { result ->
+              if (!result) {
+                throw DatabaseTransactionException("favouritedPhotoDao: Could not delete photo by id ${photoInfo.photoId}")
+              }
             }
-          }
-        results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
-          .doOnNext { result ->
-            if (!result) {
-              throw DatabaseTransactionException("reportedPhotoDao: Could not delete photo by id ${photoInfo.photoId}")
+          results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+            .doOnNext { result ->
+              if (!result) {
+                throw DatabaseTransactionException("reportedPhotoDao: Could not delete photo by id ${photoInfo.photoId}")
+              }
             }
-          }
-        results += locationMapDao.deleteById(photoInfo.photoId)
-          .doOnNext { result ->
-            if (!result) {
-              throw DatabaseTransactionException("locationMapDao: Could not delete location map by id ${photoInfo.photoId}")
+          results += locationMapDao.deleteById(photoInfo.photoId)
+            .doOnNext { result ->
+              if (!result) {
+                throw DatabaseTransactionException("locationMapDao: Could not delete location map by id ${photoInfo.photoId}")
+              }
             }
-          }
-        results += galleryPhotoDao.deleteById(photoInfo.photoId)
-          .doOnNext { result ->
-            if (!result) {
-              throw DatabaseTransactionException("galleryPhotoDao: Could not delete gallery photo by id ${photoInfo.photoId}")
+          results += galleryPhotoDao.deleteById(photoInfo.photoId)
+            .doOnNext { result ->
+              if (!result) {
+                throw DatabaseTransactionException("galleryPhotoDao: Could not delete gallery photo by id ${photoInfo.photoId}")
+              }
             }
-          }
 
-        results.forEach { it.awaitFirst() }
-        return@mono true
+          results.forEach { it.awaitFirst() }
+          return@mono true
+        }
       }
     }
       .single()
@@ -419,34 +417,32 @@ open class PhotoInfoRepository(
 
   suspend fun findGalleryPhotos(lastUploadedOn: Long, count: Int): List<GalleryPhotosResponse.GalleryPhotoResponseData> {
     return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
+      val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
 
-        val pageOfGalleryPhotos = galleryPhotoDao.findPage(lastUploadedOn, count).awaitFirst()
-        val photoIds = pageOfGalleryPhotos.map { it.photoId }
+      val pageOfGalleryPhotos = galleryPhotoDao.findPage(lastUploadedOn, count).awaitFirst()
+      val photoIds = pageOfGalleryPhotos.map { it.photoId }
 
-        val photoInfosDeferred = photoInfoDao.findManyByIds(photoIds, PhotoInfoDao.SortOrder.Descending)
-        val favouritedPhotosMapDeferred = favouritedPhotoDao.findMany(photoIds)
+      val photoInfosDeferred = photoInfoDao.findManyByIds(photoIds, PhotoInfoDao.SortOrder.Descending)
+      val favouritedPhotosMapDeferred = favouritedPhotoDao.findMany(photoIds)
 
-        val photoInfos = photoInfosDeferred.awaitFirst()
-        val favouritedPhotosMap = favouritedPhotosMapDeferred.awaitFirst().groupBy { it.photoId }
+      val photoInfos = photoInfosDeferred.awaitFirst()
+      val favouritedPhotosMap = favouritedPhotosMapDeferred.awaitFirst().groupBy { it.photoId }
 
-        for (photo in photoInfos) {
-          val galleryPhoto = pageOfGalleryPhotos.first { it.photoId == photo.photoId }
-          val favouritedPhotos = favouritedPhotosMap[photo.photoId] ?: emptyList()
+      for (photo in photoInfos) {
+        val galleryPhoto = pageOfGalleryPhotos.first { it.photoId == photo.photoId }
+        val favouritedPhotos = favouritedPhotosMap[photo.photoId] ?: emptyList()
 
-          resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto, favouritedPhotos.size.toLong())
-        }
+        resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto, favouritedPhotos.size.toLong())
+      }
 
-        return@withLock resultMap.values.map { (photoInfo, _, favouritesCount) ->
-          GalleryPhotosResponse.GalleryPhotoResponseData(
-            photoInfo.photoName,
-            photoInfo.lon,
-            photoInfo.lat,
-            photoInfo.uploadedOn,
-            favouritesCount
-          )
-        }
+      return@withContext resultMap.values.map { (photoInfo, _, favouritesCount) ->
+        GalleryPhotosResponse.GalleryPhotoResponseData(
+          photoInfo.photoName,
+          photoInfo.lon,
+          photoInfo.lat,
+          photoInfo.uploadedOn,
+          favouritesCount
+        )
       }
     }
   }
@@ -456,32 +452,30 @@ open class PhotoInfoRepository(
     photoNames: List<String>
   ): List<GalleryPhotoInfoResponse.GalleryPhotosInfoResponseData> {
     return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        val resultMap = linkedMapOf<Long, GalleryPhotoInfoDto>()
+      val resultMap = linkedMapOf<Long, GalleryPhotoInfoDto>()
 
-        val userFavouritedPhotosDeferred = favouritedPhotoDao.findManyByPhotoNameList(userId, photoNames)
-        val userReportedPhotosDeferred = reportedPhotoDao.findManyByPhotoNameList(userId, photoNames)
+      val userFavouritedPhotosDeferred = favouritedPhotoDao.findManyByPhotoNameList(userId, photoNames)
+      val userReportedPhotosDeferred = reportedPhotoDao.findManyByPhotoNameList(userId, photoNames)
 
-        val userFavouritedPhotos = userFavouritedPhotosDeferred.awaitFirst()
-        val userReportedPhotos = userReportedPhotosDeferred.awaitFirst()
+      val userFavouritedPhotos = userFavouritedPhotosDeferred.awaitFirst()
+      val userReportedPhotos = userReportedPhotosDeferred.awaitFirst()
 
-        for (favouritedPhoto in userFavouritedPhotos) {
-          resultMap.putIfAbsent(favouritedPhoto.photoId, GalleryPhotoInfoDto(favouritedPhoto.photoName))
-          resultMap[favouritedPhoto.photoId]!!.isFavourited = true
-        }
+      for (favouritedPhoto in userFavouritedPhotos) {
+        resultMap.putIfAbsent(favouritedPhoto.photoId, GalleryPhotoInfoDto(favouritedPhoto.photoName))
+        resultMap[favouritedPhoto.photoId]!!.isFavourited = true
+      }
 
-        for (reportedPhoto in userReportedPhotos) {
-          resultMap.putIfAbsent(reportedPhoto.photoId, GalleryPhotoInfoDto(reportedPhoto.photoName))
-          resultMap[reportedPhoto.photoId]!!.isReported = true
-        }
+      for (reportedPhoto in userReportedPhotos) {
+        resultMap.putIfAbsent(reportedPhoto.photoId, GalleryPhotoInfoDto(reportedPhoto.photoName))
+        resultMap[reportedPhoto.photoId]!!.isReported = true
+      }
 
-        return@withLock resultMap.values.map { (galleryPhotoName, isFavourited, isReported) ->
-          GalleryPhotoInfoResponse.GalleryPhotosInfoResponseData(
-            galleryPhotoName,
-            isFavourited,
-            isReported
-          )
-        }
+      return@withContext resultMap.values.map { (galleryPhotoName, isFavourited, isReported) ->
+        GalleryPhotoInfoResponse.GalleryPhotosInfoResponseData(
+          galleryPhotoName,
+          isFavourited,
+          isReported
+        )
       }
     }
   }
@@ -491,28 +485,26 @@ open class PhotoInfoRepository(
     photoNameList: List<String>
   ): List<ReceivedPhotosResponse.ReceivedPhotoResponseData> {
     return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        val myPhotos = photoInfoDao.findPhotosByNames(userId, photoNameList).awaitFirst()
-        val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
+      val myPhotos = photoInfoDao.findPhotosByNames(userId, photoNameList).awaitFirst()
+      val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
 
-        val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds).awaitFirst()
-        val result = mutableListOf<ReceivedPhotosResponse.ReceivedPhotoResponseData>()
+      val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds).awaitFirst()
+      val result = mutableListOf<ReceivedPhotosResponse.ReceivedPhotoResponseData>()
 
-        for (theirPhoto in theirPhotos) {
-          val myPhoto = myPhotos.first { it.photoId == theirPhoto.exchangedPhotoId }
+      for (theirPhoto in theirPhotos) {
+        val myPhoto = myPhotos.first { it.photoId == theirPhoto.exchangedPhotoId }
 
-          result += ReceivedPhotosResponse.ReceivedPhotoResponseData(
-            theirPhoto.photoId,
-            myPhoto.photoName,
-            theirPhoto.photoName,
-            theirPhoto.lon,
-            theirPhoto.lat,
-            theirPhoto.uploadedOn
-          )
-        }
-
-        return@withLock result
+        result += ReceivedPhotosResponse.ReceivedPhotoResponseData(
+          theirPhoto.photoId,
+          myPhoto.photoName,
+          theirPhoto.photoName,
+          theirPhoto.lon,
+          theirPhoto.lat,
+          theirPhoto.uploadedOn
+        )
       }
+
+      return@withContext result
     }
   }
 
@@ -526,25 +518,19 @@ open class PhotoInfoRepository(
 
   suspend fun countFreshGalleryPhotosSince(time: Long): Int {
     return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        return@withLock galleryPhotoDao.countFreshGalleryPhotosSince(time).awaitFirst()
-      }
+      return@withContext galleryPhotoDao.countFreshGalleryPhotosSince(time).awaitFirst()
     }
   }
 
   suspend fun countFreshReceivedPhotosSince(userId: String, time: Long): Int {
     return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        return@withLock photoInfoDao.countFreshUploadedPhotosSince(userId, time).awaitFirst()
-      }
+      return@withContext photoInfoDao.countFreshUploadedPhotosSince(userId, time).awaitFirst()
     }
   }
 
   suspend fun countFreshUploadedPhotosSince(userId: String, time: Long): Int {
     return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        return@withLock photoInfoDao.countFreshExchangedPhotos(userId, time).awaitFirst()
-      }
+      return@withContext photoInfoDao.countFreshExchangedPhotos(userId, time).awaitFirst()
     }
   }
 
