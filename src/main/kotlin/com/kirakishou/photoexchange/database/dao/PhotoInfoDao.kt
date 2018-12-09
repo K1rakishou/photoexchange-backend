@@ -205,25 +205,23 @@ open class PhotoInfoDao(
       .onErrorReturn(PhotoInfo.empty())
   }
 
-  fun markAsDeletedPhotosOlderThan(olderThanTime: Long, now: Long, count: Int): Mono<Boolean> {
+  fun findPhotosUploadedEarlierThan(earlierThanTime: Long, count: Int): Mono<List<PhotoInfo>> {
     val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.UPLOADED_ON))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(olderThanTime))
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).lt(earlierThanTime))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).gt(0L))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
       .limit(count)
 
-    val update = Update()
-      .set(PhotoInfo.Mongo.Field.DELETED_ON, now)
-
-    return template.updateMulti(query, update, PhotoInfo::class.java)
-      .map { updateResult -> updateResult.wasAcknowledged() }
+    return template.find(query, PhotoInfo::class.java)
+      .collectList()
+      .defaultIfEmpty(emptyList())
       .doOnError { error -> logger.error("DB error", error) }
-      .onErrorReturn(false)
+      .onErrorReturn(emptyList())
   }
 
-  fun findOlderThan(olderThanTime: Long, count: Int): Mono<List<PhotoInfo>> {
+  fun findDeletedEarlierThan(earlierThanTime: Long, count: Int): Mono<List<PhotoInfo>> {
     val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.UPLOADED_ON))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).lt(olderThanTime)
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).lt(earlierThanTime)
         .andOperator(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).gt(0L)))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).gt(0L))
       .limit(count)
@@ -243,6 +241,19 @@ open class PhotoInfoDao(
       .set(PhotoInfo.Mongo.Field.LOCATION_MAP_ID, locationMapId)
 
     return template.updateFirst(query, update, PhotoInfo::class.java)
+      .map { updateResult -> updateResult.wasAcknowledged() }
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(false)
+  }
+
+  fun updateManySetDeletedOn(now: Long, toBeUpdated: List<Long>): Mono<Boolean> {
+    val query = Query()
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(toBeUpdated))
+
+    val update = Update()
+      .set(PhotoInfo.Mongo.Field.DELETED_ON, now)
+
+    return template.updateMulti(query, update, PhotoInfo::class.java)
       .map { updateResult -> updateResult.wasAcknowledged() }
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)

@@ -7,6 +7,7 @@ import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.entity.ReportedPhoto
 import com.kirakishou.photoexchange.exception.DatabaseTransactionException
 import com.kirakishou.photoexchange.exception.ExchangeException
+import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.GeneratorService
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactor.mono
@@ -17,7 +18,6 @@ import net.response.*
 import org.slf4j.LoggerFactory
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import reactor.core.publisher.Mono
-import java.lang.IllegalStateException
 
 open class PhotoInfoRepository(
   private val template: ReactiveMongoTemplate,
@@ -28,7 +28,8 @@ open class PhotoInfoRepository(
   private val reportedPhotoDao: ReportedPhotoDao,
   private val userInfoDao: UserInfoDao,
   private val locationMapDao: LocationMapDao,
-  private val generator: GeneratorService
+  private val generator: GeneratorService,
+  private val diskManipulationService: DiskManipulationService
 ) : AbstractRepository() {
   private val mutex = Mutex()
   private val logger = LoggerFactory.getLogger(PhotoInfoRepository::class.java)
@@ -167,17 +168,90 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun markAsDeletedPhotosOlderThan(olderThanTime: Long, now: Long, count: Int): Boolean {
+  suspend fun markAsDeletedPhotosUploadedEarlierThan(
+    uploadedEarlierThan: Long,
+    now: Long,
+    count: Int
+  ): Int {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        return@withLock photoInfoDao.markAsDeletedPhotosOlderThan(olderThanTime, now, count).awaitFirst()
+        val oldPhotos = photoInfoDao.findPhotosUploadedEarlierThan(uploadedEarlierThan, count).awaitFirst()
+        val oldPhotosMap = oldPhotos.associateBy { it.photoId }
+        val exchangedPhotosMap = oldPhotos.associateBy { it.exchangedPhotoId }
+
+        val toBeUpdated = hashSetOf<Long>()
+
+        for (photo in oldPhotosMap) {
+          if (toBeUpdated.contains(photo.key)) {
+            continue
+          }
+
+          val exchangedPhoto = exchangedPhotosMap[photo.key]
+          if (exchangedPhoto == null) {
+            continue
+          }
+
+          if (toBeUpdated.contains(exchangedPhoto.photoId)) {
+            continue
+          }
+
+          if (photo.value.photoId != exchangedPhoto.exchangedPhotoId
+            || photo.value.exchangedPhotoId != exchangedPhoto.photoId) {
+            logger.debug("exchanged photos does not have each other's ids: " +
+              "photo.value.photoId = ${photo.value.photoId}, " +
+              "exchangedPhoto.exchangedPhotoId = ${exchangedPhoto.exchangedPhotoId}, " +
+              "photo.value.exchangedPhotoId = ${photo.value.exchangedPhotoId}, " +
+              "exchangedPhoto.photoId = ${exchangedPhoto.photoId}")
+            continue
+          }
+
+          //if both of the photos were uploaded earlier than "uploadedEarlierThan" - mark them as deleted
+          if (photo.value.uploadedOn < uploadedEarlierThan && exchangedPhoto.uploadedOn < uploadedEarlierThan) {
+            toBeUpdated.add(photo.key)
+            toBeUpdated.add(exchangedPhoto.photoId)
+          }
+        }
+
+        if (!photoInfoDao.updateManySetDeletedOn(now, toBeUpdated.toList()).awaitFirst()) {
+          return@withLock -1
+        }
+
+        return@withLock toBeUpdated.size
       }
     }
   }
 
-  suspend fun findOlderThan(olderThanTime: Long, count: Int): List<PhotoInfo> {
-    return withContext(coroutineContext) {
-      return@withContext photoInfoDao.findOlderThan(olderThanTime, count).awaitFirst()
+  suspend fun cleanDatabaseAndPhotos(
+    deletedEarlierThan: Long,
+    photosPerQuery: Int
+  ) {
+    withContext(coroutineContext) {
+      mutex.withLock {
+        val photosToDelete = photoInfoDao.findDeletedEarlierThan(deletedEarlierThan, photosPerQuery).awaitFirst()
+        if (photosToDelete.isEmpty()) {
+          logger.debug("No photos to delete")
+          return@withLock
+        }
+
+        logger.debug("Found ${photosToDelete.size} photos to delete")
+        val photoFilesToDelete = mutableListOf<String>()
+
+        for (photoInfo in photosToDelete) {
+          logger.debug("Deleting ${photoInfo.photoName}")
+
+          //TODO: probably should rewrite this to delete all photos in one transaction
+          if (!deletePhotoInternalInTransaction(photoInfo)) {
+            logger.error("Could not deletePhotoWithFile photo ${photoInfo.photoName}")
+            continue
+          }
+
+          photoFilesToDelete += photoInfo.photoName
+        }
+
+        if (photoFilesToDelete.isNotEmpty()) {
+          photoFilesToDelete.forEach { diskManipulationService.deleteAllPhotoFiles(it) }
+        }
+      }
     }
   }
 
@@ -233,7 +307,7 @@ open class PhotoInfoRepository(
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val photoInfo = photoInfoDao.findOneByUserIdAndPhotoName(userId, photoName).awaitFirst()
-        return@withLock deletePhotoInternal(photoInfo)
+        return@withLock deletePhotoInternalInTransaction(photoInfo)
       }
     }
   }
@@ -241,12 +315,12 @@ open class PhotoInfoRepository(
   suspend fun delete(photoInfo: PhotoInfo): Boolean {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        return@withLock deletePhotoInternal(photoInfo)
+        return@withLock deletePhotoInternalInTransaction(photoInfo)
       }
     }
   }
 
-  private suspend fun deletePhotoInternal(photoInfo: PhotoInfo): Boolean {
+  private suspend fun deletePhotoInternalInTransaction(photoInfo: PhotoInfo): Boolean {
     if (photoInfo.isEmpty()) {
       return false
     }

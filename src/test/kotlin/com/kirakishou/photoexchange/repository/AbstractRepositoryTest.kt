@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.repository
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.mongodb.ConnectionString
 import org.mockito.Mockito
@@ -22,6 +23,7 @@ abstract class AbstractRepositoryTest {
 	lateinit var locationMapDao: LocationMapDao
 
 	lateinit var photoInfoRepository: PhotoInfoRepository
+	lateinit var diskManipulationService: DiskManipulationService
 
 	fun init() {
 		template = ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(
@@ -59,6 +61,7 @@ abstract class AbstractRepositoryTest {
 
 
 		val generator = Mockito.spy(GeneratorService())
+		diskManipulationService = Mockito.spy(DiskManipulationService::class.java)
 
 		photoInfoRepository = Mockito.spy(PhotoInfoRepository(
 			template,
@@ -69,7 +72,8 @@ abstract class AbstractRepositoryTest {
 			reportedPhotoDao,
 			userInfoDao,
 			locationMapDao,
-			generator)
+			generator,
+			diskManipulationService)
 		)
 	}
 

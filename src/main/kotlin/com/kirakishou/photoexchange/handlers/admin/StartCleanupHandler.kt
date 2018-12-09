@@ -41,7 +41,7 @@ class StartCleanupHandler(
             StartCleanupResponse.fail(ErrorCode.BadRequest))
         }
 
-        cleanupService.tryToStartCleaningRoutine(true)
+        cleanupService.startCleaningRoutine()
 
         return@mono formatResponse(HttpStatus.OK, StartCleanupResponse.success())
       } catch (error: Throwable) {

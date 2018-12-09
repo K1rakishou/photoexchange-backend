@@ -106,7 +106,8 @@ abstract class AbstractHandlerTest {
 			reportedPhotoDao,
 			userInfoDao,
 			locationMapDao,
-			generator
+			generator,
+			diskManipulationService
 		)
 
 		locationMapRepository = LocationMapRepository(
