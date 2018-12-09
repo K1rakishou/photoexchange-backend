@@ -28,23 +28,33 @@ open class PhotoInfoDao(
       .onErrorReturn(PhotoInfo.empty())
   }
 
-  fun findOldestVacantPhoto(userId: String): Mono<PhotoInfo> {
+  fun findOldestEmptyPhoto(userId: String): Mono<PhotoInfo> {
     val query = Query().with(Sort(Sort.Direction.ASC, PhotoInfo.Mongo.Field.PHOTO_ID))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).ne(userId))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).`is`(PhotoInfo.EMPTY_PHOTO_ID))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.LOCATION_MAP_ID).gt(0L))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
 
-    val update = Update()
-      .set(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID, PhotoInfo.PHOTO_IS_EXCHANGING)
-
-    return template.findAndModify(query, update, PhotoInfo::class.java)
+    return template.findOne(query, PhotoInfo::class.java)
       .defaultIfEmpty(PhotoInfo.empty())
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(PhotoInfo.empty())
   }
 
-  fun resetVacantPhoto(photoId: Long): Mono<Boolean> {
+  fun updatePhotoAsExchanging(photoId: Long): Mono<Boolean> {
+    val query = Query()
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+    val update = Update()
+      .set(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID, PhotoInfo.PHOTO_IS_EXCHANGING)
+
+    return template.updateFirst(query, update, PhotoInfo::class.java)
+      .map { updateResult -> updateResult.wasAcknowledged() }
+      .doOnError { error -> logger.error("DB error", error) }
+      .onErrorReturn(false)
+  }
+
+  fun updatePhotoAsEmpty(photoId: Long): Mono<Boolean> {
     val query = Query()
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
 
@@ -63,19 +73,6 @@ open class PhotoInfoDao(
 
     val update = Update()
       .set(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID, receiverId)
-
-    return template.updateFirst(query, update, PhotoInfo::class.java)
-      .map { updateResult -> updateResult.wasAcknowledged() }
-      .doOnError { error -> logger.error("DB error", error) }
-      .onErrorReturn(false)
-  }
-
-  fun resetPhotoReceiverId(photoId: Long): Mono<Boolean> {
-    val query = Query()
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
-
-    val update = Update()
-      .set(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID, PhotoInfo.EMPTY_PHOTO_ID)
 
     return template.updateFirst(query, update, PhotoInfo::class.java)
       .map { updateResult -> updateResult.wasAcknowledged() }

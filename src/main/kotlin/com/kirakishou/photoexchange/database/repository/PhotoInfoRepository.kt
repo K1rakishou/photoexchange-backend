@@ -254,51 +254,46 @@ open class PhotoInfoRepository(
     }
   }
 
-  //TODO: rewrite to use transactions
   suspend fun tryDoExchange(userId: String, newUploadingPhoto: PhotoInfo): PhotoInfo {
     return withContext(coroutineContext) {
+      val oldestPhoto = photoInfoDao.findOldestEmptyPhoto(userId).awaitFirst()
+      if (oldestPhoto.isEmpty()) {
+        if (!photoInfoDao.updatePhotoAsEmpty(newUploadingPhoto.photoId).awaitFirst()) {
+          throw RuntimeException("Could not set photoExchangeId as EMPTY_PHOTO_ID")
+        }
+
+        return@withContext PhotoInfo.empty()
+      }
+
       return@withContext mutex.withLock {
-        val oldestPhoto = photoInfoDao.findOldestVacantPhoto(userId).awaitFirst()
-        if (oldestPhoto.isEmpty()) {
-          //no photos to exchange with, set newUploadingPhoto's exchangeId to PhotoInfo.EMPTY_PHOTO_ID
-          //so it can be found by other's upon uploading
-          if (!photoInfoDao.resetVacantPhoto(newUploadingPhoto.photoId).awaitFirst()) {
-            throw RuntimeException("Something is wrong with the database. " +
-              "Could not reset photo exchange id for photo with id (${oldestPhoto.photoId})")
-          }
+        val transactionResult = template.inTransaction().execute {
+          return@execute mono {
+            if (!photoInfoDao.updatePhotoAsExchanging(oldestPhoto.photoId).awaitFirst()) {
+              throw ExchangeException()
+            }
 
+            if (!photoInfoDao.updatePhotoSetReceiverId(oldestPhoto.photoId, newUploadingPhoto.photoId).awaitFirst()) {
+              throw ExchangeException()
+            }
+
+            if (!photoInfoDao.updatePhotoSetReceiverId(newUploadingPhoto.photoId, oldestPhoto.photoId).awaitFirst()) {
+              throw ExchangeException()
+            }
+
+            return@mono true
+          }
+        }
+          .single()
+          .onErrorReturn(false)
+          .awaitFirst()
+
+        if (!transactionResult) {
+          //TODO: probably should updatePhotoAsEmpty here as well
           return@withLock PhotoInfo.empty()
         }
 
-        try {
-          if (!photoInfoDao.updatePhotoSetReceiverId(oldestPhoto.photoId, newUploadingPhoto.photoId).awaitFirst()) {
-            throw ExchangeException()
-          }
-
-          if (!photoInfoDao.updatePhotoSetReceiverId(newUploadingPhoto.photoId, oldestPhoto.photoId).awaitFirst()) {
-            throw ExchangeException()
-          }
-
-          return@withLock oldestPhoto
-            .copy(exchangedPhotoId = newUploadingPhoto.photoId)
-        } catch (exception: ExchangeException) {
-          if (!photoInfoDao.resetPhotoReceiverId(newUploadingPhoto.photoId).awaitFirst()) {
-            throw RuntimeException("Something is wrong with the database. " +
-              "Could not reset photo receiver id for photo with id (${newUploadingPhoto.photoId})")
-          }
-
-          if (!photoInfoDao.resetPhotoReceiverId(oldestPhoto.photoId).awaitFirst()) {
-            throw RuntimeException("Something is wrong with the database. " +
-              "Could not reset photo receiver id for photo with id (${oldestPhoto.photoId})")
-          }
-
-          if (!photoInfoDao.resetVacantPhoto(oldestPhoto.photoId).awaitFirst()) {
-            throw RuntimeException("Something is wrong with the database. " +
-              "Could not reset photo exchange id for photo with id (${oldestPhoto.photoId})")
-          }
-
-          return@withLock PhotoInfo.empty()
-        }
+        return@withLock oldestPhoto
+          .copy(exchangedPhotoId = newUploadingPhoto.photoId)
       }
     }
   }
