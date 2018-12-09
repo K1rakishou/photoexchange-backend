@@ -32,70 +32,77 @@ import org.springframework.web.reactive.function.server.HandlerStrategies
 import org.springframework.web.reactive.function.server.RouterFunctions
 
 fun myBeans(adminToken: String) = beans {
-	//router
-	bean<Router>()
+  //router
+  bean<Router>()
 
-	bean { WebClient.builder().build() }
-	bean { GsonBuilder().excludeFieldsWithoutExposeAnnotation().create() }
-	bean { JsonConverterService(ref()) }
-	bean { ReactiveMongoRepositoryFactory(ref()) }
-	bean { ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(ConnectionString("mongodb://$HOST:$PORT/$DB_NAME"))) }
+  bean { WebClient.builder().build() }
+  bean { GsonBuilder().excludeFieldsWithoutExposeAnnotation().create() }
+  bean { JsonConverterService(ref()) }
+  bean { ReactiveMongoRepositoryFactory(ref()) }
+  bean { ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(ConnectionString("mongodb://$HOST:$PORT/$DB_NAME"))) }
 
-	//dao
-	bean { AdminInfoRepository(adminToken) }
-	bean { MongoSequenceDao(ref()).also { it.create() } }
-	bean { PhotoInfoDao(ref()).also { it.create() } }
-	bean { GalleryPhotoDao(ref()).also { it.create() } }
-	bean { FavouritedPhotoDao(ref()).also { it.create() } }
-	bean { ReportedPhotoDao(ref()).also { it.create() } }
-	bean { UserInfoDao(ref()).also { it.create() } }
-	bean { LocationMapDao(ref()).also { it.create() } }
-	bean { BanListDao(ref()).also { it.create() } }
+  //dao
+  bean { AdminInfoRepository(adminToken) }
+  bean { MongoSequenceDao(ref()).also { it.create() } }
+  bean { PhotoInfoDao(ref()).also { it.create() } }
+  bean { GalleryPhotoDao(ref()).also { it.create() } }
+  bean { FavouritedPhotoDao(ref()).also { it.create() } }
+  bean { ReportedPhotoDao(ref()).also { it.create() } }
+  bean { UserInfoDao(ref()).also { it.create() } }
+  bean { LocationMapDao(ref()).also { it.create() } }
+  bean { BanListDao(ref()).also { it.create() } }
 
-	//repository
-	bean<PhotoInfoRepository>()
-	bean<UserInfoRepository>()
-	bean<LocationMapRepository>()
-	bean<BanListRepository>()
+  //repository
+  bean<PhotoInfoRepository>()
+  bean<UserInfoRepository>()
+  bean<LocationMapRepository>()
+  bean<BanListRepository>()
 
-	//service
-	bean { StaticMapDownloaderService(ref(), ref(), ref()).also { it.init() } }
-	bean<GeneratorService>()
-	bean<RemoteAddressExtractorService>()
-	bean<PushNotificationSenderService>()
-	bean<DiskManipulationService>()
-  bean<CleanupService>()
+  //service
+  bean { StaticMapDownloaderService(ref(), ref(), ref()).also { it.init() } }
+  bean<GeneratorService>()
+  bean<RemoteAddressExtractorService>()
+  bean<PushNotificationSenderService>()
+  bean<DiskManipulationService>()
+  bean {
+    CleanupService(
+      ref(),
+      ServerSettings.UPLOADED_OLDER_THAN_TIME_DELTA,
+      ServerSettings.DELETED_EARLIER_THAN_TIME_DELTA,
+      ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL
+    )
+  }
 
-	//handler
-	bean<UploadPhotoHandler>()
-	bean<ReceivePhotosHandler>()
-	bean<GetPhotoHandler>()
-	bean<GetGalleryPhotosHandler>()
-	bean<GetGalleryPhotoInfoHandler>()
-	bean<FavouritePhotoHandler>()
-	bean<ReportPhotoHandler>()
-	bean<GetUserIdHandler>()
-	bean<GetUploadedPhotosHandler>()
-	bean<GetReceivedPhotosHandler>()
-	bean<GetStaticMapHandler>()
-	bean<CheckAccountExistsHandler>()
+  //handler
+  bean<UploadPhotoHandler>()
+  bean<ReceivePhotosHandler>()
+  bean<GetPhotoHandler>()
+  bean<GetGalleryPhotosHandler>()
+  bean<GetGalleryPhotoInfoHandler>()
+  bean<FavouritePhotoHandler>()
+  bean<ReportPhotoHandler>()
+  bean<GetUserIdHandler>()
+  bean<GetUploadedPhotosHandler>()
+  bean<GetReceivedPhotosHandler>()
+  bean<GetStaticMapHandler>()
+  bean<CheckAccountExistsHandler>()
   bean<UpdateFirebaseTokenHandler>()
-	bean<GetFreshGalleryPhotosCountHandler>()
-	bean<GetFreshUploadedPhotosCountHandler>()
-	bean<GetFreshReceivedPhotosCountHandler>()
-	bean<BanPhotoHandler>()
-	bean<BanUserHandler>()
-	bean<StartCleanupHandler>()
+  bean<GetFreshGalleryPhotosCountHandler>()
+  bean<GetFreshUploadedPhotosCountHandler>()
+  bean<GetFreshReceivedPhotosCountHandler>()
+  bean<BanPhotoHandler>()
+  bean<BanUserHandler>()
+  bean<StartCleanupHandler>()
 
-	//etc
-	bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }
-	bean {
-		val prefix = "classpath:/templates/"
-		val suffix = ".mustache"
-		val loader = MustacheResourceTemplateLoader(prefix, suffix)
-		MustacheViewResolver(Mustache.compiler().withLoader(loader)).apply {
-			setPrefix(prefix)
-			setSuffix(suffix)
-		}
-	}
+  //etc
+  bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }
+  bean {
+    val prefix = "classpath:/templates/"
+    val suffix = ".mustache"
+    val loader = MustacheResourceTemplateLoader(prefix, suffix)
+    MustacheViewResolver(Mustache.compiler().withLoader(loader)).apply {
+      setPrefix(prefix)
+      setSuffix(suffix)
+    }
+  }
 }

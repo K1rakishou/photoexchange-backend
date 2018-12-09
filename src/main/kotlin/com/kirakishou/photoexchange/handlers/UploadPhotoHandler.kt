@@ -1,13 +1,17 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.config.ServerSettings.MAX_PHOTO_SIZE
+import com.kirakishou.photoexchange.core.FileWrapper
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.repository.BanListRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.exception.EmptyPacket
 import com.kirakishou.photoexchange.extensions.containsAllParts
+import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.*
+import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.SecurityUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import core.ErrorCode
@@ -24,6 +28,8 @@ import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
+import java.io.File
+import java.io.IOException
 
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
@@ -99,8 +105,8 @@ class UploadPhotoHandler(
 						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
 				}
 
-				val tempFile = diskManipulationService.saveTempFile(photoParts, newUploadingPhoto)
-				if (tempFile == null) {
+				val tempFile = saveTempFile(photoParts, newUploadingPhoto)
+				if (tempFile.isEmpty()) {
 					logger.error("Could not save file to disk")
 
           deletePhotoWithFile(newUploadingPhoto)
@@ -116,13 +122,11 @@ class UploadPhotoHandler(
 					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
 						UploadPhotoResponse.fail(ErrorCode.ServerResizeError))
 				} finally {
-					if (tempFile.exists()) {
-						tempFile.delete()
-					}
+					tempFile.deleteIfExists()
 				}
 
 				try {
-					cleanupService.tryToStartCleaningRoutine(false)
+					cleanupService.tryToStartCleaningRoutine()
 				} catch (error: Throwable) {
 					logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
 				}
@@ -196,6 +200,23 @@ class UploadPhotoHandler(
 			}
 			.buffer()
 			.single()
+	}
+
+	private fun saveTempFile(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): FileWrapper {
+		val filePath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
+		val outFile = File(filePath)
+
+		logger.debug("outFile = ${outFile.absolutePath}")
+
+		try {
+			IOUtils.copyDataBuffersToFile(photoChunks, outFile)
+		} catch (e: IOException) {
+			logger.error("Error while trying to save file to the disk", e)
+
+			return FileWrapper()
+		}
+
+		return FileWrapper(outFile)
 	}
 
 	private suspend fun deletePhotoWithFile(photoInfo: PhotoInfo) {

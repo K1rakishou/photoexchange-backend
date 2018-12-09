@@ -63,7 +63,8 @@ abstract class AbstractHandlerTest {
 		jsonConverterService = JsonConverterService(gson)
 
 		template = ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(
-			ConnectionString("mongodb://${ServerSettings.TestDatabaseInfo.HOST}:${ServerSettings.TestDatabaseInfo.PORT}/${ServerSettings.TestDatabaseInfo.DB_NAME}"))
+			ConnectionString("mongodb://${ServerSettings.TestDatabaseInfo.HOST}:" +
+				"${ServerSettings.TestDatabaseInfo.PORT}/${ServerSettings.TestDatabaseInfo.DB_NAME}"))
 		)
 
 		mongoSequenceDao = MongoSequenceDao(template).also {
@@ -97,18 +98,6 @@ abstract class AbstractHandlerTest {
 
 		val generator = GeneratorService()
 
-		photoInfoRepository = PhotoInfoRepository(
-			template,
-			mongoSequenceDao,
-			photoInfoDao,
-			galleryPhotoDao,
-			favouritedPhotoDao,
-			reportedPhotoDao,
-			userInfoDao,
-			locationMapDao,
-			generator
-		)
-
 		locationMapRepository = LocationMapRepository(
 			mongoSequenceDao,
 			locationMapDao
@@ -121,6 +110,19 @@ abstract class AbstractHandlerTest {
 		remoteAddressExtractorService = Mockito.mock(RemoteAddressExtractorService::class.java)
 		diskManipulationService = Mockito.mock(DiskManipulationService::class.java)
 		cleanupService = Mockito.mock(CleanupService::class.java)
+
+		photoInfoRepository = PhotoInfoRepository(
+			template,
+			mongoSequenceDao,
+			photoInfoDao,
+			galleryPhotoDao,
+			favouritedPhotoDao,
+			reportedPhotoDao,
+			userInfoDao,
+			locationMapDao,
+			generator,
+			diskManipulationService
+		)
 	}
 
 	fun clear() {

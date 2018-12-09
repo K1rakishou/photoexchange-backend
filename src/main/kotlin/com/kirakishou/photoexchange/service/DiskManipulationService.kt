@@ -1,6 +1,7 @@
 package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.config.ServerSettings
+import com.kirakishou.photoexchange.core.FileWrapper
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.util.IOUtils
 import kotlinx.coroutines.sync.Mutex
@@ -20,16 +21,19 @@ open class DiskManipulationService {
 	private val mutex = Mutex()
 	private val photoRemovedPlaceHolderName = "photo_has_been_removed"
 
-	open suspend fun resizeAndSavePhotos(tempFile: File, newUploadingPhoto: PhotoInfo) {
+	open suspend fun resizeAndSavePhotos(tempFile: FileWrapper, newUploadingPhoto: PhotoInfo) {
 		fun resizeAndSaveImageOnDisk(
-			file: File,
+			fileWrapper: FileWrapper,
 			newMaxSize: Dimension,
 			sizeType: String,
 			currentFolderDirPath: String,
 			imageNewName: String
 		) {
-			check(file.exists())
+			if (fileWrapper.isEmpty()) {
+				throw RuntimeException("No file in the FileWrapper")
+			}
 
+			val file = fileWrapper.getFile()!!
 			val imageToResize = ImageIO.read(file)
 			val outputResizedFile = File("$currentFolderDirPath\\$imageNewName$sizeType")
 
@@ -146,21 +150,6 @@ open class DiskManipulationService {
 				}
 			}
 		}
-	}
-
-	open suspend fun saveTempFile(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): File? {
-		val filePath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
-		val outFile = File(filePath)
-
-		try {
-			IOUtils.copyDataBuffersToFile(photoChunks, outFile)
-		} catch (e: IOException) {
-			logger.error("Error while trying to save file to the disk", e)
-
-			return null
-		}
-
-		return outFile
 	}
 
 }

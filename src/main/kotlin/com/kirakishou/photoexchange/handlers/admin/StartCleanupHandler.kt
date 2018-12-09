@@ -2,7 +2,7 @@ package com.kirakishou.photoexchange.handlers.admin
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.AdminInfoRepository
-import com.kirakishou.photoexchange.handlers.AbstractWebHandler
+import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.CleanupService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
@@ -41,7 +41,7 @@ class StartCleanupHandler(
             StartCleanupResponse.fail(ErrorCode.BadRequest))
         }
 
-        cleanupService.tryToStartCleaningRoutine(true)
+        cleanupService.startCleaningRoutine()
 
         return@mono formatResponse(HttpStatus.OK, StartCleanupResponse.success())
       } catch (error: Throwable) {

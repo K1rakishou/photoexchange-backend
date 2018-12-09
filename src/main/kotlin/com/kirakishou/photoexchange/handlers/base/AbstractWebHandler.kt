@@ -1,4 +1,4 @@
-package com.kirakishou.photoexchange.handlers
+package com.kirakishou.photoexchange.handlers.base
 
 import com.kirakishou.photoexchange.service.JsonConverterService
 import kotlinx.coroutines.CoroutineScope
@@ -13,19 +13,19 @@ import reactor.core.publisher.Mono
 import kotlin.coroutines.CoroutineContext
 
 abstract class AbstractWebHandler(
-	protected val jsonConverter: JsonConverterService
+  protected val jsonConverter: JsonConverterService
 ) : CoroutineScope {
   private val job = Job()
 
   final override val coroutineContext: CoroutineContext
-    get() = job  + Dispatchers.Default
+    get() = job + Dispatchers.Default
 
   abstract fun handle(request: ServerRequest): Mono<ServerResponse>
 
-	protected fun <T> formatResponse(httpStatus: HttpStatus, response: T): Mono<ServerResponse> {
-		val photoAnswerJson = jsonConverter.toJson(response)
-		return ServerResponse.status(httpStatus)
-			.contentType(MediaType.APPLICATION_JSON)
-			.body(Mono.just(photoAnswerJson))
-	}
+  protected fun <T> formatResponse(httpStatus: HttpStatus, response: T): Mono<ServerResponse> {
+    val photoAnswerJson = jsonConverter.toJson(response)
+    return ServerResponse.status(httpStatus)
+      .contentType(MediaType.APPLICATION_JSON)
+      .body(Mono.just(photoAnswerJson))
+  }
 }

@@ -30,9 +30,7 @@ open class BanListRepository(
 
   open suspend fun isBanned(ipHash: String): Boolean {
     return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        return@withLock !banListDao.find(ipHash).awaitFirst().isEmpty()
-      }
+      return@withContext !banListDao.find(ipHash).awaitFirst().isEmpty()
     }
   }
 

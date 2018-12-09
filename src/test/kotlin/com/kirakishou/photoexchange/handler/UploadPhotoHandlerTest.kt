@@ -400,8 +400,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
   }
 
   @Test
-  fun `test 100 concurrent uploadings at the same time`() {
-    val concurrency = 100
+  fun `test 500 concurrent uploadings at the same time`() {
+    val concurrency = 500
     val webClient = getWebTestClient()
 
     runBlocking {
