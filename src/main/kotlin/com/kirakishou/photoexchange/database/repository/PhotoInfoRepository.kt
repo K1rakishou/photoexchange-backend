@@ -256,16 +256,16 @@ open class PhotoInfoRepository(
 
   suspend fun tryDoExchange(userId: String, newUploadingPhoto: PhotoInfo): PhotoInfo {
     return withContext(coroutineContext) {
-      val oldestPhoto = photoInfoDao.findOldestEmptyPhoto(userId).awaitFirst()
-      if (oldestPhoto.isEmpty()) {
-        if (!photoInfoDao.updatePhotoAsEmpty(newUploadingPhoto.photoId).awaitFirst()) {
-          throw RuntimeException("Could not set photoExchangeId as EMPTY_PHOTO_ID")
+      return@withContext mutex.withLock {
+        val oldestPhoto = photoInfoDao.findOldestEmptyPhoto(userId).awaitFirst()
+        if (oldestPhoto.isEmpty()) {
+          if (!photoInfoDao.updatePhotoAsEmpty(newUploadingPhoto.photoId).awaitFirst()) {
+            throw RuntimeException("Could not set photoExchangeId as EMPTY_PHOTO_ID")
+          }
+
+          return@withLock PhotoInfo.empty()
         }
 
-        return@withContext PhotoInfo.empty()
-      }
-
-      return@withContext mutex.withLock {
         val transactionResult = template.inTransaction().execute {
           return@execute mono {
             if (!photoInfoDao.updatePhotoAsExchanging(oldestPhoto.photoId).awaitFirst()) {
