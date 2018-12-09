@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
-class CleanupService(
+open class CleanupService(
   private val photoInfoRepository: PhotoInfoRepository,
   private val cleanupInterval: Long,
   private val uploadedEarlierThanTimeDelta: Long,
@@ -17,7 +17,7 @@ class CleanupService(
   private val inProgress = AtomicBoolean(false)
   private val photosPerQuery = 100
 
-  suspend fun tryToStartCleaningRoutine() {
+  open suspend fun tryToStartCleaningRoutine() {
     val now = TimeUtils.getTimeFast()
     val oldTime = lastTimeCheck.get()
 
@@ -29,7 +29,7 @@ class CleanupService(
     }
   }
 
-  suspend fun startCleaningRoutine() {
+  open suspend fun startCleaningRoutine() {
     if (inProgress.getAndSet(true)) {
       logger.debug("Already in progress")
       return
