@@ -31,6 +31,8 @@ class ReportPhotoHandler(
 					.awaitSingle()
 
 				val packet = jsonConverter.fromJson<ReportPhotoPacket>(packetBuffers)
+
+				//TODO: move isPacketOk from commons project to backend
 				if (!packet.isPacketOk()) {
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						ReportPhotoResponse.fail(ErrorCode.BadRequest))

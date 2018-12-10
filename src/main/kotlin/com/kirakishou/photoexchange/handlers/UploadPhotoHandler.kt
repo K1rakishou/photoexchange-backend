@@ -67,6 +67,8 @@ class UploadPhotoHandler(
 
 				val packetParts = collectPart(multiValueMap, PACKET_PART_KEY).awaitSingle()
 				val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
+
+				//TODO: move isPacketOk from commons project to backend
 				if (!packet.isPacketOk()) {
 					logger.error("One or more of the packet's fields are incorrect")
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,

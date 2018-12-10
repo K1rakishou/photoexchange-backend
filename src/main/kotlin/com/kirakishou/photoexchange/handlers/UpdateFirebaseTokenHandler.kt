@@ -37,8 +37,11 @@ class UpdateFirebaseTokenHandler(
           .awaitFirst()
 
         val packet = jsonConverter.fromJson<UpdateFirebaseTokenPacket>(packetParts)
+
+        //TODO: move isPacketOk from commons project to backend
         if (!packet.isPacketOk()) {
-          logger.error("One or more of the packet's fields are incorrect")
+          logger.error("One or more of the packet's fields is incorrect")
+
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
             UpdateFirebaseTokenResponse.fail(ErrorCode.BadRequest))
         }
