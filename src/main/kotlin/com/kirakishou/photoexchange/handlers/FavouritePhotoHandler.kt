@@ -31,6 +31,8 @@ class FavouritePhotoHandler(
 					.awaitSingle()
 
 				val packet = jsonConverter.fromJson<FavouritePhotoPacket>(packetBuffers)
+
+				//TODO: move isPacketOk from commons project to backend
 				if (!packet.isPacketOk()) {
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						FavouritePhotoResponse.fail(ErrorCode.BadRequest))
