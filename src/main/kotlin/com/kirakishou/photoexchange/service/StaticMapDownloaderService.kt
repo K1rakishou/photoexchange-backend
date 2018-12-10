@@ -110,6 +110,7 @@ open class StaticMapDownloaderService(
         throw CouldNotFindPhotoInfo("Could not find photoInfo with photoId = ${locationMap.photoId}")
       }
 
+      //TODO: check coordinates for (-1.0, -1.0) skip photos with such coordinates
       val lon = photoInfo.lon
       val lat = photoInfo.lat
       val photoMapName = "${photoInfo.photoName}$PHOTO_MAP_SUFFIX"

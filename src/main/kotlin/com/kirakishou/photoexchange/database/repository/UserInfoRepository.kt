@@ -33,6 +33,8 @@ open class UserInfoRepository(
   suspend fun createNew(): UserInfo {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
+        //TODO: probably should create userInfo with firebaseToken =
+        // NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN by default instead of empty string
         val userInfo = UserInfo.empty()
         userInfo.userId = generateUserId()
         userInfo.id = mongoSequenceDao.getNextUserId().awaitFirst()
