@@ -99,8 +99,10 @@ abstract class AbstractHandlerTest {
 		val generator = GeneratorService()
 
 		locationMapRepository = LocationMapRepository(
+			template,
 			mongoSequenceDao,
-			locationMapDao
+			locationMapDao,
+			photoInfoDao
 		)
 
 		userInfoRepository = Mockito.mock(UserInfoRepository::class.java)
