@@ -3,23 +3,21 @@ package com.kirakishou.photoexchange.service
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.core.FileWrapper
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
-import com.kirakishou.photoexchange.util.IOUtils
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import net.coobird.thumbnailator.Thumbnails
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
-import org.springframework.core.io.buffer.DataBuffer
 import java.awt.Dimension
 import java.io.File
-import java.io.IOException
 import java.lang.RuntimeException
 import javax.imageio.ImageIO
 
 open class DiskManipulationService {
 	private val logger = LoggerFactory.getLogger(DiskManipulationService::class.java)
 	private val mutex = Mutex()
-	private val photoRemovedPlaceHolderName = "photo_has_been_removed"
+	private val photoRemovedPlaceholderName = "photo_has_been_removed"
+	private val noMapAvailablePlaceholderName = "no_map_available"
 
 	open suspend fun resizeAndSavePhotos(tempFile: FileWrapper, newUploadingPhoto: PhotoInfo) {
 		fun resizeAndSaveImageOnDisk(
@@ -77,8 +75,8 @@ open class DiskManipulationService {
 	}
 
 	open suspend fun replaceImagesOnDiskWithRemovedImagePlaceholder(photoName: String) {
-		fun replaceFile(photoName: String, photoSuffix: String) {
-			val path = "files\\photo_removed_image\\$photoRemovedPlaceHolderName${photoSuffix}.png"
+		fun replacePhotoFile(photoName: String, photoSuffix: String) {
+			val path = "files\\photo_removed_image\\$photoRemovedPlaceholderName${photoSuffix}.png"
 			val placeholderFile = ClassPathResource(path).file
 			if (!placeholderFile.exists()) {
 				return
@@ -92,22 +90,47 @@ open class DiskManipulationService {
 				throw RuntimeException("Cannot replace file ${placeholderFile.absolutePath}")
 			}
 
-			val smallPhotoPath = File("${ServerSettings.FILE_DIR_PATH}\\$photoName${photoSuffix}")
-			placeholderFile.copyTo(smallPhotoPath, true)
+			val targetPath = File("${ServerSettings.FILE_DIR_PATH}\\$photoName${photoSuffix}")
+			placeholderFile.copyTo(targetPath, true)
 		}
 
 		mutex.withLock {
 			//replace small photo with placeholder
-			replaceFile(photoName, ServerSettings.SMALL_PHOTO_SUFFIX)
+			replacePhotoFile(photoName, ServerSettings.SMALL_PHOTO_SUFFIX)
 
 			//replace medium photo with placeholder
-			replaceFile(photoName, ServerSettings.MEDIUM_PHOTO_SUFFIX)
+			replacePhotoFile(photoName, ServerSettings.MEDIUM_PHOTO_SUFFIX)
 
 			//replace big photo with placeholder
-			replaceFile(photoName, ServerSettings.BIG_PHOTO_SUFFIX)
+			replacePhotoFile(photoName, ServerSettings.BIG_PHOTO_SUFFIX)
 
 			//replace very big photo with placeholder
-			replaceFile(photoName, ServerSettings.VERY_BIG_PHOTO_SUFFIX)
+			replacePhotoFile(photoName, ServerSettings.VERY_BIG_PHOTO_SUFFIX)
+		}
+	}
+
+	open suspend fun replaceMapOnDiskWithNoMapAvailablePlaceholder(photoName: String) {
+		fun replaceMapFile(photoName: String) {
+			val path = "files\\photo_removed_image\\$noMapAvailablePlaceholderName.png"
+			val placeholderFile = ClassPathResource(path).file
+			if (!placeholderFile.exists()) {
+				return
+			}
+
+			if (!placeholderFile.isFile) {
+				throw RuntimeException("File ${placeholderFile.absolutePath} is not file!")
+			}
+
+			if (!placeholderFile.canWrite()) {
+				throw RuntimeException("Cannot replace file ${placeholderFile.absolutePath}")
+			}
+
+			val targetPath = File("${ServerSettings.FILE_DIR_PATH}\\${photoName}_map")
+			placeholderFile.copyTo(targetPath, true)
+		}
+
+		mutex.withLock {
+			replaceMapFile(photoName)
 		}
 	}
 

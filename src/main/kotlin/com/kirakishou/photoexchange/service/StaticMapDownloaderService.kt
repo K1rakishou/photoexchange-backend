@@ -26,7 +26,8 @@ import kotlin.coroutines.CoroutineContext
 open class StaticMapDownloaderService(
   private val client: WebClient,
   private val photoInfoRepository: PhotoInfoRepository,
-  private val locationMapRepository: LocationMapRepository
+  private val locationMapRepository: LocationMapRepository,
+  private val diskManipulationService: DiskManipulationService
 ) : CoroutineScope {
   private val logger = LoggerFactory.getLogger(StaticMapDownloaderService::class.java)
   private val job = Job()
@@ -169,18 +170,33 @@ open class StaticMapDownloaderService(
   private suspend fun increaseAttemptsCountOrSetStatusFailed(locationMap: LocationMap) {
     val repeatTimeDelta = repeatTimesList.getOrElse(locationMap.attemptsCount + 1, { -1L })
     if (repeatTimeDelta == -1L) {
-      //TODO
-      // probably should set here some kind of default image for a case when we could not
-      // download a map from the google servers and wasted all of the attempts
-
-      if (!locationMapRepository.setMapFailed(locationMap.photoId)) {
-        logger.error("Could not set map status as Failed")
-      }
+      //no more attempts left
+      updateMapAsFailed(locationMap)
     } else {
       val nextAttemptTime = TimeUtils.getTimeFast() + repeatTimeDelta
       if (!locationMapRepository.increaseAttemptsCountAndNextAttemptTime(locationMap.photoId, nextAttemptTime)) {
-        logger.error("Could not increase attempts count")
+        logger.error("Could not increase attempts count for " +
+          "photo with id (${locationMap.photoId}) and nextAttemptTime ($nextAttemptTime)")
       }
+    }
+  }
+
+  private suspend fun updateMapAsFailed(locationMap: LocationMap) {
+    if (!locationMapRepository.setMapFailed(locationMap.photoId)) {
+      logger.error("Could not set map status as Failed")
+      return
+    }
+
+    val photoInfo = photoInfoRepository.findOneById(locationMap.photoId)
+    if (photoInfo.isEmpty()) {
+      logger.error("Could not find photo by photoId (${locationMap.photoId})")
+      return
+    }
+
+    try {
+      diskManipulationService.replaceMapOnDiskWithNoMapAvailablePlaceholder(photoInfo.photoName)
+    } catch (error: Throwable) {
+      logger.error("Could not replace map with placeholder for photo with name (${photoInfo.photoName})", error)
     }
   }
 
@@ -219,6 +235,7 @@ open class StaticMapDownloaderService(
   companion object {
     //apparently mapbox uses longitude as the first parameter and latitude as the second (as opposite to google maps)
     const val lonLatFormat = "%9.7f,%9.7f"
-    val requestStringFormat ="https://api.mapbox.com/styles/v1/mapbox/streets-v10/static/pin-l-x+050c09($lonLatFormat)/$lonLatFormat,8/600x600?access_token=${ServerSettings.MAPBOX_ACCESS_TOKEN}"
+    val requestStringFormat ="https://api.mapbox.com/styles/v1/mapbox/streets-v10/static/" +
+      "pin-l-x+050c09($lonLatFormat)/$lonLatFormat,8/600x600?access_token=${ServerSettings.MAPBOX_ACCESS_TOKEN}"
   }
 }
