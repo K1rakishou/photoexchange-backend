@@ -83,9 +83,9 @@ open class StaticMapDownloaderService(
 
     logger.debug("Found ${requestsBatch.size} requests")
     processBatch(requestsBatch.chunked(CHUNCKS_COUNT))
+    logger.debug("Chunk processed, proceeding to the next one")
 
     //check again if there any new maps to be downloaded
-    logger.debug("Chunk processed, proceeding to the next one")
     startDownloadingMapFiles()
   }
 
@@ -110,7 +110,12 @@ open class StaticMapDownloaderService(
         throw CouldNotFindPhotoInfo("Could not find photoInfo with photoId = ${locationMap.photoId}")
       }
 
-      //TODO: check coordinates for (-1.0, -1.0) skip photos with such coordinates
+      if (photoInfo.isAnonymous()) {
+        //photo does not have location attached to it, so just update it's state as Anonymous
+        locationMapRepository.setMapAnonymous(locationMap.photoId, locationMap.id)
+        return true
+      }
+
       val lon = photoInfo.lon
       val lat = photoInfo.lat
       val photoMapName = "${photoInfo.photoName}$PHOTO_MAP_SUFFIX"
@@ -144,13 +149,7 @@ open class StaticMapDownloaderService(
           throw CouldNotSaveToDiskException("[$photoMapName], Could not save file to disk")
         }
 
-        if (!locationMapRepository.setMapReady(locationMap.photoId)) {
-          throw CouldNotUpdateMapReadyFlag("[$photoMapName], Could not set mapReady flag in the DB")
-        }
-
-        if (!photoInfoRepository.updateSetLocationMapId(locationMap.photoId, locationMap.id)) {
-          throw CouldNotUpdateLocationId("[$photoMapName], Could not set locationMapId flag in the DB")
-        }
+        locationMapRepository.setMapReady(locationMap.photoId, locationMap.id)
 
         logger.debug("[$photoMapName], Map has been successfully downloaded")
       } catch (error: Throwable) {
@@ -216,8 +215,6 @@ open class StaticMapDownloaderService(
   class CouldNotFindPhotoInfo(message: String) : Exception(message)
   class ResponseIsNot2xxSuccessful(message: String) : Exception(message)
   class CouldNotSaveToDiskException(message: String) : Exception(message)
-  class CouldNotUpdateMapReadyFlag(message: String) : Exception(message)
-  class CouldNotUpdateLocationId(message: String) : Exception(message)
 
   companion object {
     //apparently mapbox uses longitude as the first parameter and latitude as the second (as opposite to google maps)
