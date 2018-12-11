@@ -43,7 +43,8 @@ class LocationMap(
 	enum class MapStatus(val value: Int) {
 		Empty(0),
 		Ready(1),
-		Failed(2)
+		Anonymous(2),
+		Failed(3)
 	}
 
 	object Mongo {

@@ -53,6 +53,10 @@ data class PhotoInfo(
 		return photoId == EMPTY_PHOTO_ID
 	}
 
+	fun isAnonymous(): Boolean {
+		return lon == -1.0 && lat == -1.0
+	}
+
 	companion object {
     //This is a default exchangedPhotoId when photo is uploading.
     //This is used so other uploading request wouldn't be able to find this photo to do the exchange

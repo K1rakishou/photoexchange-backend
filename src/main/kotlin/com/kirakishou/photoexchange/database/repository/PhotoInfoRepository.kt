@@ -148,6 +148,7 @@ open class PhotoInfoRepository(
       val result = mutableListOf<ReceivedPhotosResponse.ReceivedPhotoResponseData>()
 
       for (theirPhoto in theirPhotos) {
+        //FIXME: may throw NoSuchElementException when one of the photos got deleted
         val myPhoto = myPhotos.first { it.photoId == theirPhoto.exchangedPhotoId }
 
         result += ReceivedPhotosResponse.ReceivedPhotoResponseData(
@@ -300,63 +301,67 @@ open class PhotoInfoRepository(
 
   suspend fun delete(userId: String, photoName: String): Boolean {
     return withContext(coroutineContext) {
-      val photoInfo = photoInfoDao.findOneByUserIdAndPhotoName(userId, photoName).awaitFirst()
-      return@withContext deletePhotoInternalInTransaction(photoInfo)
+      return@withContext mutex.withLock {
+        val photoInfo = photoInfoDao.findOneByUserIdAndPhotoName(userId, photoName).awaitFirst()
+        return@withLock deletePhotoInternalInTransaction(photoInfo)
+      }
     }
   }
 
   suspend fun delete(photoInfo: PhotoInfo): Boolean {
     return withContext(coroutineContext) {
-      return@withContext deletePhotoInternalInTransaction(photoInfo)
+      return@withContext mutex.withLock {
+        return@withLock deletePhotoInternalInTransaction(photoInfo)
+      }
     }
   }
 
+  //should be called from within locked mutex
   private suspend fun deletePhotoInternalInTransaction(photoInfo: PhotoInfo): Boolean {
     if (photoInfo.isEmpty()) {
       return false
     }
 
-    return mutex.withLock {
-      return@withLock template.inTransaction().execute {
-        return@execute mono {
-          val results = mutableListOf<Mono<Boolean>>()
-          results += photoInfoDao.deleteById(photoInfo.photoId)
-            .doOnNext { result ->
-              if (!result) {
-                throw DatabaseTransactionException("photoInfoDao: Could not delete photo by id ${photoInfo.photoId}")
-              }
+    return template.inTransaction().execute {
+      return@execute mono {
+        val results = mutableListOf<Mono<Boolean>>()
+        results += photoInfoDao.deleteById(photoInfo.photoId)
+          .doOnNext { result ->
+            if (!result) {
+              throw DatabaseTransactionException("photoInfoDao: Could not delete photo by id ${photoInfo.photoId}")
             }
-          results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
-            .doOnNext { result ->
-              if (!result) {
-                throw DatabaseTransactionException("favouritedPhotoDao: Could not delete photo by id ${photoInfo.photoId}")
-              }
+          }
+        results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+          .doOnNext { result ->
+            if (!result) {
+              throw DatabaseTransactionException("favouritedPhotoDao: Could not delete photo by id ${photoInfo.photoId}")
             }
-          results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
-            .doOnNext { result ->
-              if (!result) {
-                throw DatabaseTransactionException("reportedPhotoDao: Could not delete photo by id ${photoInfo.photoId}")
-              }
+          }
+        results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+          .doOnNext { result ->
+            if (!result) {
+              throw DatabaseTransactionException("reportedPhotoDao: Could not delete photo by id ${photoInfo.photoId}")
             }
-          results += locationMapDao.deleteById(photoInfo.photoId)
-            .doOnNext { result ->
-              if (!result) {
-                throw DatabaseTransactionException("locationMapDao: Could not delete location map by id ${photoInfo.photoId}")
-              }
+          }
+        results += locationMapDao.deleteById(photoInfo.photoId)
+          .doOnNext { result ->
+            if (!result) {
+              throw DatabaseTransactionException("locationMapDao: Could not delete location map by id ${photoInfo.photoId}")
             }
-          results += galleryPhotoDao.deleteById(photoInfo.photoId)
-            .doOnNext { result ->
-              if (!result) {
-                throw DatabaseTransactionException("galleryPhotoDao: Could not delete gallery photo by id ${photoInfo.photoId}")
-              }
+          }
+        results += galleryPhotoDao.deleteById(photoInfo.photoId)
+          .doOnNext { result ->
+            if (!result) {
+              throw DatabaseTransactionException("galleryPhotoDao: Could not delete gallery photo by id ${photoInfo.photoId}")
             }
+          }
 
-          results.forEach { it.awaitFirst() }
-          return@mono true
-        }
+        results.forEach { it.awaitFirst() }
+        return@mono true
       }
     }
       .single()
+      .doOnError { error -> logger.error("Could not delete photo", error) }
       .onErrorReturn(false)
       .awaitFirst()
   }
@@ -500,14 +505,6 @@ open class PhotoInfoRepository(
       }
 
       return@withContext result
-    }
-  }
-
-  suspend fun updateSetLocationMapId(photoId: Long, locationMapId: Long): Boolean {
-    return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        return@withLock photoInfoDao.updateSetLocationMapId(photoId, locationMapId).awaitFirst()
-      }
     }
   }
 

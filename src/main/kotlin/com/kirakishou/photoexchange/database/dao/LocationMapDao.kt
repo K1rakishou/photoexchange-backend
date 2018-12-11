@@ -54,6 +54,19 @@ open class LocationMapDao(
 			.onErrorReturn(false)
 	}
 
+	fun updateSetMapAnonymous(photoId: Long): Mono<Boolean> {
+		val query = Query()
+			.addCriteria(Criteria.where(LocationMap.Mongo.Field.PHOTO_ID).`is`(photoId))
+
+		val update = Update()
+			.set(LocationMap.Mongo.Field.MAP_STATUS, LocationMap.MapStatus.Anonymous.value)
+
+		return template.updateFirst(query, update, LocationMap::class.java)
+			.map { updateResult -> updateResult.wasAcknowledged() }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
+	}
+
 	fun updateSetMapFailed(photoId: Long): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(LocationMap.Mongo.Field.PHOTO_ID).`is`(photoId))

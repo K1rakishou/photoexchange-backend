@@ -59,7 +59,7 @@ fun myBeans(adminToken: String) = beans {
   bean<BanListRepository>()
 
   //service
-  bean { StaticMapDownloaderService(ref(), ref(), ref()).also { it.init() } }
+  bean { StaticMapDownloaderService(ref(), ref(), ref(), ref()).also { it.init() } }
   bean<GeneratorService>()
   bean<RemoteAddressExtractorService>()
   bean<PushNotificationSenderService>()
