@@ -503,14 +503,6 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun updateSetLocationMapId(photoId: Long, locationMapId: Long): Boolean {
-    return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        return@withLock photoInfoDao.updateSetLocationMapId(photoId, locationMapId).awaitFirst()
-      }
-    }
-  }
-
   suspend fun countFreshGalleryPhotosSince(time: Long): Int {
     return withContext(coroutineContext) {
       return@withContext galleryPhotoDao.countFreshGalleryPhotosSince(time).awaitFirst()
