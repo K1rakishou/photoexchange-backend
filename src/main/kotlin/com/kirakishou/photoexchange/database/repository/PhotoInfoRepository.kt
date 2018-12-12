@@ -96,6 +96,7 @@ open class PhotoInfoRepository(
 
   suspend fun findAllIpHashesByUserId(userId: String): List<String> {
     return withContext(coroutineContext) {
+      //user may have used different ip addresses to upload photos, and we need to find all of them
       return@withContext photoInfoDao.findAllByUserId(userId).awaitFirst()
         .map { it.ipHash }
         .toSet()  //remove duplicates
@@ -148,8 +149,12 @@ open class PhotoInfoRepository(
       val result = mutableListOf<ReceivedPhotosResponse.ReceivedPhotoResponseData>()
 
       for (theirPhoto in theirPhotos) {
-        //FIXME: may throw NoSuchElementException when one of the photos got deleted
-        val myPhoto = myPhotos.first { it.photoId == theirPhoto.exchangedPhotoId }
+        val myPhoto = myPhotos.firstOrNull { it.photoId == theirPhoto.exchangedPhotoId }
+        if (myPhoto == null) {
+          logger.warn("Could not find myPhoto by theirPhoto.exchangedPhotoId (${theirPhoto.exchangedPhotoId}). " +
+            "This may be because it got deleted without theirPhoto being deleted as well (inconsistency).")
+          continue
+        }
 
         result += ReceivedPhotosResponse.ReceivedPhotoResponseData(
           theirPhoto.photoId,
@@ -370,6 +375,9 @@ open class PhotoInfoRepository(
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val photoId = photoInfoDao.getPhotoIdByName(photoName).awaitFirst()
+        if (photoId <= 0) {
+          return@withLock FavouritePhotoResult.PhotoDoesNotExist()
+        }
 
         return@withLock if (favouritedPhotoDao.isPhotoFavourited(userId, photoId).awaitFirst()) {
           if (!favouritedPhotoDao.unfavouritePhoto(userId, photoId).awaitFirst()) {
@@ -395,6 +403,9 @@ open class PhotoInfoRepository(
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val photoId = photoInfoDao.getPhotoIdByName(photoName).awaitFirst()
+        if (photoId <= 0L) {
+          return@withLock ReportPhotoResult.PhotoDoesNotExist()
+        }
 
         return@withLock if (reportedPhotoDao.isPhotoReported(userId, photoId).awaitFirst()) {
           if (!reportedPhotoDao.unreportPhoto(userId, photoId).awaitFirst()) {
@@ -541,12 +552,14 @@ open class PhotoInfoRepository(
   sealed class ReportPhotoResult {
     class Reported : ReportPhotoResult()
     class Unreported : ReportPhotoResult()
+    class PhotoDoesNotExist() : ReportPhotoResult()
     class Error : ReportPhotoResult()
   }
 
   sealed class FavouritePhotoResult {
     class Favourited(val count: Long) : FavouritePhotoResult()
     class Unfavourited(val count: Long) : FavouritePhotoResult()
+    class PhotoDoesNotExist() : FavouritePhotoResult()
     class Error : FavouritePhotoResult()
   }
 }

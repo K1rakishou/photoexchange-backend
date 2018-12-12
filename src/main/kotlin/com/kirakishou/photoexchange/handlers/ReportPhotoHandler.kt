@@ -53,6 +53,10 @@ class ReportPhotoHandler(
 						logger.debug("A photo (${packet.photoName}) has been reported")
 						formatResponse(HttpStatus.OK, ReportPhotoResponse.success(true))
 					}
+					is PhotoInfoRepository.ReportPhotoResult.PhotoDoesNotExist -> {
+						logger.debug("A photo (${packet.photoName}) does not exist")
+						formatResponse(HttpStatus.NOT_FOUND, ReportPhotoResponse.fail(ErrorCode.PhotoDoesNotExist))
+					}
 				}
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)

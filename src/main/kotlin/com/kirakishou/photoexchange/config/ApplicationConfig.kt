@@ -21,6 +21,9 @@ import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.*
 import com.mongodb.ConnectionString
 import com.samskivert.mustache.Mustache
+import core.SharedConstants
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.springframework.boot.autoconfigure.mustache.MustacheResourceTemplateLoader
 import org.springframework.boot.web.reactive.result.view.MustacheViewResolver
 import org.springframework.context.support.beans
@@ -69,8 +72,8 @@ fun myBeans(adminToken: String) = beans {
       ref(),
       ServerSettings.UPLOADED_OLDER_THAN_TIME_DELTA,
       ServerSettings.DELETED_EARLIER_THAN_TIME_DELTA,
-      ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL
-    )
+      SharedConstants.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL
+    ).also { GlobalScope.launch { it.startCleaningRoutine() } }
   }
 
   //handler

@@ -14,15 +14,6 @@ object ServerSettings {
 	const val authTokenHeaderName = "X-Auth-Token"
 
 	const val FILE_DIR_PATH = "D:\\projects\\data\\photos"
-	const val MAX_PHOTO_SIZE = 10 * (1024 * 1024) //10 megabytes
-	//TODO: change in production
-	val OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL = TimeUnit.MINUTES.toMillis(1)
-	//TODO: change in production
-	val UPLOADED_OLDER_THAN_TIME_DELTA = TimeUnit.MINUTES.toMillis(1)
-	//TODO: change in production
-	val DELETED_EARLIER_THAN_TIME_DELTA = TimeUnit.MINUTES.toMillis(1)
-
-	const val PHOTOS_DELIMITER = ','
 
   const val MIN_GALLERY_PHOTOS_PER_REQUEST_COUNT = 5
 	const val MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT = 200
@@ -30,6 +21,13 @@ object ServerSettings {
 	const val MAX_UPLOADED_PHOTOS_PER_REQUEST_COUNT = 200
 	const val MIN_RECEIVED_PHOTOS_PER_REQUEST_COUNT = 5
 	const val MAX_RECEIVED_PHOTOS_PER_REQUEST_COUNT = 200
+
+	//TODO: change in production
+	val UPLOADED_OLDER_THAN_TIME_DELTA = TimeUnit.MINUTES.toMillis(1)
+	//TODO: change in production
+	val DELETED_EARLIER_THAN_TIME_DELTA = TimeUnit.MINUTES.toMillis(1)
+
+	const val PHOTOS_DELIMITER = ','
 
   const val VERY_BIG_PHOTO_SIZE = 2048
 	const val BIG_PHOTO_SIZE = 1024

@@ -167,7 +167,7 @@ open class PhotoInfoDao(
       .defaultIfEmpty(PhotoInfo.empty())
       .map { it.photoId }
       .doOnError { error -> logger.error("DB error", error) }
-      .onErrorReturn(-1L)
+      .onErrorReturn(PhotoInfo.EMPTY_PHOTO_ID)
   }
 
   fun findById(uploaderPhotoId: Long): Mono<PhotoInfo> {
