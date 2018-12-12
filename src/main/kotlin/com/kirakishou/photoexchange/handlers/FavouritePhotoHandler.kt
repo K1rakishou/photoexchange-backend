@@ -53,6 +53,10 @@ class FavouritePhotoHandler(
 						logger.debug("A photo (${packet.photoName}) has been favourited")
 						formatResponse(HttpStatus.OK, FavouritePhotoResponse.success(true, result.count))
 					}
+					is PhotoInfoRepository.FavouritePhotoResult.PhotoDoesNotExist -> {
+						logger.debug("A photo (${packet.photoName}) does not exist")
+						formatResponse(HttpStatus.NOT_FOUND, FavouritePhotoResponse.fail(ErrorCode.PhotoDoesNotExist))
+					}
 				}
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)

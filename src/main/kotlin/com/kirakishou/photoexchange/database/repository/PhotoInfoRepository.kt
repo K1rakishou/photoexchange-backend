@@ -375,6 +375,9 @@ open class PhotoInfoRepository(
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val photoId = photoInfoDao.getPhotoIdByName(photoName).awaitFirst()
+        if (photoId <= 0) {
+          return@withLock FavouritePhotoResult.PhotoDoesNotExist()
+        }
 
         return@withLock if (favouritedPhotoDao.isPhotoFavourited(userId, photoId).awaitFirst()) {
           if (!favouritedPhotoDao.unfavouritePhoto(userId, photoId).awaitFirst()) {
@@ -400,6 +403,9 @@ open class PhotoInfoRepository(
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val photoId = photoInfoDao.getPhotoIdByName(photoName).awaitFirst()
+        if (photoId <= 0L) {
+          return@withLock ReportPhotoResult.PhotoDoesNotExist()
+        }
 
         return@withLock if (reportedPhotoDao.isPhotoReported(userId, photoId).awaitFirst()) {
           if (!reportedPhotoDao.unreportPhoto(userId, photoId).awaitFirst()) {
@@ -546,12 +552,14 @@ open class PhotoInfoRepository(
   sealed class ReportPhotoResult {
     class Reported : ReportPhotoResult()
     class Unreported : ReportPhotoResult()
+    class PhotoDoesNotExist() : ReportPhotoResult()
     class Error : ReportPhotoResult()
   }
 
   sealed class FavouritePhotoResult {
     class Favourited(val count: Long) : FavouritePhotoResult()
     class Unfavourited(val count: Long) : FavouritePhotoResult()
+    class PhotoDoesNotExist() : FavouritePhotoResult()
     class Error : FavouritePhotoResult()
   }
 }
