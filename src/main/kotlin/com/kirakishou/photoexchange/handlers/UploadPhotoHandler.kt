@@ -1,7 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.config.ServerSettings.MAX_PHOTO_SIZE
 import com.kirakishou.photoexchange.core.FileWrapper
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.repository.BanListRepository
@@ -15,6 +14,7 @@ import com.kirakishou.photoexchange.util.IOUtils
 import com.kirakishou.photoexchange.util.SecurityUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import core.ErrorCode
+import core.SharedConstants
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.mono
 import net.request.SendPhotoPacket
@@ -173,7 +173,7 @@ class UploadPhotoHandler(
 
 	private fun checkPhotoTotalSize(photo: MutableList<DataBuffer>): Boolean {
 		val totalLength = photo.sumBy { it.readableByteCount() }
-		if (totalLength > MAX_PHOTO_SIZE) {
+		if (totalLength > SharedConstants.MAX_PHOTO_SIZE) {
 			return false
 		}
 
