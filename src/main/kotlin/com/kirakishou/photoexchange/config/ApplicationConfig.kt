@@ -70,9 +70,9 @@ fun myBeans(adminToken: String) = beans {
   bean {
     CleanupService(
       ref(),
+      ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL,
       ServerSettings.UPLOADED_OLDER_THAN_TIME_DELTA,
-      ServerSettings.DELETED_EARLIER_THAN_TIME_DELTA,
-      SharedConstants.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL
+      ServerSettings.DELETED_EARLIER_THAN_TIME_DELTA
     ).also { GlobalScope.launch { it.startCleaningRoutine() } }
   }
 
