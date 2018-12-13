@@ -422,26 +422,19 @@ open class PhotoInfoRepository(
       val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
       val photoNameList = pageOfGalleryPhotos.map { it.photoName }
 
-
-      val photoInfosDeferred = photoInfoDao.findPhotosByName(photoNameList)
-      val favouritedPhotosMapDeferred = favouritedPhotoDao.findManyFavourites(photoNameList)
-      val photoInfos = photoInfosDeferred.awaitFirst()
-      val favouritedPhotosMap = favouritedPhotosMapDeferred.awaitFirst().groupBy { it.photoName }
+      val photoInfos = photoInfoDao.findPhotosByName(photoNameList).awaitFirst()
 
       for (photo in photoInfos) {
         val galleryPhoto = pageOfGalleryPhotos.first { it.photoName == photo.photoName }
-        val favouritedPhotos = favouritedPhotosMap[photo.photoName] ?: emptyList()
-
-        resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto, favouritedPhotos.size.toLong())
+        resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto)
       }
 
-      return@withContext resultMap.values.map { (photoInfo, _, favouritesCount) ->
+      return@withContext resultMap.values.map { (photoInfo, _) ->
         GalleryPhotoResponseData(
           photoInfo.photoName,
           photoInfo.lon,
           photoInfo.lat,
-          photoInfo.uploadedOn,
-          favouritesCount
+          photoInfo.uploadedOn
         )
       }
     }
@@ -453,6 +446,12 @@ open class PhotoInfoRepository(
   ): List<PhotoAdditionalInfoResponseData> {
     return withContext(coroutineContext) {
       val resultMap = linkedMapOf<String, GalleryPhotoInfoDto>()
+      val countMap = hashMapOf<String, Long>()
+
+      photoNames
+        .map { photoName -> favouritedPhotoDao.countFavouritesByPhotoName(photoName) to photoName }
+        .map { (future, photoName) -> future.awaitFirst() to photoName }
+        .forEach { (count, photoName) -> countMap.put(photoName, count) }
 
       val userFavouritedPhotosDeferred = favouritedPhotoDao.findManyFavouritesByPhotoNameList(userId, photoNames)
       val userReportedPhotosDeferred = reportedPhotoDao.findManyReportsByPhotoNameList(userId, photoNames)
@@ -474,6 +473,7 @@ open class PhotoInfoRepository(
         PhotoAdditionalInfoResponseData(
           galleryPhotoName,
           isFavourited,
+          countMap.getOrDefault(galleryPhotoName, 0L),
           isReported
         )
       }
@@ -534,8 +534,7 @@ open class PhotoInfoRepository(
 
   data class GalleryPhotoDto(
     val photoInfo: PhotoInfo,
-    val galleryPhoto: GalleryPhoto,
-    val favouritesCount: Long
+    val galleryPhoto: GalleryPhoto
   )
 
   sealed class ReportPhotoResult {
