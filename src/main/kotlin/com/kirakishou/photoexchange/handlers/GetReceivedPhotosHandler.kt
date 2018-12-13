@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 
 class GetReceivedPhotosHandler(
 	jsonConverter: JsonConverterService,
-	private val photoInfoRepo: PhotoInfoRepository
+	private val photoInfoRepository: PhotoInfoRepository
 ) : AbstractWebHandler(jsonConverter) {
 
 	private val logger = LoggerFactory.getLogger(GetReceivedPhotosHandler::class.java)
@@ -64,11 +64,18 @@ class GetReceivedPhotosHandler(
 						ReceivedPhotosResponse.fail(ErrorCode.BadRequest))
         }
 
-				val receivedPhotos = photoInfoRepo.findPageOfReceivedPhotos(userId, lastUploadedOn, count)
-				logger.debug("Found ${receivedPhotos.size} received photos")
+				val receivedPhotosResponseData = photoInfoRepository.findPageOfReceivedPhotos(userId, lastUploadedOn, count)
+				logger.debug("Found ${receivedPhotosResponseData.size} received photos")
 
-				return@mono formatResponse(HttpStatus.OK,
-					ReceivedPhotosResponse.success(receivedPhotos))
+				val galleryPhotoNameList = receivedPhotosResponseData.map { it.uploadedPhotoName }
+				val additionalInfoResponseData = photoInfoRepository.findPhotoAdditionalInfo(userId, galleryPhotoNameList)
+
+				val response = ReceivedPhotosResponse.success(
+					receivedPhotosResponseData,
+					additionalInfoResponseData
+				)
+
+				return@mono formatResponse(HttpStatus.OK, response)
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,

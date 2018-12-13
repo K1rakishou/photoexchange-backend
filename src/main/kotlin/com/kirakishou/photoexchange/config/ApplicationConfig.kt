@@ -7,8 +7,7 @@ import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.*
 import com.kirakishou.photoexchange.handlers.*
-import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotoInfoHandler
-import com.kirakishou.photoexchange.handlers.gallery_photos.GetGalleryPhotosHandler
+import com.kirakishou.photoexchange.handlers.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
 import com.kirakishou.photoexchange.handlers.admin.BanPhotoHandler
@@ -21,7 +20,6 @@ import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.*
 import com.mongodb.ConnectionString
 import com.samskivert.mustache.Mustache
-import core.SharedConstants
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.springframework.boot.autoconfigure.mustache.MustacheResourceTemplateLoader
@@ -70,9 +68,9 @@ fun myBeans(adminToken: String) = beans {
   bean {
     CleanupService(
       ref(),
+      ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL,
       ServerSettings.UPLOADED_OLDER_THAN_TIME_DELTA,
-      ServerSettings.DELETED_EARLIER_THAN_TIME_DELTA,
-      SharedConstants.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL
+      ServerSettings.DELETED_EARLIER_THAN_TIME_DELTA
     ).also { GlobalScope.launch { it.startCleaningRoutine() } }
   }
 
@@ -81,7 +79,6 @@ fun myBeans(adminToken: String) = beans {
   bean<ReceivePhotosHandler>()
   bean<GetPhotoHandler>()
   bean<GetGalleryPhotosHandler>()
-  bean<GetGalleryPhotoInfoHandler>()
   bean<FavouritePhotoHandler>()
   bean<ReportPhotoHandler>()
   bean<GetUserIdHandler>()

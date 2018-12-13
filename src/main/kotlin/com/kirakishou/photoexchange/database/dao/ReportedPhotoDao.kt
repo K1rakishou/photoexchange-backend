@@ -27,9 +27,9 @@ open class ReportedPhotoDao(
 			.onErrorReturn(false)
 	}
 
-	fun unreportPhoto(userId: String, photoId: Long): Mono<Boolean> {
+	fun unreportPhoto(userId: String, photoName: String): Mono<Boolean> {
 		val query = Query()
-			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
 
 		return template.remove(query, ReportedPhoto::class.java)
@@ -38,7 +38,7 @@ open class ReportedPhotoDao(
 			.onErrorReturn(false)
 	}
 
-	fun findManyByPhotoNameList(userId: String, photoNameList: List<String>): Mono<List<ReportedPhoto>> {
+	fun findManyReportsByPhotoNameList(userId: String, photoNameList: List<String>): Mono<List<ReportedPhoto>> {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`in`(photoNameList))
@@ -51,22 +51,9 @@ open class ReportedPhotoDao(
 			.onErrorReturn(emptyList())
 	}
 
-	fun findMany(userId: String, photoIdList: List<Long>): Mono<List<ReportedPhoto>> {
+	fun isPhotoReported(userId: String, photoName: String): Mono<Boolean> {
 		val query = Query()
-			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
-			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`in`(photoIdList))
-			.limit(photoIdList.size)
-
-		return template.find(query, ReportedPhoto::class.java)
-			.collectList()
-			.defaultIfEmpty(emptyList())
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(emptyList())
-	}
-
-	fun isPhotoReported(userId: String, photoId: Long): Mono<Boolean> {
-		val query = Query()
-			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
 
 		return template.exists(query, ReportedPhoto::class.java)
@@ -75,20 +62,9 @@ open class ReportedPhotoDao(
 			.onErrorReturn(false)
 	}
 
-	fun deleteByPhotoId(photoId: Long): Mono<Boolean> {
+	fun deleteReportByPhotoName(photoName: String): Mono<Boolean> {
 		val query = Query()
-			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
-
-		return template.remove(query, ReportedPhoto::class.java)
-			.map { deletionResult -> deletionResult.wasAcknowledged() }
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(false)
-	}
-
-	fun deleteAll(photoIds: List<Long>): Mono<Boolean> {
-		val query = Query()
-			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.ID).`in`(photoIds))
-			.limit(photoIds.size)
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
 		return template.remove(query, ReportedPhoto::class.java)
 			.map { deletionResult -> deletionResult.wasAcknowledged() }

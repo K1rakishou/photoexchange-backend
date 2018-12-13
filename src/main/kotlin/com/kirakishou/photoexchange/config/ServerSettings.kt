@@ -23,6 +23,8 @@ object ServerSettings {
 	const val MAX_RECEIVED_PHOTOS_PER_REQUEST_COUNT = 200
 
 	//TODO: change in production
+	val OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL = TimeUnit.MINUTES.toMillis(1)
+	//TODO: change in production
 	val UPLOADED_OLDER_THAN_TIME_DELTA = TimeUnit.MINUTES.toMillis(1)
 	//TODO: change in production
 	val DELETED_EARLIER_THAN_TIME_DELTA = TimeUnit.MINUTES.toMillis(1)
