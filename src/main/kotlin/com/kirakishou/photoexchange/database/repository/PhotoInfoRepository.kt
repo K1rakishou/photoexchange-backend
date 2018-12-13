@@ -14,7 +14,7 @@ import kotlinx.coroutines.reactor.mono
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import net.response.*
+import net.response.data.*
 import org.slf4j.LoggerFactory
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import reactor.core.publisher.Mono
@@ -108,21 +108,21 @@ open class PhotoInfoRepository(
     userId: String,
     lastUploadedOn: Long,
     count: Int
-  ): List<GetUploadedPhotosResponse.UploadedPhotoResponseData> {
+  ): List<UploadedPhotoResponseData> {
     return withContext(coroutineContext) {
       val myPhotos = photoInfoDao.findPage(userId, lastUploadedOn, count).awaitFirst()
 
       val exchangeIds = myPhotos.map { it.exchangedPhotoId }
       val theirPhotos = photoInfoDao.findManyByIds(exchangeIds).awaitFirst()
 
-      val result = mutableListOf<GetUploadedPhotosResponse.UploadedPhotoResponseData>()
+      val result = mutableListOf<UploadedPhotoResponseData>()
 
       for (myPhoto in myPhotos) {
         val theirPhoto = theirPhotos.firstOrNull { it.photoId == myPhoto.exchangedPhotoId }
         val receiverInfo = theirPhoto
-          ?.let { GetUploadedPhotosResponse.ReceiverInfoResponseData(it.photoName, it.lon, it.lat) }
+          ?.let { ReceiverInfoResponseData(it.photoName, it.lon, it.lat) }
 
-        result += GetUploadedPhotosResponse.UploadedPhotoResponseData(
+        result += UploadedPhotoResponseData(
           myPhoto.photoId,
           myPhoto.photoName,
           myPhoto.lon,
@@ -139,14 +139,14 @@ open class PhotoInfoRepository(
     userId: String,
     lastUploadedOn: Long,
     count: Int
-  ): List<ReceivedPhotosResponse.ReceivedPhotoResponseData> {
+  ): List<ReceivedPhotoResponseData> {
     return withContext(coroutineContext) {
       val myPhotos = photoInfoDao.findPageOfExchangedPhotos(userId, lastUploadedOn, count).awaitFirst()
       val theirPhotoIds = myPhotos
         .map { it.exchangedPhotoId }
 
       val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds, PhotoInfoDao.SortOrder.Descending).awaitFirst()
-      val result = mutableListOf<ReceivedPhotosResponse.ReceivedPhotoResponseData>()
+      val result = mutableListOf<ReceivedPhotoResponseData>()
 
       for (theirPhoto in theirPhotos) {
         val myPhoto = myPhotos.firstOrNull { it.photoId == theirPhoto.exchangedPhotoId }
@@ -156,7 +156,7 @@ open class PhotoInfoRepository(
           continue
         }
 
-        result += ReceivedPhotosResponse.ReceivedPhotoResponseData(
+        result += ReceivedPhotoResponseData(
           theirPhoto.photoId,
           myPhoto.photoName,
           theirPhoto.photoName,
@@ -415,16 +415,16 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun findGalleryPhotos(lastUploadedOn: Long, count: Int): List<GalleryPhotosResponse.GalleryPhotoResponseData> {
+  suspend fun findGalleryPhotos(lastUploadedOn: Long, count: Int): List<GalleryPhotoResponseData> {
     return withContext(coroutineContext) {
-      val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
-
       val pageOfGalleryPhotos = galleryPhotoDao.findPage(lastUploadedOn, count).awaitFirst()
+
+      val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
       val photoNameList = pageOfGalleryPhotos.map { it.photoName }
+
 
       val photoInfosDeferred = photoInfoDao.findPhotosByName(photoNameList)
       val favouritedPhotosMapDeferred = favouritedPhotoDao.findManyFavourites(photoNameList)
-
       val photoInfos = photoInfosDeferred.awaitFirst()
       val favouritedPhotosMap = favouritedPhotosMapDeferred.awaitFirst().groupBy { it.photoName }
 
@@ -436,7 +436,7 @@ open class PhotoInfoRepository(
       }
 
       return@withContext resultMap.values.map { (photoInfo, _, favouritesCount) ->
-        GalleryPhotosResponse.GalleryPhotoResponseData(
+        GalleryPhotoResponseData(
           photoInfo.photoName,
           photoInfo.lon,
           photoInfo.lat,
@@ -447,10 +447,10 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun findGalleryPhotosInfo(
+  suspend fun findPhotoAdditionalInfo(
     userId: String,
     photoNames: List<String>
-  ): List<GalleryPhotoInfoResponse.GalleryPhotosInfoResponseData> {
+  ): List<PhotoAdditionalInfoResponseData> {
     return withContext(coroutineContext) {
       val resultMap = linkedMapOf<String, GalleryPhotoInfoDto>()
 
@@ -471,7 +471,7 @@ open class PhotoInfoRepository(
       }
 
       return@withContext resultMap.values.map { (galleryPhotoName, isFavourited, isReported) ->
-        GalleryPhotoInfoResponse.GalleryPhotosInfoResponseData(
+        PhotoAdditionalInfoResponseData(
           galleryPhotoName,
           isFavourited,
           isReported
@@ -483,18 +483,18 @@ open class PhotoInfoRepository(
   suspend fun findPhotosWithReceiverByPhotoNamesList(
     userId: String,
     photoNameList: List<String>
-  ): List<ReceivedPhotosResponse.ReceivedPhotoResponseData> {
+  ): List<ReceivedPhotoResponseData> {
     return withContext(coroutineContext) {
       val myPhotos = photoInfoDao.findPhotosByNames(userId, photoNameList).awaitFirst()
       val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
 
       val theirPhotos = photoInfoDao.findManyByIds(theirPhotoIds).awaitFirst()
-      val result = mutableListOf<ReceivedPhotosResponse.ReceivedPhotoResponseData>()
+      val result = mutableListOf<ReceivedPhotoResponseData>()
 
       for (theirPhoto in theirPhotos) {
         val myPhoto = myPhotos.first { it.photoId == theirPhoto.exchangedPhotoId }
 
-        result += ReceivedPhotosResponse.ReceivedPhotoResponseData(
+        result += ReceivedPhotoResponseData(
           theirPhoto.photoId,
           myPhoto.photoName,
           theirPhoto.photoName,

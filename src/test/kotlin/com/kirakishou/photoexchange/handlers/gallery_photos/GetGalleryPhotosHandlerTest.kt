@@ -4,6 +4,7 @@ import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handler.AbstractHandlerTest
 import com.kirakishou.photoexchange.database.entity.GalleryPhoto
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
+import com.kirakishou.photoexchange.handlers.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
@@ -61,14 +62,14 @@ class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
       photoInfoDao.save(PhotoInfo(7, 7, 7L, "111", "227", true, 11.1, 11.1, 777L, 0L, "123")).awaitFirst()
       photoInfoDao.save(PhotoInfo(8, 8, 6L, "111", "228", true, 11.1, 11.1, 888L, 0L, "123")).awaitFirst()
 
-      galleryPhotoDao.save(GalleryPhoto(1L, 1L, 111L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(2L, 2L, 222L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(3L, 3L, 333L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(4L, 4L, 444L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(5L, 5L, 555L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(6L, 6L, 666L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(7L, 7L, 777L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(8L, 8L, 888L)).awaitFirst()
+      galleryPhotoDao.save(GalleryPhoto(1L, "221", 111L)).awaitFirst()
+      galleryPhotoDao.save(GalleryPhoto(2L, "222", 222L)).awaitFirst()
+      galleryPhotoDao.save(GalleryPhoto(3L, "223", 333L)).awaitFirst()
+      galleryPhotoDao.save(GalleryPhoto(4L, "224", 444L)).awaitFirst()
+      galleryPhotoDao.save(GalleryPhoto(5L, "225", 555L)).awaitFirst()
+      galleryPhotoDao.save(GalleryPhoto(6L, "226", 666L)).awaitFirst()
+      galleryPhotoDao.save(GalleryPhoto(7L, "227", 777L)).awaitFirst()
+      galleryPhotoDao.save(GalleryPhoto(8L, "228", 888L)).awaitFirst()
     }
 
     kotlin.run {

@@ -5,7 +5,6 @@ import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.extensions.containsAllPathVars
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
-import com.kirakishou.photoexchange.util.TimeUtils
 import core.ErrorCode
 import kotlinx.coroutines.reactor.mono
 import net.response.ReceivedPhotosResponse
@@ -14,17 +13,14 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
-import java.util.concurrent.TimeUnit
 
 class ReceivePhotosHandler(
 	jsonConverter: JsonConverterService,
-	private val photoInfoRepo: PhotoInfoRepository
+	private val photoInfoRepository: PhotoInfoRepository
 ) : AbstractWebHandler(jsonConverter) {
 	private val logger = LoggerFactory.getLogger(ReceivePhotosHandler::class.java)
 	private val USER_ID_PATH_VARIABLE = "user_id"
 	private val PHOTO_NAME_PATH_VARIABLE = "photo_names"
-	private var lastTimeCheck = 0L
-	private val FIVE_MINUTES = TimeUnit.MINUTES.toMillis(5)
 
 	override fun handle(request: ServerRequest): Mono<ServerResponse> {
 		return mono {
@@ -48,17 +44,24 @@ class ReceivePhotosHandler(
 						ReceivedPhotosResponse.fail(ErrorCode.NoPhotosInRequest))
 				}
 
-				val photoInfoList = photoInfoRepo.findPhotosWithReceiverByPhotoNamesList(userId, photoNameList)
-				if (photoInfoList.isEmpty()) {
+				val receivedPhotosResponseData = photoInfoRepository.findPhotosWithReceiverByPhotoNamesList(userId, photoNameList)
+				if (receivedPhotosResponseData.isEmpty()) {
 					logger.debug("photoAnswerList is empty")
 					return@mono formatResponse(HttpStatus.OK,
 						ReceivedPhotosResponse.fail(ErrorCode.NoPhotosToSendBack))
 				}
 
-        logger.debug("Found ${photoInfoList.size} photos")
-				cleanUp()
+        logger.debug("Found ${receivedPhotosResponseData.size} photos")
 
-				return@mono formatResponse(HttpStatus.OK, ReceivedPhotosResponse.success(photoInfoList))
+				val galleryPhotoNameList = receivedPhotosResponseData.map { it.uploadedPhotoName }
+				val additionalInfoResponseData = photoInfoRepository.findPhotoAdditionalInfo(userId, galleryPhotoNameList)
+
+				val response = ReceivedPhotosResponse.success(
+					receivedPhotosResponseData,
+					additionalInfoResponseData
+				)
+
+				return@mono formatResponse(HttpStatus.OK, response)
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -67,26 +70,4 @@ class ReceivePhotosHandler(
 		}.flatMap { it }
 	}
 
-	@Synchronized
-	private suspend fun cleanUp() {
-		val now = TimeUtils.getTimeFast()
-		if (now - lastTimeCheck <= FIVE_MINUTES) {
-			return
-		}
-
-		logger.debug("Start cleanPhotoCandidates routine")
-		lastTimeCheck = now
-
-		try {
-			cleanPhotoCandidates(now - FIVE_MINUTES)
-		} catch (error: Throwable) {
-			logger.error("Error while cleaning up (cleanPhotoCandidates)", error)
-		}
-
-		logger.debug("End cleanPhotoCandidates routine")
-	}
-
-	private suspend fun cleanPhotoCandidates(time: Long) {
-		//photoInfoRepo.cleanCandidatesFromPhotosOverTime(time)
-	}
 }
