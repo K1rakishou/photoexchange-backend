@@ -18,16 +18,12 @@ data class FavouritedPhoto(
 
 	@Indexed(name = Mongo.Index.USER_ID_INDEX)
 	@Field(Mongo.Field.USER_ID)
-	var userId: String,
-
-	@Indexed(name = Mongo.Index.PHOTO_ID_INDEX)
-	@Field(Mongo.Field.PHOTO_ID)
-	var photoId: Long
+	var userId: String
 ) {
 
 	companion object {
-		fun create(id: Long, photoName: String, userId: String, photoId: Long): FavouritedPhoto {
-			return FavouritedPhoto(id, photoName, userId, photoId)
+		fun create(id: Long, photoName: String, userId: String): FavouritedPhoto {
+			return FavouritedPhoto(id, photoName, userId)
 		}
 	}
 
@@ -36,13 +32,11 @@ data class FavouritedPhoto(
 			const val ID = "_id"
       const val PHOTO_NAME = "photo_name"
 			const val USER_ID = "user_id"
-			const val PHOTO_ID = "photo_id"
 		}
 
 		object Index {
       const val PHOTO_NAME_INDEX = "photo_name_index"
 			const val USER_ID_INDEX = "user_id_index"
-			const val PHOTO_ID_INDEX = "photo_id_index"
 		}
 	}
 }

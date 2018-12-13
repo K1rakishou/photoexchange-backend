@@ -27,9 +27,9 @@ open class FavouritedPhotoDao(
 			.onErrorReturn(false)
 	}
 
-	fun unfavouritePhoto(userId: String, photoId: Long): Mono<Boolean> {
+	fun unfavouritePhoto(userId: String, photoName: String): Mono<Boolean> {
 		val query = Query()
-			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
 
 		return template.remove(query, FavouritedPhoto::class.java)
@@ -38,10 +38,10 @@ open class FavouritedPhotoDao(
 			.onErrorReturn(false)
 	}
 
-	fun findMany(photoIdList: List<Long>): Mono<List<FavouritedPhoto>> {
+	fun findManyFavourites(photoNameList: List<String>): Mono<List<FavouritedPhoto>> {
 		val query = Query()
-			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`in`(photoIdList))
-			.limit(photoIdList.size)
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_NAME).`in`(photoNameList))
+			.limit(photoNameList.size)
 
 		return template.find(query, FavouritedPhoto::class.java)
 			.collectList()
@@ -50,7 +50,7 @@ open class FavouritedPhotoDao(
 			.onErrorReturn(emptyList())
 	}
 
-	fun findManyByPhotoNameList(userId: String, photoNameList: List<String>): Mono<List<FavouritedPhoto>> {
+	fun findManyFavouritesByPhotoNameList(userId: String, photoNameList: List<String>): Mono<List<FavouritedPhoto>> {
     val query = Query()
       .addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
       .addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_NAME).`in`(photoNameList))
@@ -63,22 +63,9 @@ open class FavouritedPhotoDao(
       .onErrorReturn(emptyList())
   }
 
-	fun findMany(userId: String, photoIdList: List<Long>): Mono<List<FavouritedPhoto>> {
+	fun isPhotoFavourited(userId: String, photoName: String): Mono<Boolean> {
 		val query = Query()
-			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
-			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`in`(photoIdList))
-			.limit(photoIdList.size)
-
-		return template.find(query, FavouritedPhoto::class.java)
-			.collectList()
-			.defaultIfEmpty(emptyList())
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(emptyList())
-	}
-
-	fun isPhotoFavourited(userId: String, photoId: Long): Mono<Boolean> {
-		val query = Query()
-			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
 
 		return template.exists(query, FavouritedPhoto::class.java)
@@ -87,9 +74,9 @@ open class FavouritedPhotoDao(
 			.onErrorReturn(false)
 	}
 
-	fun deleteByPhotoId(photoId: Long): Mono<Boolean> {
+	fun deleteFavouriteByPhotoName(photoName: String): Mono<Boolean> {
 		val query = Query()
-			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
 		return template.remove(query, FavouritedPhoto::class.java)
 			.map { deletionResult -> deletionResult.wasAcknowledged() }
@@ -97,20 +84,9 @@ open class FavouritedPhotoDao(
 			.onErrorReturn(false)
 	}
 
-	fun deleteAll(photoIds: List<Long>): Mono<Boolean> {
+	fun countFavouritesByPhotoName(photoName: String): Mono<Long> {
 		val query = Query()
-			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.ID).`in`(photoIds))
-			.limit(photoIds.size)
-
-		return template.remove(query, FavouritedPhoto::class.java)
-			.map { deletionResult -> deletionResult.wasAcknowledged() }
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(false)
-	}
-
-	fun countByPhotoId(photoId: Long): Mono<Long> {
-		val query = Query()
-			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
 		return template.count(query, FavouritedPhoto::class.java)
 			.defaultIfEmpty(0)

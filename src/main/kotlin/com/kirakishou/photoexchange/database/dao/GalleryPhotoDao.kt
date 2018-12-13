@@ -30,7 +30,7 @@ open class GalleryPhotoDao(
 
   fun findPage(lastUploadedOn: Long, count: Int): Mono<List<GalleryPhoto>> {
     val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
-      .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_ID).gt(0L))
+      .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_NAME).ne(""))
       .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).lt(lastUploadedOn))
       .limit(count)
 
@@ -43,7 +43,7 @@ open class GalleryPhotoDao(
 
   fun countFreshGalleryPhotosSince(time: Long): Mono<Int> {
     val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
-      .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_ID).gt(0L))
+      .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_NAME).ne(""))
       .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).gt(time))
 
     return template.count(query, GalleryPhoto::class.java)
@@ -53,20 +53,9 @@ open class GalleryPhotoDao(
       .map { it.toInt() }
   }
 
-  fun deleteById(photoId: Long): Mono<Boolean> {
+  fun deleteByPhotoName(photoName: String): Mono<Boolean> {
     val query = Query()
-      .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_ID).`is`(photoId))
-
-    return template.remove(query, GalleryPhoto::class.java)
-      .map { deletionResult -> deletionResult.wasAcknowledged() }
-      .doOnError { error -> logger.error("DB error", error) }
-      .onErrorReturn(false)
-  }
-
-  fun deleteAll(photoIds: List<Long>): Mono<Boolean> {
-    val query = Query()
-      .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_ID).`in`(photoIds))
-      .limit(photoIds.size)
+      .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
     return template.remove(query, GalleryPhoto::class.java)
       .map { deletionResult -> deletionResult.wasAcknowledged() }

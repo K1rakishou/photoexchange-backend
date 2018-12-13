@@ -66,7 +66,7 @@ open class PhotoInfoRepository(
           val galleryPhotoId = mongoSequenceDao.getNextGalleryPhotoId().awaitFirst()
           val newGalleryPhoto = GalleryPhoto.create(
             galleryPhotoId,
-            photoInfo.photoId,
+            photoInfo.photoName,
             savedPhotoInfo.uploadedOn
           )
 
@@ -336,16 +336,16 @@ open class PhotoInfoRepository(
               throw DatabaseTransactionException("photoInfoDao: Could not delete photo by id ${photoInfo.photoId}")
             }
           }
-        results += favouritedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+        results += favouritedPhotoDao.deleteFavouriteByPhotoName(photoInfo.photoName)
           .doOnNext { result ->
             if (!result) {
-              throw DatabaseTransactionException("favouritedPhotoDao: Could not delete photo by id ${photoInfo.photoId}")
+              throw DatabaseTransactionException("favouritedPhotoDao: Could not delete photo favourite by name ${photoInfo.photoName}")
             }
           }
-        results += reportedPhotoDao.deleteByPhotoId(photoInfo.photoId)
+        results += reportedPhotoDao.deleteReportByPhotoName(photoInfo.photoName)
           .doOnNext { result ->
             if (!result) {
-              throw DatabaseTransactionException("reportedPhotoDao: Could not delete photo by id ${photoInfo.photoId}")
+              throw DatabaseTransactionException("reportedPhotoDao: Could not delete photo report by name ${photoInfo.photoName}")
             }
           }
         results += locationMapDao.deleteById(photoInfo.photoId)
@@ -354,7 +354,7 @@ open class PhotoInfoRepository(
               throw DatabaseTransactionException("locationMapDao: Could not delete location map by id ${photoInfo.photoId}")
             }
           }
-        results += galleryPhotoDao.deleteById(photoInfo.photoId)
+        results += galleryPhotoDao.deleteByPhotoName(photoInfo.photoName)
           .doOnNext { result ->
             if (!result) {
               throw DatabaseTransactionException("galleryPhotoDao: Could not delete gallery photo by id ${photoInfo.photoId}")
@@ -374,25 +374,20 @@ open class PhotoInfoRepository(
   suspend fun favouritePhoto(userId: String, photoName: String): FavouritePhotoResult {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        val photoId = photoInfoDao.getPhotoIdByName(photoName).awaitFirst()
-        if (photoId <= 0) {
-          return@withLock FavouritePhotoResult.PhotoDoesNotExist()
-        }
-
-        return@withLock if (favouritedPhotoDao.isPhotoFavourited(userId, photoId).awaitFirst()) {
-          if (!favouritedPhotoDao.unfavouritePhoto(userId, photoId).awaitFirst()) {
+        return@withLock if (favouritedPhotoDao.isPhotoFavourited(userId, photoName).awaitFirst()) {
+          if (!favouritedPhotoDao.unfavouritePhoto(userId, photoName).awaitFirst()) {
             return@withLock FavouritePhotoResult.Error()
           }
 
-          val favouritesCount = favouritedPhotoDao.countByPhotoId(photoId).awaitFirst()
+          val favouritesCount = favouritedPhotoDao.countFavouritesByPhotoName(photoName).awaitFirst()
           FavouritePhotoResult.Unfavourited(favouritesCount)
         } else {
           val id = mongoSequenceDao.getNextFavouritedPhotoId().awaitFirst()
-          if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, photoName, userId, photoId)).awaitFirst()) {
+          if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, photoName, userId)).awaitFirst()) {
             return@withLock FavouritePhotoResult.Error()
           }
 
-          val favouritesCount = favouritedPhotoDao.countByPhotoId(photoId).awaitFirst()
+          val favouritesCount = favouritedPhotoDao.countFavouritesByPhotoName(photoName).awaitFirst()
           FavouritePhotoResult.Favourited(favouritesCount)
         }
       }
@@ -402,21 +397,15 @@ open class PhotoInfoRepository(
   suspend fun reportPhoto(userId: String, photoName: String): ReportPhotoResult {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        val photoId = photoInfoDao.getPhotoIdByName(photoName).awaitFirst()
-        if (photoId <= 0L) {
-          return@withLock ReportPhotoResult.PhotoDoesNotExist()
-        }
-
-        return@withLock if (reportedPhotoDao.isPhotoReported(userId, photoId).awaitFirst()) {
-          if (!reportedPhotoDao.unreportPhoto(userId, photoId).awaitFirst()) {
+        return@withLock if (reportedPhotoDao.isPhotoReported(userId, photoName).awaitFirst()) {
+          if (!reportedPhotoDao.unreportPhoto(userId, photoName).awaitFirst()) {
             return@withLock ReportPhotoResult.Error()
           }
 
           ReportPhotoResult.Unreported()
         } else {
-
           val id = mongoSequenceDao.getNextReportedPhotoId().awaitFirst()
-          if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, photoName, userId, photoId)).awaitFirst()) {
+          if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, photoName, userId)).awaitFirst()) {
             return@withLock ReportPhotoResult.Error()
           }
 
@@ -431,17 +420,17 @@ open class PhotoInfoRepository(
       val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
 
       val pageOfGalleryPhotos = galleryPhotoDao.findPage(lastUploadedOn, count).awaitFirst()
-      val photoIds = pageOfGalleryPhotos.map { it.photoId }
+      val photoNameList = pageOfGalleryPhotos.map { it.photoName }
 
-      val photoInfosDeferred = photoInfoDao.findManyByIds(photoIds, PhotoInfoDao.SortOrder.Descending)
-      val favouritedPhotosMapDeferred = favouritedPhotoDao.findMany(photoIds)
+      val photoInfosDeferred = photoInfoDao.findPhotosByName(photoNameList)
+      val favouritedPhotosMapDeferred = favouritedPhotoDao.findManyFavourites(photoNameList)
 
       val photoInfos = photoInfosDeferred.awaitFirst()
-      val favouritedPhotosMap = favouritedPhotosMapDeferred.awaitFirst().groupBy { it.photoId }
+      val favouritedPhotosMap = favouritedPhotosMapDeferred.awaitFirst().groupBy { it.photoName }
 
       for (photo in photoInfos) {
-        val galleryPhoto = pageOfGalleryPhotos.first { it.photoId == photo.photoId }
-        val favouritedPhotos = favouritedPhotosMap[photo.photoId] ?: emptyList()
+        val galleryPhoto = pageOfGalleryPhotos.first { it.photoName == photo.photoName }
+        val favouritedPhotos = favouritedPhotosMap[photo.photoName] ?: emptyList()
 
         resultMap[photo.photoId] = GalleryPhotoDto(photo, galleryPhoto, favouritedPhotos.size.toLong())
       }
@@ -463,22 +452,22 @@ open class PhotoInfoRepository(
     photoNames: List<String>
   ): List<GalleryPhotoInfoResponse.GalleryPhotosInfoResponseData> {
     return withContext(coroutineContext) {
-      val resultMap = linkedMapOf<Long, GalleryPhotoInfoDto>()
+      val resultMap = linkedMapOf<String, GalleryPhotoInfoDto>()
 
-      val userFavouritedPhotosDeferred = favouritedPhotoDao.findManyByPhotoNameList(userId, photoNames)
-      val userReportedPhotosDeferred = reportedPhotoDao.findManyByPhotoNameList(userId, photoNames)
+      val userFavouritedPhotosDeferred = favouritedPhotoDao.findManyFavouritesByPhotoNameList(userId, photoNames)
+      val userReportedPhotosDeferred = reportedPhotoDao.findManyReportsByPhotoNameList(userId, photoNames)
 
       val userFavouritedPhotos = userFavouritedPhotosDeferred.awaitFirst()
       val userReportedPhotos = userReportedPhotosDeferred.awaitFirst()
 
       for (favouritedPhoto in userFavouritedPhotos) {
-        resultMap.putIfAbsent(favouritedPhoto.photoId, GalleryPhotoInfoDto(favouritedPhoto.photoName))
-        resultMap[favouritedPhoto.photoId]!!.isFavourited = true
+        resultMap.putIfAbsent(favouritedPhoto.photoName, GalleryPhotoInfoDto(favouritedPhoto.photoName))
+        resultMap[favouritedPhoto.photoName]!!.isFavourited = true
       }
 
       for (reportedPhoto in userReportedPhotos) {
-        resultMap.putIfAbsent(reportedPhoto.photoId, GalleryPhotoInfoDto(reportedPhoto.photoName))
-        resultMap[reportedPhoto.photoId]!!.isReported = true
+        resultMap.putIfAbsent(reportedPhoto.photoName, GalleryPhotoInfoDto(reportedPhoto.photoName))
+        resultMap[reportedPhoto.photoName]!!.isReported = true
       }
 
       return@withContext resultMap.values.map { (galleryPhotoName, isFavourited, isReported) ->
