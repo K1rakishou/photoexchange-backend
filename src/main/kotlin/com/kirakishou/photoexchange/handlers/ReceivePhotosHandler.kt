@@ -44,7 +44,11 @@ class ReceivePhotosHandler(
 						ReceivedPhotosResponse.fail(ErrorCode.NoPhotosInRequest))
 				}
 
-				val receivedPhotosResponseData = photoInfoRepository.findPhotosWithReceiverByPhotoNamesList(userId, photoNameList)
+				val receivedPhotosResponseData = photoInfoRepository.findPhotosWithReceiverByPhotoNamesList(
+          userId,
+          photoNameList
+        )
+        
 				if (receivedPhotosResponseData.isEmpty()) {
 					logger.debug("photoAnswerList is empty")
 					return@mono formatResponse(HttpStatus.OK,
@@ -53,12 +57,8 @@ class ReceivePhotosHandler(
 
         logger.debug("Found ${receivedPhotosResponseData.size} photos")
 
-				val galleryPhotoNameList = receivedPhotosResponseData.map { it.uploadedPhotoName }
-				val additionalInfoResponseData = photoInfoRepository.findPhotoAdditionalInfo(userId, galleryPhotoNameList)
-
 				val response = ReceivedPhotosResponse.success(
-					receivedPhotosResponseData,
-					additionalInfoResponseData
+					receivedPhotosResponseData
 				)
 
 				return@mono formatResponse(HttpStatus.OK, response)

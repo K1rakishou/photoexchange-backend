@@ -93,6 +93,7 @@ fun myBeans(adminToken: String) = beans {
   bean<BanPhotoHandler>()
   bean<BanUserHandler>()
   bean<StartCleanupHandler>()
+  bean<GetPhotosAdditionalInfoHandler>()
 
   //etc
   bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }
