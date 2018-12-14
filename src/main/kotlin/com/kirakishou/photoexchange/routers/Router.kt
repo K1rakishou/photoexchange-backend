@@ -33,7 +33,8 @@ class Router(
 	private val getFreshReceivedPhotosCountHandler: GetFreshReceivedPhotosCountHandler,
 	private val banPhotoHandler: BanPhotoHandler,
 	private val banUserHandler: BanUserHandler,
-	private val startCleanupHandler: StartCleanupHandler
+	private val startCleanupHandler: StartCleanupHandler,
+	private val getPhotosAdditionalInfoHandler: GetPhotosAdditionalInfoHandler
 ) {
 	private fun hasAuthHeaderPredicate() = { headers: ServerRequest.Headers ->
 		headers.header(ServerSettings.authTokenHeaderName).isNotEmpty()
@@ -52,6 +53,7 @@ class Router(
 				accept(MediaType.APPLICATION_JSON).nest {
 					GET("/get_user_id", getUserIdHandler::handle)
 					GET("/receive_photos/{photo_names}/{user_id}", receivePhotosHandler::handle)
+					GET("/get_photos_additional_info/{photo_names}/{user_id}", getPhotosAdditionalInfoHandler::handle)
 
           GET("/get_page_of_gallery_photos/{last_uploaded_on}/{count}", getGalleryPhotosHandler::handle)
 					GET("/get_page_of_uploaded_photos/{user_id}/{last_uploaded_on}/{count}", getUploadedPhotosHandler::handle)
