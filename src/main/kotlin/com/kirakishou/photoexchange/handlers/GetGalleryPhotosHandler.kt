@@ -21,16 +21,14 @@ class GetGalleryPhotosHandler(
 
   private val logger = LoggerFactory.getLogger(GetGalleryPhotosHandler::class.java)
   private val LAST_UPLOADED_ON = "last_uploaded_on"
-  private val USER_ID = "user_id"
   private val COUNT = "count"
-  private val EMPTY_USER_ID = "empty_user_id"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
     return mono {
       logger.debug("New GetGalleryPhotos request")
 
       try {
-        if (!request.containsAllPathVars(LAST_UPLOADED_ON, USER_ID, COUNT)) {
+        if (!request.containsAllPathVars(LAST_UPLOADED_ON, COUNT)) {
           logger.debug("Request does not contain one of the required path variables")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
             GalleryPhotosResponse.fail(ErrorCode.BadRequest))
@@ -58,27 +56,11 @@ class GetGalleryPhotosHandler(
             GalleryPhotosResponse.fail(ErrorCode.BadRequest))
         }
 
-        val userId = try {
-          request.pathVariable(USER_ID)
-        } catch (error: Throwable) {
-          error.printStackTrace()
-
-          EMPTY_USER_ID
-        }
-
         val galleryPhotoResponseData = photoInfoRepository.findGalleryPhotos(lastUploadedOn, count)
         logger.debug("Found ${galleryPhotoResponseData.size} photos from gallery")
 
-        val additionalInfoResponseData = if (userId != EMPTY_USER_ID) {
-          val galleryPhotoNameList = galleryPhotoResponseData.map { it.photoName }
-          photoInfoRepository.findPhotoAdditionalInfo(userId, galleryPhotoNameList)
-        } else {
-          emptyList()
-        }
-
         val response = GalleryPhotosResponse.success(
-          galleryPhotoResponseData,
-          additionalInfoResponseData
+          galleryPhotoResponseData
         )
 
         return@mono formatResponse(HttpStatus.OK, response)

@@ -67,12 +67,8 @@ class GetReceivedPhotosHandler(
 				val receivedPhotosResponseData = photoInfoRepository.findPageOfReceivedPhotos(userId, lastUploadedOn, count)
 				logger.debug("Found ${receivedPhotosResponseData.size} received photos")
 
-				val galleryPhotoNameList = receivedPhotosResponseData.map { it.uploadedPhotoName }
-				val additionalInfoResponseData = photoInfoRepository.findPhotoAdditionalInfo(userId, galleryPhotoNameList)
-
 				val response = ReceivedPhotosResponse.success(
-					receivedPhotosResponseData,
-					additionalInfoResponseData
+					receivedPhotosResponseData
 				)
 
 				return@mono formatResponse(HttpStatus.OK, response)
