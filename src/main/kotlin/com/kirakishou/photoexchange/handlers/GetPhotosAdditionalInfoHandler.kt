@@ -8,7 +8,7 @@ import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.Utils
 import core.ErrorCode
 import kotlinx.coroutines.reactor.mono
-import net.response.GetPhotoAdditionalInfoResponse
+import net.response.GetPhotosAdditionalInfoResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -31,7 +31,7 @@ class GetPhotosAdditionalInfoHandler(
         if (!request.containsAllPathVars(USER_ID_VARIABLE, PHOTO_NAMES_VARIABLE)) {
           logger.debug("Request does not contain one of the required path variables")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GetPhotoAdditionalInfoResponse.fail(ErrorCode.BadRequest))
+            GetPhotosAdditionalInfoResponse.fail(ErrorCode.BadRequest))
         }
 
         val photoNamesString = request.pathVariable(PHOTO_NAMES_VARIABLE)
@@ -40,7 +40,7 @@ class GetPhotosAdditionalInfoHandler(
         if (photoNamesString.isEmpty()) {
           logger.debug("photoNamesString is empty")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GetPhotoAdditionalInfoResponse.fail(ErrorCode.NoPhotosInRequest))
+            GetPhotosAdditionalInfoResponse.fail(ErrorCode.NoPhotosInRequest))
         }
 
         val photoNames = Utils.parsePhotoNames(
@@ -52,11 +52,11 @@ class GetPhotosAdditionalInfoHandler(
         val additionalInfoResponseData = photoInfoRepository.findPhotoAdditionalInfo(userId, photoNames)
         logger.debug("Found ${additionalInfoResponseData.size} photo additional info")
 
-        return@mono formatResponse(HttpStatus.OK, GetPhotoAdditionalInfoResponse.success(additionalInfoResponseData))
+        return@mono formatResponse(HttpStatus.OK, GetPhotosAdditionalInfoResponse.success(additionalInfoResponseData))
       } catch (error: Throwable) {
         logger.error("Unknown error", error)
         return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-          GetPhotoAdditionalInfoResponse.fail(ErrorCode.UnknownError))
+          GetPhotosAdditionalInfoResponse.fail(ErrorCode.UnknownError))
       }
     }.flatMap { it }
   }
