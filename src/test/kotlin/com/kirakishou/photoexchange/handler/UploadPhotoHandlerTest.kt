@@ -66,10 +66,113 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     super.clear()
   }
 
-  //TODO: add a test case when static photo haven't been downloaded yet
   //TODO: add a test case with a few photos when some of them do not have static map downloaded
   //TODO: add a test case when getFirebaseToken returns empty token
-  //TODO: add test cases with ban lists
+
+  @Test
+  fun `should not be allowed to upload photo when banned`() {
+    val webClient = getWebTestClient()
+
+    runBlocking {
+      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
+      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(true)
+      Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
+      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
+    }
+
+    kotlin.run {
+      val packet = SendPhotoPacket(33.4, 55.2, "111", true)
+      val multipartData = createTestMultipartFile(PHOTO1, packet)
+
+      val content = webClient
+        .post()
+        .uri("/v1/api/upload")
+        .contentType(MediaType.MULTIPART_FORM_DATA)
+        .body(BodyInserters.fromMultipartData(multipartData))
+        .exchange()
+        .expectStatus().isForbidden
+        .expectBody()
+
+      val response = fromBodyContent<UploadPhotoResponse>(content)
+      Assert.assertEquals(ErrorCode.YouAreBanned.value, response.errorCode)
+    }
+  }
+
+  @Test
+  fun `should not exchange photos when one of the photos has no static map`() {
+    val webClient = getWebTestClient()
+
+    runBlocking {
+      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
+      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
+      Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
+      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
+    }
+
+    kotlin.run {
+      val packet = SendPhotoPacket(33.4, 55.2, "111", true)
+      val multipartData = createTestMultipartFile(PHOTO1, packet)
+
+      val content = webClient
+        .post()
+        .uri("/v1/api/upload")
+        .contentType(MediaType.MULTIPART_FORM_DATA)
+        .body(BodyInserters.fromMultipartData(multipartData))
+        .exchange()
+        .expectStatus().is2xxSuccessful
+        .expectBody()
+
+      val response = fromBodyContent<UploadPhotoResponse>(content)
+      Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
+
+      val photoInfo = runBlocking {
+        photoInfoDao.findById(1).awaitFirst()
+      }
+
+      assertEquals(1, photoInfo.photoId)
+      assertEquals(PhotoInfo.EMPTY_PHOTO_ID, photoInfo.exchangedPhotoId)
+      assertEquals(PhotoInfo.EMPTY_LOCATION_MAP_ID, photoInfo.locationMapId)
+      assertEquals(packet.userId, photoInfo.userId)
+      assertEquals(packet.isPublic, photoInfo.isPublic)
+      assertEquals(packet.lon, photoInfo.lon, EPSILON)
+      assertEquals(packet.lat, photoInfo.lat, EPSILON)
+
+      val files = findAllFiles()
+      assertEquals(4, files.size)
+    }
+
+    kotlin.run {
+      val packet = SendPhotoPacket(11.4, 44.2, "222", true)
+      val multipartData = createTestMultipartFile(PHOTO2, packet)
+
+      val content = webClient
+        .post()
+        .uri("/v1/api/upload")
+        .contentType(MediaType.MULTIPART_FORM_DATA)
+        .body(BodyInserters.fromMultipartData(multipartData))
+        .exchange()
+        .expectStatus().is2xxSuccessful
+        .expectBody()
+
+      val response = fromBodyContent<UploadPhotoResponse>(content)
+      Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
+
+      val photoInfo = runBlocking {
+        photoInfoDao.findById(2).awaitFirst()
+      }
+
+      assertEquals(2, photoInfo.photoId)
+      assertEquals(PhotoInfo.EMPTY_PHOTO_ID, photoInfo.exchangedPhotoId)
+      assertEquals(PhotoInfo.EMPTY_LOCATION_MAP_ID, photoInfo.locationMapId)
+      assertEquals(packet.userId, photoInfo.userId)
+      assertEquals(packet.isPublic, photoInfo.isPublic)
+      assertEquals(packet.lon, photoInfo.lon, EPSILON)
+      assertEquals(packet.lat, photoInfo.lat, EPSILON)
+
+      val files = findAllFiles()
+      assertEquals(8, files.size)
+    }
+  }
 
   @Test
   fun `test should exchange two photos`() {

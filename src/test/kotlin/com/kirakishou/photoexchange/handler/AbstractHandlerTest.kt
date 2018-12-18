@@ -21,10 +21,13 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
+import java.io.File
+import java.nio.file.Files
 
 abstract class AbstractHandlerTest {
 	val EPSILON = 0.00001
 	val gson = GsonBuilder().create()
+	val filesDir = "D:\\projects\\data\\photos"
 
 	//any photos should work
 	val PHOTO1 = "test_photos/photo_1.jpg"
@@ -47,6 +50,7 @@ abstract class AbstractHandlerTest {
 	lateinit var reportedPhotoDao: ReportedPhotoDao
 	lateinit var userInfoDao: UserInfoDao
 	lateinit var locationMapDao: LocationMapDao
+	lateinit var banListDao: BanListDao
 
 	lateinit var staticMapDownloaderService: StaticMapDownloaderService
 	lateinit var pushNotificationSenderService: PushNotificationSenderService
@@ -59,7 +63,23 @@ abstract class AbstractHandlerTest {
   lateinit var userInfoRepository: UserInfoRepository
 	lateinit var banListRepository: BanListRepository
 
+	fun clearFilesDir() {
+		val dir = File(filesDir)
+
+		for (file in dir.listFiles()) {
+			if (!file.isDirectory) {
+				Files.deleteIfExists(file.toPath())
+			}
+		}
+	}
+
+	fun findAllFiles(): Array<File> {
+		return File(filesDir).listFiles()
+	}
+
 	fun init() {
+		clearFilesDir()
+
 		jsonConverterService = JsonConverterService(gson)
 
 		template = ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(
@@ -95,8 +115,17 @@ abstract class AbstractHandlerTest {
 			it.clear()
 			it.create()
 		}
+		banListDao = BanListDao(template).also {
+			it.clear()
+			it.create()
+		}
 
 		val generator = GeneratorService()
+
+		staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)
+		pushNotificationSenderService = Mockito.mock(PushNotificationSenderService::class.java)
+		remoteAddressExtractorService = Mockito.mock(RemoteAddressExtractorService::class.java)
+		cleanupService = Mockito.mock(CleanupService::class.java)
 
 		locationMapRepository = LocationMapRepository(
 			template,
@@ -105,13 +134,9 @@ abstract class AbstractHandlerTest {
 			photoInfoDao
 		)
 
-		userInfoRepository = Mockito.mock(UserInfoRepository::class.java)
-		banListRepository = Mockito.mock(BanListRepository::class.java)
-		staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)
-    pushNotificationSenderService = Mockito.mock(PushNotificationSenderService::class.java)
-		remoteAddressExtractorService = Mockito.mock(RemoteAddressExtractorService::class.java)
-		diskManipulationService = Mockito.mock(DiskManipulationService::class.java)
-		cleanupService = Mockito.mock(CleanupService::class.java)
+		diskManipulationService = Mockito.spy(DiskManipulationService())
+		userInfoRepository = Mockito.spy(UserInfoRepository(mongoSequenceDao, userInfoDao, generator))
+		banListRepository = Mockito.spy(BanListRepository(mongoSequenceDao, banListDao))
 
 		photoInfoRepository = PhotoInfoRepository(
 			template,
@@ -135,6 +160,8 @@ abstract class AbstractHandlerTest {
 		reportedPhotoDao.clear()
 		userInfoDao.clear()
 		locationMapDao.clear()
+
+		clearFilesDir()
 	}
 
 	fun createTestMultipartFile(fileResourceName: String, packet: SendPhotoPacket): MultiValueMap<String, Any> {
