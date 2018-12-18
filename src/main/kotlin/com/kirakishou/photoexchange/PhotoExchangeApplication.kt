@@ -14,15 +14,15 @@ class PhotoExchangeApplication(
 ) {
 
 	fun startAndAwait() {
+    //first argument should be a random string that you will use as a token to do admin stuff
+    //See: Router.kt hasAuthHeaderPredicate() method
+
+    val adminToken = args[0]
+    if (adminToken.length < 48) {
+      throw RuntimeException("Admin token should have length of at least 48 symbols. Current passed token length is ${adminToken.length}")
+    }
+
     val context = GenericApplicationContext().apply {
-			//first argument should be a random string that you will use as a token to do admin stuff
-			//See: Router.kt hasAuthHeaderPredicate() method
-
-			val adminToken = args[0]
-			if (adminToken.length < 48) {
-				throw RuntimeException("Admin token should have length of at least 48 symbols. Current passed token length is ${adminToken.length}")
-			}
-
       myBeans(adminToken).initialize(this)
       refresh()
     }
