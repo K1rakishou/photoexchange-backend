@@ -52,9 +52,21 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun save(photoInfo: PhotoInfo): PhotoInfo {
+  suspend fun save(userId: String, lon: Double, lat: Double, isPublic: Boolean, uploadedOn: Long, ipHash: String): PhotoInfo {
+    val photoName = generatePhotoInfoName()
+
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
+        val photoInfo = PhotoInfo.create(
+          userId,
+          photoName,
+          isPublic,
+          lon,
+          lat,
+          uploadedOn,
+          ipHash
+        )
+
         photoInfo.photoId = mongoSequenceDao.getNextPhotoId().awaitFirst()
 
         val savedPhotoInfo = photoInfoDao.save(photoInfo).awaitFirst()
@@ -260,13 +272,13 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun tryDoExchange(userId: String, newUploadingPhoto: PhotoInfo): PhotoInfo {
+  open suspend fun tryDoExchange(userId: String, newUploadingPhoto: PhotoInfo): PhotoInfo {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val oldestPhoto = photoInfoDao.findOldestEmptyPhoto(userId).awaitFirst()
         if (oldestPhoto.isEmpty()) {
           if (!photoInfoDao.updatePhotoAsEmpty(newUploadingPhoto.photoId).awaitFirst()) {
-            throw RuntimeException("Could not set photoExchangeId as EMPTY_PHOTO_ID")
+            throw ExchangeException("Could not set photoExchangeId as EMPTY_PHOTO_ID")
           }
 
           return@withLock PhotoInfo.empty()
@@ -274,27 +286,31 @@ open class PhotoInfoRepository(
 
         val transactionResult = template.inTransaction().execute {
           return@execute mono {
-            if (!photoInfoDao.updatePhotoAsExchanging(oldestPhoto.photoId).awaitFirst()) {
-              throw ExchangeException()
-            }
-
             if (!photoInfoDao.updatePhotoSetReceiverId(oldestPhoto.photoId, newUploadingPhoto.photoId).awaitFirst()) {
-              throw ExchangeException()
+              throw ExchangeException("Could not updatePhotoSetReceiverId for " +
+                "oldestPhoto.photoId = ${oldestPhoto.photoId}, " +
+                "newUploadingPhoto.photoId = ${newUploadingPhoto.photoId}")
             }
 
             if (!photoInfoDao.updatePhotoSetReceiverId(newUploadingPhoto.photoId, oldestPhoto.photoId).awaitFirst()) {
-              throw ExchangeException()
+              throw ExchangeException("Could not updatePhotoSetReceiverId for " +
+                "newUploadingPhoto.photoId = ${newUploadingPhoto.photoId}, " +
+                "oldestPhoto.photoId = ${oldestPhoto.photoId}")
             }
 
             return@mono true
           }
         }
           .single()
+          .doOnError { logger.error("Error in exchange transaction", it) }
           .onErrorReturn(false)
           .awaitFirst()
 
         if (!transactionResult) {
-          //TODO: probably should updatePhotoAsEmpty here as well
+          if (!photoInfoDao.updatePhotoAsEmpty(newUploadingPhoto.photoId).awaitFirst()) {
+            throw ExchangeException("Could not set photoExchangeId as EMPTY_PHOTO_ID")
+          }
+
           return@withLock PhotoInfo.empty()
         }
 
@@ -376,7 +392,7 @@ open class PhotoInfoRepository(
       return@withContext mutex.withLock {
         return@withLock if (favouritedPhotoDao.isPhotoFavourited(userId, photoName).awaitFirst()) {
           if (!favouritedPhotoDao.unfavouritePhoto(userId, photoName).awaitFirst()) {
-            return@withLock FavouritePhotoResult.Error()
+            return@withLock FavouritePhotoResult.Error
           }
 
           val favouritesCount = favouritedPhotoDao.countFavouritesByPhotoName(photoName).awaitFirst()
@@ -384,7 +400,7 @@ open class PhotoInfoRepository(
         } else {
           val id = mongoSequenceDao.getNextFavouritedPhotoId().awaitFirst()
           if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, photoName, userId)).awaitFirst()) {
-            return@withLock FavouritePhotoResult.Error()
+            return@withLock FavouritePhotoResult.Error
           }
 
           val favouritesCount = favouritedPhotoDao.countFavouritesByPhotoName(photoName).awaitFirst()
@@ -399,17 +415,17 @@ open class PhotoInfoRepository(
       return@withContext mutex.withLock {
         return@withLock if (reportedPhotoDao.isPhotoReported(userId, photoName).awaitFirst()) {
           if (!reportedPhotoDao.unreportPhoto(userId, photoName).awaitFirst()) {
-            return@withLock ReportPhotoResult.Error()
+            return@withLock ReportPhotoResult.Error
           }
 
-          ReportPhotoResult.Unreported()
+          ReportPhotoResult.Unreported
         } else {
           val id = mongoSequenceDao.getNextReportedPhotoId().awaitFirst()
           if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, photoName, userId)).awaitFirst()) {
-            return@withLock ReportPhotoResult.Error()
+            return@withLock ReportPhotoResult.Error
           }
 
-          ReportPhotoResult.Reported()
+          ReportPhotoResult.Reported
         }
       }
     }
@@ -538,17 +554,17 @@ open class PhotoInfoRepository(
   )
 
   sealed class ReportPhotoResult {
-    class Reported : ReportPhotoResult()
-    class Unreported : ReportPhotoResult()
-    class PhotoDoesNotExist() : ReportPhotoResult()
-    class Error : ReportPhotoResult()
+    object Reported : ReportPhotoResult()
+    object Unreported : ReportPhotoResult()
+    object PhotoDoesNotExist : ReportPhotoResult()
+    object Error : ReportPhotoResult()
   }
 
   sealed class FavouritePhotoResult {
     class Favourited(val count: Long) : FavouritePhotoResult()
     class Unfavourited(val count: Long) : FavouritePhotoResult()
-    class PhotoDoesNotExist() : FavouritePhotoResult()
-    class Error : FavouritePhotoResult()
+    object PhotoDoesNotExist : FavouritePhotoResult()
+    object Error : FavouritePhotoResult()
   }
 }
 

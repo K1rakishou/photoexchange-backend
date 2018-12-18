@@ -1,6 +1,7 @@
 package com.kirakishou.photoexchange.service
 
 import com.google.gson.Gson
+import core.SharedConstants
 import org.springframework.core.io.buffer.DataBuffer
 
 class JsonConverterService(
@@ -8,17 +9,17 @@ class JsonConverterService(
 ) {
 
 	@Suppress("UNCHECKED_CAST")
-	inline fun <reified T> fromJson(dataBufferList: List<DataBuffer>, maxLen: Int = 65536): T {
-		return gson.fromJson(dataBufferToString(dataBufferList, maxLen), T::class.java) as T
+	inline fun <reified T> fromJson(dataBufferList: List<DataBuffer>, maxSize: Long = SharedConstants.MAX_PACKET_SIZE): T {
+		return gson.fromJson(dataBufferToString(dataBufferList, maxSize), T::class.java) as T
 	}
 
 	fun <T> toJson(data: T): String {
 		return gson.toJson(data)
 	}
 
-	fun dataBufferToString(dataBufferList: List<DataBuffer>, maxLen: Int): String {
+	fun dataBufferToString(dataBufferList: List<DataBuffer>, maxSize: Long): String {
 		val fullLength = dataBufferList.sumBy { it.readableByteCount() }
-		if (fullLength > maxLen) {
+		if (fullLength > maxSize) {
 			throw PacketSizeExceeded()
 		}
 

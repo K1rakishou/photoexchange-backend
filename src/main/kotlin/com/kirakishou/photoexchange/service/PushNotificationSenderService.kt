@@ -7,6 +7,7 @@ import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
+import core.SharedConstants
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.actor
@@ -64,10 +65,10 @@ open class PushNotificationSenderService(
   open fun enqueue(photoInfo: PhotoInfo) {
     launch {
       val token = userInfoRepository.getFirebaseToken(photoInfo.userId)
-      if (token.isNotEmpty() && token != NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
+      if (token.isNotEmpty() && token != SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
         mutex.withLock { requests.add(photoInfo) }
       } else {
-        logger.debug("FirebaseToken is $NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN, skipping it")
+        logger.debug("FirebaseToken is ${SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN}, skipping it")
       }
 
       requestActor.offer(Unit)
@@ -118,8 +119,8 @@ open class PushNotificationSenderService(
       return
     }
 
-    if (firebaseToken == NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
-      throw RuntimeException("firebase token is $NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN. This should not happen here!!!")
+    if (firebaseToken == SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
+      throw RuntimeException("firebase token is ${SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN}. This should not happen here!!!")
     }
 
     val packet = PhotoExchangedData(
@@ -234,7 +235,5 @@ open class PushNotificationSenderService(
 
     private val MESSAGING_SCOPE = "https://www.googleapis.com/auth/firebase.messaging"
     private val SCOPES = listOf(MESSAGING_SCOPE)
-
-    const val NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN = "NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN"
   }
 }
