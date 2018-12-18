@@ -41,19 +41,6 @@ open class PhotoInfoDao(
       .onErrorReturn(PhotoInfo.empty())
   }
 
-  fun updatePhotoAsExchanging(photoId: Long): Mono<Boolean> {
-    val query = Query()
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
-
-    val update = Update()
-      .set(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID, PhotoInfo.PHOTO_IS_EXCHANGING)
-
-    return template.updateFirst(query, update, PhotoInfo::class.java)
-      .map { updateResult -> updateResult.wasAcknowledged() }
-      .doOnError { error -> logger.error("DB error", error) }
-      .onErrorReturn(false)
-  }
-
   fun updatePhotoAsEmpty(photoId: Long): Mono<Boolean> {
     val query = Query()
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))

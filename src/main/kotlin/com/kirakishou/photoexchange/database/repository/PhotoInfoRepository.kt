@@ -286,12 +286,6 @@ open class PhotoInfoRepository(
 
         val transactionResult = template.inTransaction().execute {
           return@execute mono {
-            //TODO: do we even need this?
-            if (!photoInfoDao.updatePhotoAsExchanging(oldestPhoto.photoId).awaitFirst()) {
-              throw ExchangeException("Could not updatePhotoAsExchanging for " +
-                "oldestPhoto.photoId =  ${oldestPhoto.photoId}")
-            }
-
             if (!photoInfoDao.updatePhotoSetReceiverId(oldestPhoto.photoId, newUploadingPhoto.photoId).awaitFirst()) {
               throw ExchangeException("Could not updatePhotoSetReceiverId for " +
                 "oldestPhoto.photoId = ${oldestPhoto.photoId}, " +
