@@ -2,10 +2,10 @@ package com.kirakishou.photoexchange
 
 import com.kirakishou.photoexchange.config.myBeans
 import org.springframework.context.support.GenericApplicationContext
-import org.springframework.http.server.reactive.HttpHandler
 import org.springframework.http.server.reactive.ReactorHttpHandlerAdapter
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder
 import reactor.netty.http.server.HttpServer
+import java.lang.RuntimeException
 import java.time.Duration
 
 class PhotoExchangeApplication(
@@ -15,9 +15,15 @@ class PhotoExchangeApplication(
 
 	fun startAndAwait() {
     val context = GenericApplicationContext().apply {
-			//first argument should be random string that you will use as a token to do admin stuff
+			//first argument should be a random string that you will use as a token to do admin stuff
 			//See: Router.kt hasAuthHeaderPredicate() method
-      myBeans(args[0]).initialize(this)
+
+			val adminToken = args[0]
+			if (adminToken.length < 48) {
+				throw RuntimeException("Admin token should have length of at least 48 symbols. Current passed token length is ${adminToken.length}")
+			}
+
+      myBeans(adminToken).initialize(this)
       refresh()
     }
 
