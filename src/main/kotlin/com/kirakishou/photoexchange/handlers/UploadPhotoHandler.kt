@@ -30,6 +30,7 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
 import java.io.File
 import java.io.IOException
+import java.lang.RuntimeException
 
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,
@@ -75,11 +76,17 @@ class UploadPhotoHandler(
 						UploadPhotoResponse.fail(ErrorCode.BadRequest))
 				}
 
-        //user should not be able to send photo without creating default account with firebase token first
+				if (!userInfoRepository.accountExists(packet.userId)) {
+					logger.error("Account with userId ${packet.userId} does not exist!")
+					return@mono formatResponse(HttpStatus.FORBIDDEN,
+						UploadPhotoResponse.fail(ErrorCode.AccountNotFound))
+				}
+
+				//user should not be able to send photo without creating default account with firebase token first
         val token = userInfoRepository.getFirebaseToken(packet.userId)
         if (token.isEmpty()) {
           logger.error("User does not have firebase token yet!")
-          return@mono formatResponse(HttpStatus.BAD_REQUEST,
+          return@mono formatResponse(HttpStatus.FORBIDDEN,
             UploadPhotoResponse.fail(ErrorCode.UserDoesNotHaveFirebaseToken))
         }
 
@@ -90,72 +97,86 @@ class UploadPhotoHandler(
 						UploadPhotoResponse.fail(ErrorCode.ExceededMaxPhotoSize))
 				}
 
-				val photoInfoName = photoInfoRepo.generatePhotoInfoName()
-				val newUploadingPhoto = photoInfoRepo.save(createPhotoInfo(photoInfoName, packet, ipHash))
-
-				if (newUploadingPhoto.isEmpty()) {
-					logger.error("Could not save a photoInfo")
-					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
-				}
-
-				if (!staticMapDownloaderService.enqueue(newUploadingPhoto.photoId)) {
-					logger.error("Could not enqueue photo in locationMapReceiverService")
-
-          deletePhotoWithFile(newUploadingPhoto)
-					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
-				}
-
-				val tempFile = saveTempFile(photoParts, newUploadingPhoto)
-				if (tempFile.isEmpty()) {
-					logger.error("Could not save file to disk")
-
-          deletePhotoWithFile(newUploadingPhoto)
-					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.ServerDiskError))
-				}
-
-				try {
-					diskManipulationService.resizeAndSavePhotos(tempFile, newUploadingPhoto)
-				} catch (error: Throwable) {
-					logger.error("Unknown error", error)
-					photoInfoRepo.delete(newUploadingPhoto.userId, photoInfoName)
-					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.ServerResizeError))
-				} finally {
-					tempFile.deleteIfExists()
-				}
-
-				try {
-					cleanupService.tryToStartCleaningRoutine()
-				} catch (error: Throwable) {
-					logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
-				}
-
-				val exchangedPhoto = try {
-					photoInfoRepo.tryDoExchange(packet.userId, newUploadingPhoto)
-				} catch (error: Throwable) {
-					logger.error("Unknown error while trying to do photo exchange", error)
-
-          deletePhotoWithFile(newUploadingPhoto)
-					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						UploadPhotoResponse.fail(ErrorCode.DatabaseError))
-				}
-
-				logger.debug("Photo has been successfully uploaded")
-
-				if (!exchangedPhoto.isEmpty()) {
-          pushNotificationSenderService.enqueue(exchangedPhoto)
-        }
-
-        val response = UploadPhotoResponse.success(
-          newUploadingPhoto.photoId,
-          newUploadingPhoto.photoName,
-          newUploadingPhoto.uploadedOn
+				val newUploadingPhoto = photoInfoRepo.save(
+          packet.userId,
+          packet.lon,
+          packet.lat,
+          packet.isPublic,
+          TimeUtils.getTimeFast(),
+          ipHash
         )
 
-				return@mono formatResponse(HttpStatus.OK, response)
+        if (newUploadingPhoto.isEmpty()) {
+          logger.error("Could not save a photoInfo")
+          return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+            UploadPhotoResponse.fail(ErrorCode.DatabaseError))
+        }
+
+				try {
+          if (!staticMapDownloaderService.enqueue(newUploadingPhoto.photoId)) {
+            logger.error("Could not enqueue photo in locationMapReceiverService")
+
+            deletePhotoWithFile(newUploadingPhoto)
+            return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+              UploadPhotoResponse.fail(ErrorCode.DatabaseError))
+          }
+
+          val tempFile = saveTempFile(photoParts, newUploadingPhoto)
+          if (tempFile.isEmpty()) {
+            logger.error("Could not save file to disk")
+
+            deletePhotoWithFile(newUploadingPhoto)
+            return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+              UploadPhotoResponse.fail(ErrorCode.ServerDiskError))
+          }
+
+          try {
+            diskManipulationService.resizeAndSavePhotos(tempFile, newUploadingPhoto)
+          } catch (error: Throwable) {
+            logger.error("Unknown error", error)
+            photoInfoRepo.delete(newUploadingPhoto.userId, newUploadingPhoto.photoName)
+            return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+              UploadPhotoResponse.fail(ErrorCode.ServerResizeError))
+          } finally {
+            tempFile.deleteIfExists()
+          }
+
+          try {
+            cleanupService.tryToStartCleaningRoutine()
+          } catch (error: Throwable) {
+            logger.error("Error while cleaning up (cleanDatabaseAndPhotos)", error)
+          }
+
+          val exchangedPhoto = try {
+            photoInfoRepo.tryDoExchange(packet.userId, newUploadingPhoto)
+          } catch (error: Throwable) {
+            logger.error("Unknown error while trying to do photo exchange", error)
+
+            deletePhotoWithFile(newUploadingPhoto)
+            return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+              UploadPhotoResponse.fail(ErrorCode.DatabaseError))
+          }
+
+          logger.debug("Photo has been successfully uploaded")
+
+          if (!exchangedPhoto.isEmpty()) {
+            pushNotificationSenderService.enqueue(exchangedPhoto)
+          }
+
+          val response = UploadPhotoResponse.success(
+            newUploadingPhoto.photoId,
+            newUploadingPhoto.photoName,
+            newUploadingPhoto.uploadedOn
+          )
+
+          return@mono formatResponse(HttpStatus.OK, response)
+				} catch (error: Throwable) {
+          if (!photoInfoRepo.delete(newUploadingPhoto.userId, newUploadingPhoto.photoName)) {
+            throw RuntimeException("Could not delete photo when some unknown error has occurred", error)
+          }
+
+          throw error
+        }
 			} catch (error: Throwable) {
 				logger.error("Unknown error", error)
 				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -178,18 +199,6 @@ class UploadPhotoHandler(
 		}
 
 		return true
-	}
-
-	private fun createPhotoInfo(photoName: String, packet: SendPhotoPacket, ipHash: String): PhotoInfo {
-		return PhotoInfo.create(
-			packet.userId,
-			photoName,
-			packet.isPublic,
-			packet.lon,
-			packet.lat,
-			TimeUtils.getTimeFast(),
-      ipHash
-    )
 	}
 
 	private fun collectPart(map: MultiValueMap<String, Part>, partName: String): Mono<MutableList<DataBuffer>> {

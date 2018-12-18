@@ -44,7 +44,7 @@ open class UserInfoRepository(
     }
   }
 
-  suspend fun accountExists(userId: String): Boolean {
+  open suspend fun accountExists(userId: String): Boolean {
     return withContext(coroutineContext) {
       return@withContext userInfoDao.userIdExists(userId).awaitFirst()
     }

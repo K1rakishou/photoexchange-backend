@@ -4,6 +4,7 @@ import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
 import com.nhaarman.mockito_kotlin.any
 import core.ErrorCode
+import core.SharedConstants
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
@@ -70,13 +71,104 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
   //TODO: add a test case when getFirebaseToken returns empty token
 
   @Test
+  fun `should be allowed to upload photos when firebase token is NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN`() {
+    val webClient = getWebTestClient()
+    val token = SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN
+    val userId = "1234235236"
+
+    runBlocking {
+      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
+      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
+      Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(true)
+      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
+      Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
+    }
+
+    kotlin.run {
+      val packet = SendPhotoPacket(33.4, 55.2, userId, true)
+      val multipartData = createTestMultipartFile(PHOTO1, packet)
+
+      val content = webClient
+        .post()
+        .uri("/v1/api/upload")
+        .contentType(MediaType.MULTIPART_FORM_DATA)
+        .body(BodyInserters.fromMultipartData(multipartData))
+        .exchange()
+        .expectStatus().is2xxSuccessful
+        .expectBody()
+
+      val response = fromBodyContent<UploadPhotoResponse>(content)
+      Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
+    }
+  }
+
+  @Test
+  fun `should not be allowed to upload photos when firebase token is empty`() {
+    val webClient = getWebTestClient()
+    val token = ""
+    val userId = "1234235236"
+
+    runBlocking {
+      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
+      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
+      Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(true)
+      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
+    }
+
+    kotlin.run {
+      val packet = SendPhotoPacket(33.4, 55.2, userId, true)
+      val multipartData = createTestMultipartFile(PHOTO1, packet)
+
+      val content = webClient
+        .post()
+        .uri("/v1/api/upload")
+        .contentType(MediaType.MULTIPART_FORM_DATA)
+        .body(BodyInserters.fromMultipartData(multipartData))
+        .exchange()
+        .expectStatus().isForbidden
+        .expectBody()
+
+      val response = fromBodyContent<UploadPhotoResponse>(content)
+      Assert.assertEquals(ErrorCode.UserDoesNotHaveFirebaseToken.value, response.errorCode)
+    }
+  }
+
+  @Test
+  fun `should not be allowed to upload photos when user has no account`() {
+    val webClient = getWebTestClient()
+    val userId = "1234235236"
+
+    runBlocking {
+      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
+      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
+      Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(false)
+    }
+
+    kotlin.run {
+      val packet = SendPhotoPacket(33.4, 55.2, userId, true)
+      val multipartData = createTestMultipartFile(PHOTO1, packet)
+
+      val content = webClient
+        .post()
+        .uri("/v1/api/upload")
+        .contentType(MediaType.MULTIPART_FORM_DATA)
+        .body(BodyInserters.fromMultipartData(multipartData))
+        .exchange()
+        .expectStatus().isForbidden
+        .expectBody()
+
+      val response = fromBodyContent<UploadPhotoResponse>(content)
+      Assert.assertEquals(ErrorCode.AccountNotFound.value, response.errorCode)
+    }
+  }
+
+  @Test
   fun `should not be allowed to upload photo when banned`() {
     val webClient = getWebTestClient()
 
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(true)
-      Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
       Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
     }
 

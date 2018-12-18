@@ -52,9 +52,21 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun save(photoInfo: PhotoInfo): PhotoInfo {
+  suspend fun save(userId: String, lon: Double, lat: Double, isPublic: Boolean, uploadedOn: Long, ipHash: String): PhotoInfo {
+    val photoName = generatePhotoInfoName()
+
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
+        val photoInfo = PhotoInfo.create(
+          userId,
+          photoName,
+          isPublic,
+          lon,
+          lat,
+          uploadedOn,
+          ipHash
+        )
+
         photoInfo.photoId = mongoSequenceDao.getNextPhotoId().awaitFirst()
 
         val savedPhotoInfo = photoInfoDao.save(photoInfo).awaitFirst()
