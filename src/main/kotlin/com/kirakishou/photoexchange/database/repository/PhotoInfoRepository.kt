@@ -272,7 +272,7 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun tryDoExchange(userId: String, newUploadingPhoto: PhotoInfo): PhotoInfo {
+  open suspend fun tryDoExchange(userId: String, newUploadingPhoto: PhotoInfo): PhotoInfo {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         val oldestPhoto = photoInfoDao.findOldestEmptyPhoto(userId).awaitFirst()

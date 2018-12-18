@@ -63,6 +63,11 @@ open class GalleryPhotoDao(
       .onErrorReturn(false)
   }
 
+  fun testFindAll(): Mono<List<GalleryPhoto>> {
+    return template.findAll(GalleryPhoto::class.java)
+      .collectList()
+  }
+
   companion object {
     const val COLLECTION_NAME = "gallery_photo"
   }

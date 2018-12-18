@@ -229,8 +229,6 @@ class UploadPhotoHandler(
     val filePath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
     val outFile = File(filePath)
 
-    logger.debug("outFile = ${outFile.absolutePath}")
-
     try {
       diskManipulationService.copyDataBuffersToFile(photoChunks, outFile)
     } catch (e: IOException) {
