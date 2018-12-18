@@ -8,8 +8,10 @@ import kotlinx.coroutines.sync.withLock
 import net.coobird.thumbnailator.Thumbnails
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
+import org.springframework.core.io.buffer.DataBuffer
 import java.awt.Dimension
 import java.io.File
+import java.io.IOException
 import java.lang.RuntimeException
 import javax.imageio.ImageIO
 
@@ -18,6 +20,22 @@ open class DiskManipulationService {
 	private val mutex = Mutex()
 	private val photoRemovedPlaceholderName = "photo_has_been_removed"
 	private val noMapAvailablePlaceholderName = "no_map_available"
+
+	@Throws(IOException::class)
+	open fun copyDataBuffersToFile(bufferList: List<DataBuffer>, outFile: File) {
+		outFile.outputStream().use { outputStream ->
+			for (chunk in bufferList) {
+				chunk.asInputStream().use { inputStream ->
+					val chunkSize = inputStream.available()
+					val buffer = ByteArray(chunkSize)
+
+					//copy chunks from one stream to another
+					inputStream.read(buffer, 0, chunkSize)
+					outputStream.write(buffer, 0, chunkSize)
+				}
+			}
+		}
+	}
 
 	open suspend fun resizeAndSavePhotos(tempFile: FileWrapper, newUploadingPhoto: PhotoInfo) {
 		fun resizeAndSaveImageOnDisk(
