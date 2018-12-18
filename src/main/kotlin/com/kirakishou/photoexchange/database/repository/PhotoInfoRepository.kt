@@ -278,7 +278,7 @@ open class PhotoInfoRepository(
         val oldestPhoto = photoInfoDao.findOldestEmptyPhoto(userId).awaitFirst()
         if (oldestPhoto.isEmpty()) {
           if (!photoInfoDao.updatePhotoAsEmpty(newUploadingPhoto.photoId).awaitFirst()) {
-            throw RuntimeException("Could not set photoExchangeId as EMPTY_PHOTO_ID")
+            throw ExchangeException("Could not set photoExchangeId as EMPTY_PHOTO_ID")
           }
 
           return@withLock PhotoInfo.empty()
@@ -286,27 +286,37 @@ open class PhotoInfoRepository(
 
         val transactionResult = template.inTransaction().execute {
           return@execute mono {
+            //TODO: do we even need this?
             if (!photoInfoDao.updatePhotoAsExchanging(oldestPhoto.photoId).awaitFirst()) {
-              throw ExchangeException()
+              throw ExchangeException("Could not updatePhotoAsExchanging for " +
+                "oldestPhoto.photoId =  ${oldestPhoto.photoId}")
             }
 
             if (!photoInfoDao.updatePhotoSetReceiverId(oldestPhoto.photoId, newUploadingPhoto.photoId).awaitFirst()) {
-              throw ExchangeException()
+              throw ExchangeException("Could not updatePhotoSetReceiverId for " +
+                "oldestPhoto.photoId = ${oldestPhoto.photoId}, " +
+                "newUploadingPhoto.photoId = ${newUploadingPhoto.photoId}")
             }
 
             if (!photoInfoDao.updatePhotoSetReceiverId(newUploadingPhoto.photoId, oldestPhoto.photoId).awaitFirst()) {
-              throw ExchangeException()
+              throw ExchangeException("Could not updatePhotoSetReceiverId for " +
+                "newUploadingPhoto.photoId = ${newUploadingPhoto.photoId}, " +
+                "oldestPhoto.photoId = ${oldestPhoto.photoId}")
             }
 
             return@mono true
           }
         }
           .single()
+          .doOnError { logger.error("Error in exchange transaction", it) }
           .onErrorReturn(false)
           .awaitFirst()
 
         if (!transactionResult) {
-          //TODO: probably should updatePhotoAsEmpty here as well
+          if (!photoInfoDao.updatePhotoAsEmpty(newUploadingPhoto.photoId).awaitFirst()) {
+            throw ExchangeException("Could not set photoExchangeId as EMPTY_PHOTO_ID")
+          }
+
           return@withLock PhotoInfo.empty()
         }
 
