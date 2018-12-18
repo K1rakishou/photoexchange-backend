@@ -36,6 +36,7 @@ abstract class AbstractHandlerTest {
 	val PHOTO4 = "test_photos/photo_4.jpg"
 	val PHOTO5 = "test_photos/photo_5.jpg"
 	val PHOTO6 = "test_photos/photo_6.jpg"
+	val BIG_PHOTO = "test_photos/big_photo.png"
 
 	val ipAddress = "127.0.0.1"
 
@@ -169,6 +170,30 @@ abstract class AbstractHandlerTest {
 
 		val photoPart = HttpEntity(fileResource, HttpHeaders().also { it.contentType = MediaType.IMAGE_JPEG })
 		val packetPart = HttpEntity(jsonConverterService.toJson(packet), HttpHeaders().also { it.contentType = MediaType.APPLICATION_JSON })
+
+		val parts = LinkedMultiValueMap<String, Any>()
+		parts.add("photo", photoPart)
+		parts.add("packet", packetPart)
+
+		return parts
+	}
+
+	fun createMultipartFileWithEmptyPhoto(packet: SendPhotoPacket): MultiValueMap<String, Any> {
+		val photoPart = HttpEntity("",  HttpHeaders().also { it.contentType = MediaType.IMAGE_JPEG })
+		val packetPart = HttpEntity(jsonConverterService.toJson(packet), HttpHeaders().also { it.contentType = MediaType.APPLICATION_JSON })
+
+		val parts = LinkedMultiValueMap<String, Any>()
+		parts.add("photo", photoPart)
+		parts.add("packet", packetPart)
+
+		return parts
+	}
+
+	fun createMultipartFileWithEmptyPacket(fileResourceName: String): MultiValueMap<String, Any> {
+		val fileResource = ClassPathResource(fileResourceName)
+
+		val photoPart = HttpEntity(fileResource, HttpHeaders().also { it.contentType = MediaType.IMAGE_JPEG })
+		val packetPart = HttpEntity("", HttpHeaders().also { it.contentType = MediaType.APPLICATION_JSON })
 
 		val parts = LinkedMultiValueMap<String, Any>()
 		parts.add("photo", photoPart)

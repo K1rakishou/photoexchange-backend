@@ -30,7 +30,6 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
 import java.io.File
 import java.io.IOException
-import java.lang.RuntimeException
 
 class UploadPhotoHandler(
 	jsonConverter: JsonConverterService,

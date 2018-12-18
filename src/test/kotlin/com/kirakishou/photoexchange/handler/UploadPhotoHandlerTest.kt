@@ -67,20 +67,74 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     super.clear()
   }
 
-  //TODO: add a test case with a few photos when some of them do not have static map downloaded
-  //TODO: add a test case when getFirebaseToken returns empty token
-
   @Test
-  fun `should be allowed to upload photos when firebase token is NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN`() {
+  fun `should not be allowed to upload photo that exceeds MaxPhotoSize`() {
     val webClient = getWebTestClient()
-    val token = SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN
     val userId = "1234235236"
+    val token = "fwerwe"
 
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
       Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(true)
       Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
+      Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
+    }
+
+    kotlin.run {
+      val packet = SendPhotoPacket(33.4, 55.2, userId, true)
+      val multipartData = createTestMultipartFile(BIG_PHOTO, packet)
+
+      val content = webClient
+        .post()
+        .uri("/v1/api/upload")
+        .contentType(MediaType.MULTIPART_FORM_DATA)
+        .body(BodyInserters.fromMultipartData(multipartData))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+
+      val response = fromBodyContent<UploadPhotoResponse>(content)
+      Assert.assertEquals(ErrorCode.ExceededMaxPhotoSize.value, response.errorCode)
+    }
+  }
+
+  @Test
+  fun `should return RequestPartIsEmpty when packet part is empty`() {
+    val webClient = getWebTestClient()
+
+    runBlocking {
+      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
+      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
+    }
+
+    kotlin.run {
+      val multipartData = createMultipartFileWithEmptyPacket(PHOTO1)
+
+      val content = webClient
+        .post()
+        .uri("/v1/api/upload")
+        .contentType(MediaType.MULTIPART_FORM_DATA)
+        .body(BodyInserters.fromMultipartData(multipartData))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+
+      val response = fromBodyContent<UploadPhotoResponse>(content)
+      Assert.assertEquals(ErrorCode.RequestPartIsEmpty.value, response.errorCode)
+    }
+  }
+
+  @Test
+  fun `should be allowed to upload photos when firebase token is NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN`() {
+    val webClient = getWebTestClient()
+    val userId = "1234235236"
+
+    runBlocking {
+      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
+      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
+      Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(true)
+      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn(SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
     }
 
