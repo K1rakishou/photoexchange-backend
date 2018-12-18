@@ -376,7 +376,7 @@ open class PhotoInfoRepository(
       return@withContext mutex.withLock {
         return@withLock if (favouritedPhotoDao.isPhotoFavourited(userId, photoName).awaitFirst()) {
           if (!favouritedPhotoDao.unfavouritePhoto(userId, photoName).awaitFirst()) {
-            return@withLock FavouritePhotoResult.Error()
+            return@withLock FavouritePhotoResult.Error
           }
 
           val favouritesCount = favouritedPhotoDao.countFavouritesByPhotoName(photoName).awaitFirst()
@@ -384,7 +384,7 @@ open class PhotoInfoRepository(
         } else {
           val id = mongoSequenceDao.getNextFavouritedPhotoId().awaitFirst()
           if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, photoName, userId)).awaitFirst()) {
-            return@withLock FavouritePhotoResult.Error()
+            return@withLock FavouritePhotoResult.Error
           }
 
           val favouritesCount = favouritedPhotoDao.countFavouritesByPhotoName(photoName).awaitFirst()
@@ -399,17 +399,17 @@ open class PhotoInfoRepository(
       return@withContext mutex.withLock {
         return@withLock if (reportedPhotoDao.isPhotoReported(userId, photoName).awaitFirst()) {
           if (!reportedPhotoDao.unreportPhoto(userId, photoName).awaitFirst()) {
-            return@withLock ReportPhotoResult.Error()
+            return@withLock ReportPhotoResult.Error
           }
 
-          ReportPhotoResult.Unreported()
+          ReportPhotoResult.Unreported
         } else {
           val id = mongoSequenceDao.getNextReportedPhotoId().awaitFirst()
           if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, photoName, userId)).awaitFirst()) {
-            return@withLock ReportPhotoResult.Error()
+            return@withLock ReportPhotoResult.Error
           }
 
-          ReportPhotoResult.Reported()
+          ReportPhotoResult.Reported
         }
       }
     }
@@ -538,17 +538,17 @@ open class PhotoInfoRepository(
   )
 
   sealed class ReportPhotoResult {
-    class Reported : ReportPhotoResult()
-    class Unreported : ReportPhotoResult()
-    class PhotoDoesNotExist() : ReportPhotoResult()
-    class Error : ReportPhotoResult()
+    object Reported : ReportPhotoResult()
+    object Unreported : ReportPhotoResult()
+    object PhotoDoesNotExist : ReportPhotoResult()
+    object Error : ReportPhotoResult()
   }
 
   sealed class FavouritePhotoResult {
     class Favourited(val count: Long) : FavouritePhotoResult()
     class Unfavourited(val count: Long) : FavouritePhotoResult()
-    class PhotoDoesNotExist() : FavouritePhotoResult()
-    class Error : FavouritePhotoResult()
+    object PhotoDoesNotExist : FavouritePhotoResult()
+    object Error : FavouritePhotoResult()
   }
 }
 
