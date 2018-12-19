@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.database.repository
 
+import com.kirakishou.photoexchange.Utils
 import com.kirakishou.photoexchange.database.entity.*
 import com.kirakishou.photoexchange.exception.DatabaseTransactionException
 import com.nhaarman.mockito_kotlin.any
@@ -12,6 +13,7 @@ import org.mockito.Mockito
 import reactor.core.publisher.Mono
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class PhotoInfoRepositoryTest : AbstractRepositoryTest() {
 
@@ -47,6 +49,26 @@ class PhotoInfoRepositoryTest : AbstractRepositoryTest() {
       assertEquals(photoInfo.photoName, reportedPhotoDao.testFindAll().awaitFirst().first().photoName)
       assertEquals(photoInfo.photoName, galleryPhotoDao.testFindAll().awaitFirst().first().photoName)
       assertEquals(photoInfo.photoId, locationMapDao.testFindAll().awaitFirst().first().photoId)
+    }
+  }
+
+  @Test
+  fun `save method should create gallery photo if uploaded photo is public`() {
+    runBlocking {
+      val saved = photoInfoRepository.save("4234", 11.1, 22.2, true, 5345L, "23123")
+
+      assertEquals(saved.photoName, photoInfoDao.testFindAll().awaitFirst().first().photoName)
+      assertEquals(saved.photoName, galleryPhotoDao.testFindAll().awaitFirst().first().photoName)
+    }
+  }
+
+  @Test
+  fun `save method should NOT create gallery photo if uploaded photo is private`() {
+    runBlocking {
+      val saved = photoInfoRepository.save("4234", 11.1, 22.2, false, 5345L, "23123")
+
+      assertEquals(saved.photoName, photoInfoDao.testFindAll().awaitFirst().first().photoName)
+      assertTrue(galleryPhotoDao.testFindAll().awaitFirst().isEmpty())
     }
   }
 
