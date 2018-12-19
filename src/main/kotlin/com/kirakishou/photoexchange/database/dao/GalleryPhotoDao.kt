@@ -23,7 +23,7 @@ open class GalleryPhotoDao(
   }
 
   open fun save(galleryPhoto: GalleryPhoto): Mono<Boolean> {
-    return template.save(galleryPhoto)
+    return reactiveTemplate.save(galleryPhoto)
       .map { true }
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)
@@ -35,7 +35,7 @@ open class GalleryPhotoDao(
       .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).lt(lastUploadedOn))
       .limit(count)
 
-    return template.find(query, GalleryPhoto::class.java)
+    return reactiveTemplate.find(query, GalleryPhoto::class.java)
       .collectList()
       .defaultIfEmpty(emptyList())
       .doOnError { error -> logger.error("DB error", error) }
@@ -47,22 +47,18 @@ open class GalleryPhotoDao(
       .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_NAME).ne(""))
       .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).gt(time))
 
-    return template.count(query, GalleryPhoto::class.java)
+    return reactiveTemplate.count(query, GalleryPhoto::class.java)
       .defaultIfEmpty(0L)
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(0L)
       .map { it.toInt() }
   }
 
-  /**
-   * Transactional
-   * */
-
-  open fun deleteByPhotoNameTransactional(txTemplate: ReactiveMongoOperations, photoName: String): Mono<Boolean> {
+  open fun deleteByPhotoName(photoName: String, template: ReactiveMongoOperations = reactiveTemplate): Mono<Boolean> {
     val query = Query()
       .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
-    return txTemplate.remove(query, GalleryPhoto::class.java)
+    return template.remove(query, GalleryPhoto::class.java)
       .map { deletionResult -> deletionResult.wasAcknowledged() }
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)
@@ -73,7 +69,7 @@ open class GalleryPhotoDao(
    * */
 
   open fun testFindAll(): Mono<List<GalleryPhoto>> {
-    return template.findAll(GalleryPhoto::class.java)
+    return reactiveTemplate.findAll(GalleryPhoto::class.java)
       .collectList()
   }
 

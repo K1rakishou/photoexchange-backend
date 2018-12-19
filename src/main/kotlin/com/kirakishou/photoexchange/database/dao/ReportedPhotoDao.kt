@@ -22,7 +22,7 @@ open class ReportedPhotoDao(
 	}
 
 	open fun reportPhoto(reportedPhoto: ReportedPhoto): Mono<Boolean> {
-		return template.save(reportedPhoto)
+		return reactiveTemplate.save(reportedPhoto)
 			.map { true }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
@@ -33,7 +33,7 @@ open class ReportedPhotoDao(
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
 
-		return template.remove(query, ReportedPhoto::class.java)
+		return reactiveTemplate.remove(query, ReportedPhoto::class.java)
 			.map { deletionResult -> deletionResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
@@ -45,7 +45,7 @@ open class ReportedPhotoDao(
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`in`(photoNameList))
 			.limit(photoNameList.size)
 
-		return template.find(query, ReportedPhoto::class.java)
+		return reactiveTemplate.find(query, ReportedPhoto::class.java)
 			.collectList()
 			.defaultIfEmpty(emptyList())
 			.doOnError { error -> logger.error("DB error", error) }
@@ -57,13 +57,13 @@ open class ReportedPhotoDao(
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
 
-		return template.exists(query, ReportedPhoto::class.java)
+		return reactiveTemplate.exists(query, ReportedPhoto::class.java)
 			.defaultIfEmpty(false)
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
 
-	open fun deleteReportByPhotoName(photoName: String): Mono<Boolean> {
+	open fun deleteReportByPhotoName(photoName: String, template: ReactiveMongoOperations = reactiveTemplate): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
@@ -74,25 +74,11 @@ open class ReportedPhotoDao(
 	}
 
 	/**
-	 * Transactional
-	 * */
-
-	open fun deleteReportByPhotoNameTransactional(txTemplate: ReactiveMongoOperations, photoName: String): Mono<Boolean> {
-		val query = Query()
-			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
-
-		return txTemplate.remove(query, ReportedPhoto::class.java)
-			.map { deletionResult -> deletionResult.wasAcknowledged() }
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(false)
-	}
-
-	/**
 	 * For test purposes
 	 * */
 
 	open fun testFindAll(): Mono<List<ReportedPhoto>> {
-		return template.findAll(ReportedPhoto::class.java)
+		return reactiveTemplate.findAll(ReportedPhoto::class.java)
 			.collectList()
 	}
 

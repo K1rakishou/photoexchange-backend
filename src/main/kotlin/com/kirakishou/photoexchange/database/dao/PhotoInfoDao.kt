@@ -24,7 +24,7 @@ open class PhotoInfoDao(
   }
 
   open fun save(photoInfo: PhotoInfo): Mono<PhotoInfo> {
-    return template.save(photoInfo)
+    return reactiveTemplate.save(photoInfo)
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(PhotoInfo.empty())
   }
@@ -36,7 +36,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.LOCATION_MAP_ID).gt(0L))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
 
-    return template.findOne(query, PhotoInfo::class.java)
+    return reactiveTemplate.findOne(query, PhotoInfo::class.java)
       .defaultIfEmpty(PhotoInfo.empty())
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(PhotoInfo.empty())
@@ -49,7 +49,7 @@ open class PhotoInfoDao(
     val update = Update()
       .set(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID, PhotoInfo.EMPTY_PHOTO_ID)
 
-    return template.updateFirst(query, update, PhotoInfo::class.java)
+    return reactiveTemplate.updateFirst(query, update, PhotoInfo::class.java)
       .map { updateResult -> updateResult.wasAcknowledged() }
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)
@@ -62,7 +62,7 @@ open class PhotoInfoDao(
     val update = Update()
       .set(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID, receiverId)
 
-    return template.updateFirst(query, update, PhotoInfo::class.java)
+    return reactiveTemplate.updateFirst(query, update, PhotoInfo::class.java)
       .map { updateResult -> updateResult.wasAcknowledged() }
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)
@@ -72,7 +72,7 @@ open class PhotoInfoDao(
     val query = Query()
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
 
-    return template.find(query, PhotoInfo::class.java)
+    return reactiveTemplate.find(query, PhotoInfo::class.java)
       .collectList()
       .defaultIfEmpty(emptyList())
       .doOnError { error -> logger.error("DB error", error) }
@@ -88,7 +88,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.LOCATION_MAP_ID).ne(PhotoInfo.EMPTY_LOCATION_MAP_ID))
       .limit(photoNameList.size)
 
-    return template.find(query, PhotoInfo::class.java)
+    return reactiveTemplate.find(query, PhotoInfo::class.java)
       .collectList()
       .defaultIfEmpty(emptyList())
       .doOnError { error -> logger.error("DB error", error) }
@@ -101,7 +101,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
       .limit(photoNameList.size)
 
-    return template.find(query, PhotoInfo::class.java)
+    return reactiveTemplate.find(query, PhotoInfo::class.java)
       .collectList()
       .defaultIfEmpty(emptyList())
       .doOnError { error -> logger.error("DB error", error) }
@@ -124,7 +124,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
       .limit(photoIdList.size)
 
-    return template.find(query, PhotoInfo::class.java)
+    return reactiveTemplate.find(query, PhotoInfo::class.java)
       .collectList()
       .defaultIfEmpty(emptyList())
       .doOnError { error -> logger.error("DB error", error) }
@@ -138,7 +138,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
       .limit(count)
 
-    return template.find(query, PhotoInfo::class.java)
+    return reactiveTemplate.find(query, PhotoInfo::class.java)
       .collectList()
       .defaultIfEmpty(emptyList())
       .doOnError { error -> logger.error("DB error", error) }
@@ -153,7 +153,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
       .limit(count)
 
-    return template.find(query, PhotoInfo::class.java)
+    return reactiveTemplate.find(query, PhotoInfo::class.java)
       .collectList()
       .defaultIfEmpty(emptyList())
       .doOnError { error -> logger.error("DB error", error) }
@@ -165,7 +165,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(uploaderPhotoId))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
 
-    return template.findOne(query, PhotoInfo::class.java)
+    return reactiveTemplate.findOne(query, PhotoInfo::class.java)
       .defaultIfEmpty(PhotoInfo.empty())
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(PhotoInfo.empty())
@@ -175,7 +175,7 @@ open class PhotoInfoDao(
     val query = Query()
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
-    return template.findOne(query, PhotoInfo::class.java)
+    return reactiveTemplate.findOne(query, PhotoInfo::class.java)
       .defaultIfEmpty(PhotoInfo.empty())
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(PhotoInfo.empty())
@@ -186,7 +186,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(photoName))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
 
-    return template.findOne(query, PhotoInfo::class.java)
+    return reactiveTemplate.findOne(query, PhotoInfo::class.java)
       .defaultIfEmpty(PhotoInfo.empty())
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(PhotoInfo.empty())
@@ -199,7 +199,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
       .limit(count)
 
-    return template.find(query, PhotoInfo::class.java)
+    return reactiveTemplate.find(query, PhotoInfo::class.java)
       .collectList()
       .defaultIfEmpty(emptyList())
       .doOnError { error -> logger.error("DB error", error) }
@@ -213,7 +213,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).gt(0L))
       .limit(count)
 
-    return template.find(query, PhotoInfo::class.java)
+    return reactiveTemplate.find(query, PhotoInfo::class.java)
       .collectList()
       .defaultIfEmpty(emptyList())
       .doOnError { error -> logger.error("DB error", error) }
@@ -227,7 +227,7 @@ open class PhotoInfoDao(
     val update = Update()
       .set(PhotoInfo.Mongo.Field.LOCATION_MAP_ID, locationMapId)
 
-    return template.updateFirst(query, update, PhotoInfo::class.java)
+    return reactiveTemplate.updateFirst(query, update, PhotoInfo::class.java)
       .map { updateResult -> updateResult.wasAcknowledged() }
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)
@@ -240,13 +240,13 @@ open class PhotoInfoDao(
     val update = Update()
       .set(PhotoInfo.Mongo.Field.DELETED_ON, now)
 
-    return template.updateMulti(query, update, PhotoInfo::class.java)
+    return reactiveTemplate.updateMulti(query, update, PhotoInfo::class.java)
       .map { updateResult -> updateResult.wasAcknowledged() }
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)
   }
 
-  open fun deleteById(photoId: Long): Mono<Boolean> {
+  open fun deleteById(photoId: Long, template: ReactiveMongoOperations = reactiveTemplate): Mono<Boolean> {
     val query = Query()
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
 
@@ -261,7 +261,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(ids))
       .limit(ids.size)
 
-    return template.remove(query, PhotoInfo::class.java)
+    return reactiveTemplate.remove(query, PhotoInfo::class.java)
       .map { deletionResult -> deletionResult.wasAcknowledged() }
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)
@@ -271,7 +271,7 @@ open class PhotoInfoDao(
     val query = Query()
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_NAME).`is`(generatedName))
 
-    return template.exists(query, PhotoInfo::class.java)
+    return reactiveTemplate.exists(query, PhotoInfo::class.java)
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)
   }
@@ -283,7 +283,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.UPLOADED_ON).gt(time))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
 
-    return template.count(query, PhotoInfo::class.java)
+    return reactiveTemplate.count(query, PhotoInfo::class.java)
       .defaultIfEmpty(0L)
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(0L)
@@ -297,7 +297,7 @@ open class PhotoInfoDao(
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).`is`(0L))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.USER_ID).`is`(userId))
 
-    return template.count(query, PhotoInfo::class.java)
+    return reactiveTemplate.count(query, PhotoInfo::class.java)
       .defaultIfEmpty(0L)
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(0L)
@@ -305,25 +305,11 @@ open class PhotoInfoDao(
   }
 
   /**
-   * Transactional
-   * */
-
-  open fun deleteByIdTransactional(txTemplate: ReactiveMongoOperations, photoId: Long): Mono<Boolean> {
-    val query = Query()
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
-
-    return txTemplate.remove(query, PhotoInfo::class.java)
-      .map { deletionResult -> deletionResult.wasAcknowledged() }
-      .doOnError { error -> logger.error("DB error", error) }
-      .onErrorReturn(false)
-  }
-
-  /**
    * For test purposes
    * */
 
   open fun testFindAll(): Mono<List<PhotoInfo>> {
-    return template.findAll(PhotoInfo::class.java)
+    return reactiveTemplate.findAll(PhotoInfo::class.java)
       .collectList()
       .defaultIfEmpty(emptyList())
       .doOnError { error -> logger.error("DB error", error) }

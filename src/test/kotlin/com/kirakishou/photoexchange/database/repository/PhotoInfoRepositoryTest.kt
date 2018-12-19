@@ -32,7 +32,7 @@ class PhotoInfoRepositoryTest : AbstractRepositoryTest() {
     runBlocking {
       Mockito
         .doReturn(Mono.error<Boolean>(DatabaseTransactionException("BAM")))
-        .`when`(reportedPhotoDao).deleteReportByPhotoNameTransactional(any(), Mockito.anyString())
+        .`when`(reportedPhotoDao).deleteReportByPhotoName(Mockito.anyString(), any())
 
       val saved = photoInfoDao.save(photoInfo).awaitFirst()
       galleryPhotoDao.save(GalleryPhoto.create(saved.photoId, saved.photoName, 777L)).awaitFirst()

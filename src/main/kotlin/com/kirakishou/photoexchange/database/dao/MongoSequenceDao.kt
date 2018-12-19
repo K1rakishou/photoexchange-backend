@@ -36,7 +36,7 @@ open class MongoSequenceDao(
 
 		val options = FindAndModifyOptions.options().returnNew(true).upsert(true)
 
-		return template.findAndModify(query, update, options, MongoSequence::class.java)
+		return reactiveTemplate.findAndModify(query, update, options, MongoSequence::class.java)
 			.map { it.id }
 	}
 

@@ -343,11 +343,11 @@ open class PhotoInfoRepository(
 
     val transactionMono = template.inTransaction().execute { txTemplate ->
       return@execute Flux.merge(
-        photoInfoDao.deleteByIdTransactional(txTemplate, photoInfo.photoId),
-        favouritedPhotoDao.deleteFavouriteByPhotoNameTransactional(txTemplate, photoInfo.photoName),
-        reportedPhotoDao.deleteReportByPhotoNameTransactional(txTemplate, photoInfo.photoName),
-        locationMapDao.deleteByIdTransactional(txTemplate, photoInfo.photoId),
-        galleryPhotoDao.deleteByPhotoNameTransactional(txTemplate, photoInfo.photoName)
+        photoInfoDao.deleteById(photoInfo.photoId, txTemplate),
+        favouritedPhotoDao.deleteFavouriteByPhotoName(photoInfo.photoName, txTemplate),
+        reportedPhotoDao.deleteReportByPhotoName(photoInfo.photoName, txTemplate),
+        locationMapDao.deleteById(photoInfo.photoId, txTemplate),
+        galleryPhotoDao.deleteByPhotoName(photoInfo.photoName, txTemplate)
       )
     }.next()
 

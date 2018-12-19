@@ -24,7 +24,7 @@ open class LocationMapDao(
 	}
 
 	open fun save(locationMap: LocationMap): Mono<LocationMap> {
-		return template.save(locationMap)
+		return reactiveTemplate.save(locationMap)
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(LocationMap.empty())
 	}
@@ -35,7 +35,7 @@ open class LocationMapDao(
 			.addCriteria(Criteria.where(LocationMap.Mongo.Field.MAP_STATUS).`is`(LocationMap.MapStatus.Empty.value))
 			.limit(count)
 
-		return template.find(query, LocationMap::class.java)
+		return reactiveTemplate.find(query, LocationMap::class.java)
 			.collectList()
 			.defaultIfEmpty(emptyList())
 			.doOnError { error -> logger.error("DB error", error) }
@@ -49,7 +49,7 @@ open class LocationMapDao(
 		val update = Update()
 			.set(LocationMap.Mongo.Field.MAP_STATUS, LocationMap.MapStatus.Ready.value)
 
-		return template.updateFirst(query, update, LocationMap::class.java)
+		return reactiveTemplate.updateFirst(query, update, LocationMap::class.java)
 			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
@@ -62,7 +62,7 @@ open class LocationMapDao(
 		val update = Update()
 			.set(LocationMap.Mongo.Field.MAP_STATUS, LocationMap.MapStatus.Anonymous.value)
 
-		return template.updateFirst(query, update, LocationMap::class.java)
+		return reactiveTemplate.updateFirst(query, update, LocationMap::class.java)
 			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
@@ -75,7 +75,7 @@ open class LocationMapDao(
 		val update = Update()
 			.set(LocationMap.Mongo.Field.MAP_STATUS, LocationMap.MapStatus.Failed.value)
 
-		return template.updateFirst(query, update, LocationMap::class.java)
+		return reactiveTemplate.updateFirst(query, update, LocationMap::class.java)
 			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
@@ -89,13 +89,13 @@ open class LocationMapDao(
 			.inc(LocationMap.Mongo.Field.ATTEMPTS_COUNT, 1)
 			.set(LocationMap.Mongo.Field.NEXT_ATTEMPT_TIME, nextAttemptTime)
 
-		return template.updateFirst(query, update, LocationMap::class.java)
+		return reactiveTemplate.updateFirst(query, update, LocationMap::class.java)
 			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
 
-	open fun deleteById(photoId: Long): Mono<Boolean> {
+	open fun deleteById(photoId: Long, template: ReactiveMongoOperations = reactiveTemplate): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(LocationMap.Mongo.Field.PHOTO_ID).`is`(photoId))
 
@@ -110,21 +110,7 @@ open class LocationMapDao(
 			.addCriteria(Criteria.where(LocationMap.Mongo.Field.PHOTO_ID).`in`(photoIds))
 			.limit(photoIds.size)
 
-		return template.remove(query, LocationMap::class.java)
-			.map { deletionResult -> deletionResult.wasAcknowledged() }
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(false)
-	}
-
-	/**
-	 * Transactional
-	 * */
-
-	open fun deleteByIdTransactional(txTemplate: ReactiveMongoOperations, photoId: Long): Mono<Boolean> {
-		val query = Query()
-			.addCriteria(Criteria.where(LocationMap.Mongo.Field.PHOTO_ID).`is`(photoId))
-
-		return txTemplate.remove(query, LocationMap::class.java)
+		return reactiveTemplate.remove(query, LocationMap::class.java)
 			.map { deletionResult -> deletionResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
@@ -135,7 +121,7 @@ open class LocationMapDao(
 	 * */
 
 	open fun testFindAll(): Mono<List<LocationMap>> {
-		return template.findAll(LocationMap::class.java)
+		return reactiveTemplate.findAll(LocationMap::class.java)
 			.collectList()
 	}
 

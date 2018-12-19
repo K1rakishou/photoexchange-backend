@@ -21,14 +21,14 @@ open class BanListDao(
   }
 
   fun save(banEntry: BanEntry): Mono<Boolean> {
-    return template.save(banEntry)
+    return reactiveTemplate.save(banEntry)
       .map { true }
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)
   }
 
   fun saveMany(banEntryList: List<BanEntry>): Mono<Boolean> {
-    return template.insertAll(banEntryList)
+    return reactiveTemplate.insertAll(banEntryList)
       .collectList()
       .map { true }
       .doOnError { error -> logger.error("DB error", error) }
@@ -39,7 +39,7 @@ open class BanListDao(
     val query = Query()
       .addCriteria(Criteria.where(BanEntry.Mongo.Field.IP_HASH).`is`(ipHash))
 
-    return template.findOne(query, BanEntry::class.java)
+    return reactiveTemplate.findOne(query, BanEntry::class.java)
       .defaultIfEmpty(BanEntry.empty())
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(BanEntry.empty())
