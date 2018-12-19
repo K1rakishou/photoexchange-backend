@@ -2,6 +2,7 @@ package com.kirakishou.photoexchange.database.dao
 
 import com.kirakishou.photoexchange.database.entity.ReportedPhoto
 import org.slf4j.LoggerFactory
+import org.springframework.data.mongodb.core.ReactiveMongoOperations
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
@@ -20,14 +21,14 @@ open class ReportedPhotoDao(
 		dropCollectionIfExists(COLLECTION_NAME)
 	}
 
-	fun reportPhoto(reportedPhoto: ReportedPhoto): Mono<Boolean> {
+	open fun reportPhoto(reportedPhoto: ReportedPhoto): Mono<Boolean> {
 		return template.save(reportedPhoto)
 			.map { true }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
 
-	fun unreportPhoto(userId: String, photoName: String): Mono<Boolean> {
+	open fun unreportPhoto(userId: String, photoName: String): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
@@ -38,7 +39,7 @@ open class ReportedPhotoDao(
 			.onErrorReturn(false)
 	}
 
-	fun findManyReportsByPhotoNameList(userId: String, photoNameList: List<String>): Mono<List<ReportedPhoto>> {
+	open fun findManyReportsByPhotoNameList(userId: String, photoNameList: List<String>): Mono<List<ReportedPhoto>> {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`in`(photoNameList))
@@ -51,7 +52,7 @@ open class ReportedPhotoDao(
 			.onErrorReturn(emptyList())
 	}
 
-	fun isPhotoReported(userId: String, photoName: String): Mono<Boolean> {
+	open fun isPhotoReported(userId: String, photoName: String): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.USER_ID).`is`(userId))
@@ -62,7 +63,7 @@ open class ReportedPhotoDao(
 			.onErrorReturn(false)
 	}
 
-	fun deleteReportByPhotoName(photoName: String): Mono<Boolean> {
+	open fun deleteReportByPhotoName(photoName: String): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
@@ -70,6 +71,29 @@ open class ReportedPhotoDao(
 			.map { deletionResult -> deletionResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
+	}
+
+	/**
+	 * Transactional
+	 * */
+
+	open fun deleteReportByPhotoNameTransactional(txTemplate: ReactiveMongoOperations, photoName: String): Mono<Boolean> {
+		val query = Query()
+			.addCriteria(Criteria.where(ReportedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
+
+		return txTemplate.remove(query, ReportedPhoto::class.java)
+			.map { deletionResult -> deletionResult.wasAcknowledged() }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
+	}
+
+	/**
+	 * For test purposes
+	 * */
+
+	open fun testFindAll(): Mono<List<ReportedPhoto>> {
+		return template.findAll(ReportedPhoto::class.java)
+			.collectList()
 	}
 
 	companion object {

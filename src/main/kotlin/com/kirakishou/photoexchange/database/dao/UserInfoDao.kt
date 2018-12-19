@@ -21,13 +21,13 @@ open class UserInfoDao(
 		dropCollectionIfExists(COLLECTION_NAME)
 	}
 
-	fun save(userInfo: UserInfo): Mono<UserInfo> {
+	open fun save(userInfo: UserInfo): Mono<UserInfo> {
 		return template.save(userInfo)
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(UserInfo.empty())
 	}
 
-  fun userIdExists(userId: String): Mono<Boolean> {
+  open fun userIdExists(userId: String): Mono<Boolean> {
     val query = Query()
       .addCriteria(Criteria.where(UserInfo.Mongo.Field.USER_ID).`is`(userId))
 
@@ -37,7 +37,7 @@ open class UserInfoDao(
       .onErrorReturn(false)
   }
 
-  fun getUser(userId: String): Mono<UserInfo> {
+  open fun getUser(userId: String): Mono<UserInfo> {
     val query = Query()
       .addCriteria(Criteria.where(UserInfo.Mongo.Field.USER_ID).`is`(userId))
 
@@ -47,7 +47,7 @@ open class UserInfoDao(
       .onErrorReturn(UserInfo.empty())
   }
 
-	fun updateFirebaseToken(userId: String, token: String): Mono<Boolean> {
+	open fun updateFirebaseToken(userId: String, token: String): Mono<Boolean> {
     val query = Query()
       .addCriteria(Criteria.where(UserInfo.Mongo.Field.USER_ID).`is`(userId))
 

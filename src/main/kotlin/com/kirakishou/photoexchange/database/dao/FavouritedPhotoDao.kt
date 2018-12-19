@@ -2,6 +2,7 @@ package com.kirakishou.photoexchange.database.dao
 
 import com.kirakishou.photoexchange.database.entity.FavouritedPhoto
 import org.slf4j.LoggerFactory
+import org.springframework.data.mongodb.core.ReactiveMongoOperations
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
@@ -20,14 +21,14 @@ open class FavouritedPhotoDao(
 		dropCollectionIfExists(COLLECTION_NAME)
 	}
 
-	fun favouritePhoto(favouritedPhoto: FavouritedPhoto): Mono<Boolean> {
+	open fun favouritePhoto(favouritedPhoto: FavouritedPhoto): Mono<Boolean> {
 		return template.save(favouritedPhoto)
 			.map { true }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
 
-	fun unfavouritePhoto(userId: String, photoName: String): Mono<Boolean> {
+	open fun unfavouritePhoto(userId: String, photoName: String): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
@@ -38,7 +39,7 @@ open class FavouritedPhotoDao(
 			.onErrorReturn(false)
 	}
 
-	fun findManyFavouritesByPhotoNameList(userId: String, photoNameList: List<String>): Mono<List<FavouritedPhoto>> {
+	open fun findManyFavouritesByPhotoNameList(userId: String, photoNameList: List<String>): Mono<List<FavouritedPhoto>> {
     val query = Query()
       .addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
       .addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_NAME).`in`(photoNameList))
@@ -51,7 +52,7 @@ open class FavouritedPhotoDao(
       .onErrorReturn(emptyList())
   }
 
-	fun isPhotoFavourited(userId: String, photoName: String): Mono<Boolean> {
+	open fun isPhotoFavourited(userId: String, photoName: String): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.USER_ID).`is`(userId))
@@ -62,17 +63,7 @@ open class FavouritedPhotoDao(
 			.onErrorReturn(false)
 	}
 
-	fun deleteFavouriteByPhotoName(photoName: String): Mono<Boolean> {
-		val query = Query()
-			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
-
-		return template.remove(query, FavouritedPhoto::class.java)
-			.map { deletionResult -> deletionResult.wasAcknowledged() }
-			.doOnError { error -> logger.error("DB error", error) }
-			.onErrorReturn(false)
-	}
-
-	fun countFavouritesByPhotoName(photoName: String): Mono<Long> {
+	open fun countFavouritesByPhotoName(photoName: String): Mono<Long> {
 		val query = Query()
 			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
@@ -80,6 +71,29 @@ open class FavouritedPhotoDao(
 			.defaultIfEmpty(0)
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(0)
+	}
+
+	/**
+	 * Transactional
+	 * */
+
+	open fun deleteFavouriteByPhotoNameTransactional(txTemplate: ReactiveMongoOperations, photoName: String): Mono<Boolean> {
+		val query = Query()
+			.addCriteria(Criteria.where(FavouritedPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
+
+		return txTemplate.remove(query, FavouritedPhoto::class.java)
+			.map { deletionResult -> deletionResult.wasAcknowledged() }
+			.doOnError { error -> logger.error("DB error", error) }
+			.onErrorReturn(false)
+	}
+
+	/**
+	 * For test purposes
+	 * */
+
+	open fun testFindAll(): Mono<List<FavouritedPhoto>> {
+		return template.findAll(FavouritedPhoto::class.java)
+			.collectList()
 	}
 
 	companion object {

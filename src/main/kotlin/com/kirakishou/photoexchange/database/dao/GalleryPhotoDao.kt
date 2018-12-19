@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.database.dao
 import com.kirakishou.photoexchange.database.entity.GalleryPhoto
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
+import org.springframework.data.mongodb.core.ReactiveMongoOperations
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
@@ -21,14 +22,14 @@ open class GalleryPhotoDao(
     dropCollectionIfExists(COLLECTION_NAME)
   }
 
-  fun save(galleryPhoto: GalleryPhoto): Mono<Boolean> {
+  open fun save(galleryPhoto: GalleryPhoto): Mono<Boolean> {
     return template.save(galleryPhoto)
       .map { true }
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)
   }
 
-  fun findPage(lastUploadedOn: Long, count: Int): Mono<List<GalleryPhoto>> {
+  open fun findPage(lastUploadedOn: Long, count: Int): Mono<List<GalleryPhoto>> {
     val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
       .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_NAME).ne(""))
       .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).lt(lastUploadedOn))
@@ -41,7 +42,7 @@ open class GalleryPhotoDao(
       .onErrorReturn(emptyList())
   }
 
-  fun countFreshGalleryPhotosSince(time: Long): Mono<Int> {
+  open fun countFreshGalleryPhotosSince(time: Long): Mono<Int> {
     val query = Query().with(Sort(Sort.Direction.DESC, GalleryPhoto.Mongo.Field.ID))
       .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_NAME).ne(""))
       .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.UPLOADED_ON).gt(time))
@@ -53,17 +54,25 @@ open class GalleryPhotoDao(
       .map { it.toInt() }
   }
 
-  fun deleteByPhotoName(photoName: String): Mono<Boolean> {
+  /**
+   * Transactional
+   * */
+
+  open fun deleteByPhotoNameTransactional(txTemplate: ReactiveMongoOperations, photoName: String): Mono<Boolean> {
     val query = Query()
       .addCriteria(Criteria.where(GalleryPhoto.Mongo.Field.PHOTO_NAME).`is`(photoName))
 
-    return template.remove(query, GalleryPhoto::class.java)
+    return txTemplate.remove(query, GalleryPhoto::class.java)
       .map { deletionResult -> deletionResult.wasAcknowledged() }
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)
   }
 
-  fun testFindAll(): Mono<List<GalleryPhoto>> {
+  /**
+   * For test purposes
+   * */
+
+  open fun testFindAll(): Mono<List<GalleryPhoto>> {
     return template.findAll(GalleryPhoto::class.java)
       .collectList()
   }
