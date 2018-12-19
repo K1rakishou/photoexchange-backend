@@ -270,6 +270,14 @@ open class PhotoInfoRepository(
     }
   }
 
+  /**
+   * Tries to find the oldest not exchanged photo and exchange it with the current photo.
+   * If it cannot find oldest not exchanged photo then sets exchangedPhotoId of the newUploadingPhoto to EMPTY_PHOTO_ID
+   * and returns empty PhotoInfo.
+   * If it can then it sets exchangedPhotoId of both photos to each others in transaction.
+   * If transaction fails it sets exchangedPhotoId of the newUploadingPhoto to EMPTY_PHOTO_ID and returns empty PhotoInfo.
+   * If it doesn't fail then it returns the oldestPhoto with updated exchangedPhotoId with newUploadingPhoto.photoId.
+   * */
   open suspend fun tryDoExchange(userId: String, newUploadingPhoto: PhotoInfo): PhotoInfo {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
@@ -282,26 +290,22 @@ open class PhotoInfoRepository(
           return@withLock PhotoInfo.empty()
         }
 
-        val transactionResult = template.inTransaction().execute {
-          return@execute mono {
-            if (!photoInfoDao.updatePhotoSetReceiverId(oldestPhoto.photoId, newUploadingPhoto.photoId).awaitFirst()) {
-              throw ExchangeException("Could not updatePhotoSetReceiverId for " +
-                "oldestPhoto.photoId = ${oldestPhoto.photoId}, " +
-                "newUploadingPhoto.photoId = ${newUploadingPhoto.photoId}")
-            }
+        val transactionResult = template.inTransaction().execute { txTemplate ->
+          return@execute Flux.merge(
+            photoInfoDao.updatePhotoSetReceiverId(
+              oldestPhoto.photoId,
+              newUploadingPhoto.photoId,
+              txTemplate
+            ),
 
-            if (!photoInfoDao.updatePhotoSetReceiverId(newUploadingPhoto.photoId, oldestPhoto.photoId).awaitFirst()) {
-              throw ExchangeException("Could not updatePhotoSetReceiverId for " +
-                "newUploadingPhoto.photoId = ${newUploadingPhoto.photoId}, " +
-                "oldestPhoto.photoId = ${oldestPhoto.photoId}")
-            }
-
-            return@mono true
-          }
+            photoInfoDao.updatePhotoSetReceiverId(
+              newUploadingPhoto.photoId,
+              oldestPhoto.photoId,
+              txTemplate
+            )
+          )
         }
-          .single()
-          .doOnError { logger.error("Error in exchange transaction", it) }
-          .onErrorReturn(false)
+          .next()
           .awaitFirst()
 
         if (!transactionResult) {

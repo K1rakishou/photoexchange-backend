@@ -72,4 +72,34 @@ class PhotoInfoRepositoryTest : AbstractRepositoryTest() {
     }
   }
 
+  @Test
+  fun `tryDoExchange should return empty PhotoInfo when there is nothing to exchange with`() {
+    runBlocking {
+      val userId = "4234"
+
+      val photo = PhotoInfo(1L, -2L, 1L, userId, "ttt", true, 11.1, 22.2, 5345L, 0L, "23123")
+      val resultPhoto = photoInfoRepository.tryDoExchange(userId, photo)
+
+      assertTrue(resultPhoto.isEmpty())
+    }
+  }
+
+  @Test
+  fun `tryDoExchange should return old photo when exchange was successful`() {
+    runBlocking {
+      val userId1 = "111"
+      val userId2 = "222"
+
+      val photo1 = PhotoInfo(1L, -2L, 1L, userId1, "ert", true, 11.1, 22.2, 5345L, 0L, "23123")
+      val photo2 = PhotoInfo(2L, -2L, 2L, userId2, "ttt", true, 11.1, 22.2, 5345L, 0L, "23123")
+
+      photoInfoDao.save(photo1).awaitFirst()
+      photoInfoDao.save(photo2).awaitFirst()
+
+      val resultPhoto = photoInfoRepository.tryDoExchange(userId2, photo2)
+
+      assertEquals(1L, resultPhoto.photoId)
+      assertEquals(2L, resultPhoto.exchangedPhotoId)
+    }
+  }
 }

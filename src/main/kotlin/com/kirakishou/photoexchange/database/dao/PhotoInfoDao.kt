@@ -55,14 +55,18 @@ open class PhotoInfoDao(
       .onErrorReturn(false)
   }
 
-  open fun updatePhotoSetReceiverId(photoId: Long, receiverId: Long): Mono<Boolean> {
+  open fun updatePhotoSetReceiverId(
+    photoId: Long,
+    receiverId: Long,
+    template: ReactiveMongoOperations = reactiveTemplate
+  ): Mono<Boolean> {
     val query = Query()
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`is`(photoId))
 
     val update = Update()
       .set(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID, receiverId)
 
-    return reactiveTemplate.updateFirst(query, update, PhotoInfo::class.java)
+    return template.updateFirst(query, update, PhotoInfo::class.java)
       .map { updateResult -> updateResult.wasAcknowledged() }
       .doOnError { error -> logger.error("DB error", error) }
       .onErrorReturn(false)
