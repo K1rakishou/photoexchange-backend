@@ -5,7 +5,6 @@ import com.kirakishou.photoexchange.database.entity.FavouritedPhoto
 import com.kirakishou.photoexchange.database.entity.GalleryPhoto
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.entity.ReportedPhoto
-import com.kirakishou.photoexchange.exception.DatabaseTransactionException
 import com.kirakishou.photoexchange.exception.ExchangeException
 import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.GeneratorService
@@ -17,7 +16,7 @@ import kotlinx.coroutines.withContext
 import net.response.data.*
 import org.slf4j.LoggerFactory
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
-import reactor.core.publisher.Mono
+import reactor.core.publisher.Flux
 
 open class PhotoInfoRepository(
   private val template: ReactiveMongoTemplate,
@@ -26,7 +25,6 @@ open class PhotoInfoRepository(
   private val galleryPhotoDao: GalleryPhotoDao,
   private val favouritedPhotoDao: FavouritedPhotoDao,
   private val reportedPhotoDao: ReportedPhotoDao,
-  private val userInfoDao: UserInfoDao,
   private val locationMapDao: LocationMapDao,
   private val generator: GeneratorService,
   private val diskManipulationService: DiskManipulationService
@@ -272,6 +270,14 @@ open class PhotoInfoRepository(
     }
   }
 
+  /**
+   * Tries to find the oldest not exchanged photo and exchange it with the current photo.
+   * If it cannot find oldest not exchanged photo then sets exchangedPhotoId of the newUploadingPhoto to EMPTY_PHOTO_ID
+   * and returns empty PhotoInfo.
+   * If it can then it sets exchangedPhotoId of both photos to each others in transaction.
+   * If transaction fails it sets exchangedPhotoId of the newUploadingPhoto to EMPTY_PHOTO_ID and returns empty PhotoInfo.
+   * If it doesn't fail then it returns the oldestPhoto with updated exchangedPhotoId with newUploadingPhoto.photoId.
+   * */
   open suspend fun tryDoExchange(userId: String, newUploadingPhoto: PhotoInfo): PhotoInfo {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
@@ -284,26 +290,22 @@ open class PhotoInfoRepository(
           return@withLock PhotoInfo.empty()
         }
 
-        val transactionResult = template.inTransaction().execute {
-          return@execute mono {
-            if (!photoInfoDao.updatePhotoSetReceiverId(oldestPhoto.photoId, newUploadingPhoto.photoId).awaitFirst()) {
-              throw ExchangeException("Could not updatePhotoSetReceiverId for " +
-                "oldestPhoto.photoId = ${oldestPhoto.photoId}, " +
-                "newUploadingPhoto.photoId = ${newUploadingPhoto.photoId}")
-            }
+        val transactionResult = template.inTransaction().execute { txTemplate ->
+          return@execute Flux.merge(
+            photoInfoDao.updatePhotoSetReceiverId(
+              oldestPhoto.photoId,
+              newUploadingPhoto.photoId,
+              txTemplate
+            ),
 
-            if (!photoInfoDao.updatePhotoSetReceiverId(newUploadingPhoto.photoId, oldestPhoto.photoId).awaitFirst()) {
-              throw ExchangeException("Could not updatePhotoSetReceiverId for " +
-                "newUploadingPhoto.photoId = ${newUploadingPhoto.photoId}, " +
-                "oldestPhoto.photoId = ${oldestPhoto.photoId}")
-            }
-
-            return@mono true
-          }
+            photoInfoDao.updatePhotoSetReceiverId(
+              newUploadingPhoto.photoId,
+              oldestPhoto.photoId,
+              txTemplate
+            )
+          )
         }
-          .single()
-          .doOnError { logger.error("Error in exchange transaction", it) }
-          .onErrorReturn(false)
+          .next()
           .awaitFirst()
 
         if (!transactionResult) {
@@ -329,7 +331,7 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun delete(photoInfo: PhotoInfo): Boolean {
+  open suspend fun delete(photoInfo: PhotoInfo): Boolean {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
         return@withLock deletePhotoInternalInTransaction(photoInfo)
@@ -343,48 +345,23 @@ open class PhotoInfoRepository(
       return false
     }
 
-    return template.inTransaction().execute {
-      return@execute mono {
-        val results = mutableListOf<Mono<Boolean>>()
-        results += photoInfoDao.deleteById(photoInfo.photoId)
-          .doOnNext { result ->
-            if (!result) {
-              throw DatabaseTransactionException("photoInfoDao: Could not delete photo by id ${photoInfo.photoId}")
-            }
-          }
-        results += favouritedPhotoDao.deleteFavouriteByPhotoName(photoInfo.photoName)
-          .doOnNext { result ->
-            if (!result) {
-              throw DatabaseTransactionException("favouritedPhotoDao: Could not delete photo favourite by name ${photoInfo.photoName}")
-            }
-          }
-        results += reportedPhotoDao.deleteReportByPhotoName(photoInfo.photoName)
-          .doOnNext { result ->
-            if (!result) {
-              throw DatabaseTransactionException("reportedPhotoDao: Could not delete photo report by name ${photoInfo.photoName}")
-            }
-          }
-        results += locationMapDao.deleteById(photoInfo.photoId)
-          .doOnNext { result ->
-            if (!result) {
-              throw DatabaseTransactionException("locationMapDao: Could not delete location map by id ${photoInfo.photoId}")
-            }
-          }
-        results += galleryPhotoDao.deleteByPhotoName(photoInfo.photoName)
-          .doOnNext { result ->
-            if (!result) {
-              throw DatabaseTransactionException("galleryPhotoDao: Could not delete gallery photo by id ${photoInfo.photoId}")
-            }
-          }
+    val transactionMono = template.inTransaction().execute { txTemplate ->
+      return@execute Flux.merge(
+        photoInfoDao.deleteById(photoInfo.photoId, txTemplate),
+        favouritedPhotoDao.deleteFavouriteByPhotoName(photoInfo.photoName, txTemplate),
+        reportedPhotoDao.deleteReportByPhotoName(photoInfo.photoName, txTemplate),
+        locationMapDao.deleteById(photoInfo.photoId, txTemplate),
+        galleryPhotoDao.deleteByPhotoName(photoInfo.photoName, txTemplate)
+      )
+    }.next()
 
-        results.forEach { it.awaitFirst() }
-        return@mono true
-      }
+    return try {
+      transactionMono.awaitFirst()
+      true
+    } catch (error: Throwable) {
+      logger.error("Could not delete photo", error)
+      false
     }
-      .single()
-      .doOnError { error -> logger.error("Could not delete photo", error) }
-      .onErrorReturn(false)
-      .awaitFirst()
   }
 
   suspend fun favouritePhoto(userId: String, photoName: String): FavouritePhotoResult {

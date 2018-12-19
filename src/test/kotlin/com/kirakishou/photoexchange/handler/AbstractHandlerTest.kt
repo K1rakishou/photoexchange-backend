@@ -146,7 +146,6 @@ abstract class AbstractHandlerTest {
 			galleryPhotoDao,
 			favouritedPhotoDao,
 			reportedPhotoDao,
-			userInfoDao,
 			locationMapDao,
 			generator,
 			diskManipulationService
@@ -203,6 +202,6 @@ abstract class AbstractHandlerTest {
 	}
 
 	inline fun <reified T> fromBodyContent(content: WebTestClient.BodyContentSpec): T {
-		return gson.fromJson<UploadPhotoResponse>(String(content.returnResult().responseBody), T::class.java) as T
+		return gson.fromJson<T>(String(content.returnResult().responseBody), T::class.java) as T
 	}
 }

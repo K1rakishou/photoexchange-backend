@@ -2,8 +2,22 @@ package com.kirakishou.photoexchange.util
 
 import com.kirakishou.photoexchange.extensions.toHex
 import java.security.MessageDigest
+import java.util.*
+import kotlin.streams.asSequence
 
 object SecurityUtils {
+
+  object Generation {
+    val source = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+    fun generateRandomString(length: Int): String {
+      return Random().ints(length.toLong(), 0, source.length)
+        .asSequence()
+        .map(source::get)
+        .joinToString("")
+    }
+  }
+
   object Hashing {
     private val sha3 = MessageDigest.getInstance("SHA-512")
 
