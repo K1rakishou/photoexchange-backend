@@ -23,7 +23,7 @@ class BanUserHandler(
   private val banListRepository: BanListRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(BanUserHandler::class.java)
-  private val PHOTO_NAME_VARIABLE_PATH = "photo_name"
+  private val USER_ID_VARIABLE_PATH = "user_id"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
     return mono {
@@ -45,30 +45,27 @@ class BanUserHandler(
             BanUserResponse.fail(ErrorCode.BadRequest))
         }
 
-        if (!request.containsAllPathVars(PHOTO_NAME_VARIABLE_PATH)) {
+        if (!request.containsAllPathVars(USER_ID_VARIABLE_PATH)) {
           logger.debug("Request does not contain one of the required path variables")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
             BanUserResponse.fail(ErrorCode.BadRequest))
         }
 
-        val photoName = request.pathVariable(PHOTO_NAME_VARIABLE_PATH)
+        val userId = request.pathVariable(USER_ID_VARIABLE_PATH)
 
-        val photoInfo = photoInfoRepository.findOneByPhotoName(photoName)
-        if (photoInfo.isEmpty()) {
-          logger.debug("Photo does not exist")
-          return@mono formatResponse(HttpStatus.NOT_FOUND,
-            BanUserResponse.fail(ErrorCode.PhotoDoesNotExist))
-        }
+        val ipHashList = photoInfoRepository.findAllPhotosByUserId(userId)
+          .distinctBy { it.ipHash }
+          .map { it.ipHash }
 
-        val ipHashList = photoInfoRepository.findAllIpHashesByUserId(photoInfo.userId)
         if (ipHashList.isNotEmpty()) {
           if (!banListRepository.banMany(ipHashList)) {
+            logger.debug("Could not ban one of the ip hashes for user ${userId}")
             return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
               BanUserResponse.fail(ErrorCode.DatabaseError))
           }
         }
 
-        logger.debug("User ${photoName} banned")
+        logger.debug("User ${userId} banned")
         return@mono formatResponse(HttpStatus.OK, BanUserResponse.success())
       } catch (error: Throwable) {
         logger.error("Unknown error", error)

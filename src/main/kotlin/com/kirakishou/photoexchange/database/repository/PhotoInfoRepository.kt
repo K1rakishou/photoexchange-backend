@@ -103,13 +103,9 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun findAllIpHashesByUserId(userId: String): List<String> {
+  suspend fun findAllPhotosByUserId(userId: String): List<PhotoInfo> {
     return withContext(coroutineContext) {
-      //user may have used different ip addresses to upload photos, and we need to find all of them
       return@withContext photoInfoDao.findAllByUserId(userId).awaitFirst()
-        .map { it.ipHash }
-        .toSet()  //remove duplicates
-        .toList()
     }
   }
 
