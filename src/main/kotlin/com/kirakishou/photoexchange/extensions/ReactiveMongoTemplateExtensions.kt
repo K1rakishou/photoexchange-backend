@@ -1,20 +1,14 @@
 package com.kirakishou.photoexchange.extensions
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.reactive.awaitFirst
+import org.springframework.data.mongodb.core.ReactiveMongoOperations
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
-import kotlinx.coroutines.reactor.mono
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 
-suspend fun <T> ReactiveMongoTemplate.transactional(
-  coroutineScope: CoroutineScope,
-  block: suspend () -> T
-): T {
-
-  return inTransaction().execute {
-    return@execute coroutineScope.mono {
-      return@mono block()
-    }
-  }
-    .single()
-    .awaitFirst()
+fun <T> ReactiveMongoTemplate.transactional(
+  block: (ReactiveMongoOperations) -> Flux<T>
+): Mono<T> {
+  return inTransaction().execute { txTemplate ->
+    return@execute block(txTemplate)
+  }.next()
 }

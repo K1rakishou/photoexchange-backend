@@ -14,6 +14,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
+import reactor.core.publisher.Flux
 
 class LocationMapRepository(
 	private val template: ReactiveMongoTemplate,
@@ -42,17 +43,15 @@ class LocationMapRepository(
 	suspend fun setMapReady(photoId: Long, locationMapId: Long) {
 		withContext(coroutineContext) {
 			mutex.withLock {
-				//FIXME
-				template.transactional(this) {
-					if (!locationMapDao.updateSetMapReady(photoId).awaitFirst()) {
-						throw CouldNotUpdateMapReadyFlag("Could not update map ready flag in the DB, " +
-							"(photoId = $photoId, locationMapId = $locationMapId)")
-					}
+				val result = template.transactional { txTemplate ->
+					return@transactional Flux.merge(
+						locationMapDao.updateSetMapReady(photoId, txTemplate),
+						photoInfoDao.updateSetLocationMapId(photoId, locationMapId, txTemplate)
+					)
+				}.awaitFirst()
 
-					if (!photoInfoDao.updateSetLocationMapId(photoId, locationMapId).awaitFirst()) {
-						throw CouldNotUpdateLocationId("Could not update locationId in the DB, " +
-							"(photoId = $photoId, locationMapId = $locationMapId)")
-					}
+				if (!result) {
+					logger.debug("Could not set map ready")
 				}
 			}
 		}
@@ -61,17 +60,15 @@ class LocationMapRepository(
 	suspend fun setMapAnonymous(photoId: Long, locationMapId: Long) {
 		withContext(coroutineContext) {
 			mutex.withLock {
-				//FIXME
-				template.transactional(this) {
-					if (!locationMapDao.updateSetMapAnonymous(photoId).awaitFirst()) {
-						throw CouldNotUpdateMapAnonymousFlag("Could not update map anonymous flag in the DB, " +
-							"(photoId = $photoId, locationMapId = $locationMapId)")
-					}
+				val result = template.transactional { txTemplate ->
+					return@transactional Flux.merge(
+						locationMapDao.updateSetMapAnonymous(photoId, txTemplate),
+						photoInfoDao.updateSetLocationMapId(photoId, locationMapId, txTemplate)
+					)
+				}.awaitFirst()
 
-					if (!photoInfoDao.updateSetLocationMapId(photoId, locationMapId).awaitFirst()) {
-						throw CouldNotUpdateLocationId("Could not update locationId in the DB, " +
-							"(photoId = $photoId, locationMapId = $locationMapId)")
-					}
+				if (!result) {
+					logger.debug("Could not set map ready")
 				}
 			}
 		}
