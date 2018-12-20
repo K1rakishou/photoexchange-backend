@@ -5,9 +5,12 @@ import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.BodyExtractors
+import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import java.time.Duration
 
 class WebClientService(
@@ -50,10 +53,29 @@ class WebClientService(
       }
   }
 
+  fun sendPushNotification(
+    accessToken: String,
+    notificationBody: String,
+    maxTimeoutSeconds: Long
+  ): Mono<HttpStatus> {
+    return client.post()
+      .uri(URL)
+      .contentType(MediaType.APPLICATION_JSON)
+      .header("Authorization", "Bearer $accessToken")
+      .body(BodyInserters.fromObject(notificationBody))
+      .exchange()
+      .timeout(Duration.ofSeconds(maxTimeoutSeconds))
+      .map { it.statusCode() }
+  }
+
   companion object {
     //apparently mapbox uses longitude as the first parameter and latitude as the second (as opposite to google maps)
     const val lonLatFormat = "%9.7f,%9.7f"
     val requestStringFormat = "https://api.mapbox.com/styles/v1/mapbox/streets-v10/static/" +
       "pin-l-x+050c09($lonLatFormat)/$lonLatFormat,8/600x600?access_token=${ServerSettings.MAPBOX_ACCESS_TOKEN}"
+
+    private val BASE_URL = "https://fcm.googleapis.com"
+    private val FCM_SEND_ENDPOINT = "/v1/projects/${ServerSettings.PROJECT_ID}/messages:send"
+    private val URL = BASE_URL + FCM_SEND_ENDPOINT
   }
 }

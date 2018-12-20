@@ -26,7 +26,7 @@ import kotlin.coroutines.CoroutineContext
 
 
 open class PushNotificationSenderService(
-  private val client: WebClient,
+  private val webClientService: WebClientService,
   private val userInfoRepository: UserInfoRepository,
   private val photoInfoRepository: PhotoInfoRepository,
   private val jsonConverterService: JsonConverterService
@@ -94,7 +94,7 @@ open class PushNotificationSenderService(
         //only requests that were executed successfully will be removed from the requests set
         try {
           chunk
-            .map { photo -> async { processRequest(photo, URL, accessToken) } }
+            .map { photo -> async { processRequest(photo, accessToken) } }
             .forEach { it.await() }
         } catch (error: Throwable) {
           logger.error("Error while processing chunk of notifications", error)
@@ -106,7 +106,7 @@ open class PushNotificationSenderService(
     }
   }
 
-  private suspend fun processRequest(myPhoto: PhotoInfo, url: String, accessToken: String) {
+  private suspend fun processRequest(myPhoto: PhotoInfo, accessToken: String) {
     val theirPhoto = photoInfoRepository.findOneById(myPhoto.exchangedPhotoId)
     if (theirPhoto.isEmpty()) {
       logger.debug("No photo with id ${myPhoto.exchangedPhotoId}, photoName = ${myPhoto.photoName}")
@@ -131,11 +131,10 @@ open class PushNotificationSenderService(
       theirPhoto.uploadedOn.toString()
     )
 
-    sendPushNotification(url, accessToken, firebaseToken, packet)
+    sendPushNotification(accessToken, firebaseToken, packet)
   }
 
   private suspend fun sendPushNotification(
-    url: String,
     accessToken: String,
     firebaseToken: String,
     data: PhotoExchangedData
@@ -144,22 +143,15 @@ open class PushNotificationSenderService(
     val body = jsonConverterService.toJson(packet)
 
     //TODO: find out whether there is a way to send notifications in batches and not one at a time
-    val response = try {
-      client.post()
-        .uri(url)
-        .contentType(MediaType.APPLICATION_JSON)
-        .header("Authorization", "Bearer $accessToken")
-        .body(BodyInserters.fromObject(body))
-        .exchange()
-        .timeout(Duration.ofSeconds(maxTimeoutSeconds))
-        .awaitFirst()
+    val statusCode = try {
+      webClientService.sendPushNotification(accessToken, body, maxTimeoutSeconds).awaitFirst()
     } catch (error: Throwable) {
       logger.error("Exception while executing web request", error)
       return
     }
 
-    if (!response.statusCode().is2xxSuccessful) {
-      logger.debug("Status code is not 2xxSuccessful (${response.statusCode()})")
+    if (!statusCode.is2xxSuccessful) {
+      logger.debug("Status code is not 2xxSuccessful ($statusCode)")
       return
     }
 
@@ -229,10 +221,6 @@ open class PushNotificationSenderService(
   ) : AbstractData()
 
   companion object {
-    private val BASE_URL = "https://fcm.googleapis.com"
-    private val FCM_SEND_ENDPOINT = "/v1/projects/${ServerSettings.PROJECT_ID}/messages:send"
-    private val URL = BASE_URL + FCM_SEND_ENDPOINT
-
     private val MESSAGING_SCOPE = "https://www.googleapis.com/auth/firebase.messaging"
     private val SCOPES = listOf(MESSAGING_SCOPE)
   }
