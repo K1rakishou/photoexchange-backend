@@ -13,12 +13,12 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Duration
 
-class WebClientService(
+open class WebClientService(
   private val client: WebClient
 ) {
   private val logger = LoggerFactory.getLogger(WebClientService::class.java)
 
-  fun downloadLocationMap(
+  open fun downloadLocationMap(
     photoInfo: PhotoInfo,
     photoMapName: String,
     maxTimeoutSeconds: Long
@@ -53,7 +53,7 @@ class WebClientService(
       }
   }
 
-  fun sendPushNotification(
+  open fun sendPushNotification(
     accessToken: String,
     notificationBody: String,
     maxTimeoutSeconds: Long
