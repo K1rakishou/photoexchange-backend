@@ -42,27 +42,27 @@ open class LocationMapDao(
 			.onErrorReturn(emptyList())
 	}
 
-	open fun updateSetMapReady(photoId: Long): Mono<Boolean> {
+	open fun updateSetMapReady(photoId: Long, template: ReactiveMongoOperations = reactiveTemplate): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(LocationMap.Mongo.Field.PHOTO_ID).`is`(photoId))
 
 		val update = Update()
 			.set(LocationMap.Mongo.Field.MAP_STATUS, LocationMap.MapStatus.Ready.value)
 
-		return reactiveTemplate.updateFirst(query, update, LocationMap::class.java)
+		return template.updateFirst(query, update, LocationMap::class.java)
 			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)
 	}
 
-	open fun updateSetMapAnonymous(photoId: Long): Mono<Boolean> {
+	open fun updateSetMapAnonymous(photoId: Long, template: ReactiveMongoOperations = reactiveTemplate): Mono<Boolean> {
 		val query = Query()
 			.addCriteria(Criteria.where(LocationMap.Mongo.Field.PHOTO_ID).`is`(photoId))
 
 		val update = Update()
 			.set(LocationMap.Mongo.Field.MAP_STATUS, LocationMap.MapStatus.Anonymous.value)
 
-		return reactiveTemplate.updateFirst(query, update, LocationMap::class.java)
+		return template.updateFirst(query, update, LocationMap::class.java)
 			.map { updateResult -> updateResult.wasAcknowledged() }
 			.doOnError { error -> logger.error("DB error", error) }
 			.onErrorReturn(false)

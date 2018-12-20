@@ -3,7 +3,6 @@ package com.kirakishou.photoexchange.service
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.gson.annotations.Expose
 import com.google.gson.annotations.SerializedName
-import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
@@ -17,16 +16,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
-import org.springframework.http.MediaType
-import org.springframework.web.reactive.function.BodyInserters
-import org.springframework.web.reactive.function.client.WebClient
-import java.lang.RuntimeException
-import java.time.Duration
 import kotlin.coroutines.CoroutineContext
 
 
 open class PushNotificationSenderService(
-  private val client: WebClient,
+  private val webClientService: WebClientService,
   private val userInfoRepository: UserInfoRepository,
   private val photoInfoRepository: PhotoInfoRepository,
   private val jsonConverterService: JsonConverterService
@@ -76,7 +70,9 @@ open class PushNotificationSenderService(
   }
 
   private suspend fun startSendingPushNotifications() {
-    if (requests.isEmpty()) {
+    val requestsCopy = mutex.withLock { requests.clone() as LinkedHashSet<PhotoInfo> }
+
+    if (requestsCopy.isEmpty()) {
       logger.debug("No requests")
       return
     }
@@ -87,14 +83,12 @@ open class PushNotificationSenderService(
       return
     }
 
-    val requestsCopy = mutex.withLock { requests.clone() as LinkedHashSet<PhotoInfo> }
-
     try {
       for (chunk in requestsCopy.chunked(chunkSize)) {
         //only requests that were executed successfully will be removed from the requests set
         try {
           chunk
-            .map { photo -> async { processRequest(photo, URL, accessToken) } }
+            .map { photo -> async { processRequest(photo, accessToken) } }
             .forEach { it.await() }
         } catch (error: Throwable) {
           logger.error("Error while processing chunk of notifications", error)
@@ -106,7 +100,7 @@ open class PushNotificationSenderService(
     }
   }
 
-  private suspend fun processRequest(myPhoto: PhotoInfo, url: String, accessToken: String) {
+  private suspend fun processRequest(myPhoto: PhotoInfo, accessToken: String) {
     val theirPhoto = photoInfoRepository.findOneById(myPhoto.exchangedPhotoId)
     if (theirPhoto.isEmpty()) {
       logger.debug("No photo with id ${myPhoto.exchangedPhotoId}, photoName = ${myPhoto.photoName}")
@@ -123,7 +117,7 @@ open class PushNotificationSenderService(
       throw RuntimeException("firebase token is ${SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN}. This should not happen here!!!")
     }
 
-    val packet = PhotoExchangedData(
+    val data = PhotoExchangedData(
       myPhoto.photoName,
       theirPhoto.photoName,
       theirPhoto.lon.toString(),
@@ -131,40 +125,15 @@ open class PushNotificationSenderService(
       theirPhoto.uploadedOn.toString()
     )
 
-    sendPushNotification(url, accessToken, firebaseToken, packet)
-  }
-
-  private suspend fun sendPushNotification(
-    url: String,
-    accessToken: String,
-    firebaseToken: String,
-    data: PhotoExchangedData
-  ) {
     val packet = Packet(Message(firebaseToken, data))
     val body = jsonConverterService.toJson(packet)
 
     //TODO: find out whether there is a way to send notifications in batches and not one at a time
-    val response = try {
-      client.post()
-        .uri(url)
-        .contentType(MediaType.APPLICATION_JSON)
-        .header("Authorization", "Bearer $accessToken")
-        .body(BodyInserters.fromObject(body))
-        .exchange()
-        .timeout(Duration.ofSeconds(maxTimeoutSeconds))
-        .awaitFirst()
+    try {
+      webClientService.sendPushNotification(accessToken, body, maxTimeoutSeconds).awaitFirst()
     } catch (error: Throwable) {
       logger.error("Exception while executing web request", error)
-      return
     }
-
-    if (!response.statusCode().is2xxSuccessful) {
-      logger.debug("Status code is not 2xxSuccessful (${response.statusCode()})")
-      return
-    }
-
-    logger.debug("PushNotification sent")
-    return
   }
 
   private fun getAccessToken(): String {
@@ -229,10 +198,6 @@ open class PushNotificationSenderService(
   ) : AbstractData()
 
   companion object {
-    private val BASE_URL = "https://fcm.googleapis.com"
-    private val FCM_SEND_ENDPOINT = "/v1/projects/${ServerSettings.PROJECT_ID}/messages:send"
-    private val URL = BASE_URL + FCM_SEND_ENDPOINT
-
     private val MESSAGING_SCOPE = "https://www.googleapis.com/auth/firebase.messaging"
     private val SCOPES = listOf(MESSAGING_SCOPE)
   }

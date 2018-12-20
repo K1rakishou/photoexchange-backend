@@ -63,7 +63,7 @@ class BanPhotoHandler(
         try {
           diskManipulationService.replaceImagesOnDiskWithRemovedImagePlaceholder(photoName)
         } catch (error: Throwable) {
-          logger.error("Error while trying to replace photo with removed photo placeholder", error)
+          logger.error("Error while trying to replace photo with removed photo placeholder, photoName = ${photoName}", error)
           return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
             BanPhotoResponse.fail(ErrorCode.CouldNotReplacePhotoWithPlaceholder))
         }
@@ -75,7 +75,6 @@ class BanPhotoHandler(
         return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
           BanPhotoResponse.fail(ErrorCode.UnknownError))
       }
-
     }.flatMap { it }
   }
 

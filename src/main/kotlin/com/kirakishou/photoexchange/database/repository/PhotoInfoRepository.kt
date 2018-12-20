@@ -6,10 +6,10 @@ import com.kirakishou.photoexchange.database.entity.GalleryPhoto
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.entity.ReportedPhoto
 import com.kirakishou.photoexchange.exception.ExchangeException
+import com.kirakishou.photoexchange.extensions.transactional
 import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.GeneratorService
 import kotlinx.coroutines.reactive.awaitFirst
-import kotlinx.coroutines.reactor.mono
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -104,13 +104,9 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun findAllIpHashesByUserId(userId: String): List<String> {
+  suspend fun findAllPhotosByUserId(userId: String): List<PhotoInfo> {
     return withContext(coroutineContext) {
-      //user may have used different ip addresses to upload photos, and we need to find all of them
       return@withContext photoInfoDao.findAllByUserId(userId).awaitFirst()
-        .map { it.ipHash }
-        .toSet()  //remove duplicates
-        .toList()
     }
   }
 
@@ -290,8 +286,8 @@ open class PhotoInfoRepository(
           return@withLock PhotoInfo.empty()
         }
 
-        val transactionResult = template.inTransaction().execute { txTemplate ->
-          return@execute Flux.merge(
+        val transactionResult = template.transactional { txTemplate ->
+          return@transactional Flux.merge(
             photoInfoDao.updatePhotoSetReceiverId(
               oldestPhoto.photoId,
               newUploadingPhoto.photoId,
@@ -304,9 +300,7 @@ open class PhotoInfoRepository(
               txTemplate
             )
           )
-        }
-          .next()
-          .awaitFirst()
+        }.awaitFirst()
 
         if (!transactionResult) {
           if (!photoInfoDao.updatePhotoAsEmpty(newUploadingPhoto.photoId).awaitFirst()) {
@@ -345,15 +339,15 @@ open class PhotoInfoRepository(
       return false
     }
 
-    val transactionMono = template.inTransaction().execute { txTemplate ->
-      return@execute Flux.merge(
+    val transactionMono = template.transactional { txTemplate ->
+      return@transactional Flux.merge(
         photoInfoDao.deleteById(photoInfo.photoId, txTemplate),
         favouritedPhotoDao.deleteFavouriteByPhotoName(photoInfo.photoName, txTemplate),
         reportedPhotoDao.deleteReportByPhotoName(photoInfo.photoName, txTemplate),
         locationMapDao.deleteById(photoInfo.photoId, txTemplate),
         galleryPhotoDao.deleteByPhotoName(photoInfo.photoName, txTemplate)
       )
-    }.next()
+    }
 
     return try {
       transactionMono.awaitFirst()

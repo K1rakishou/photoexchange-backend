@@ -11,6 +11,7 @@ import com.kirakishou.photoexchange.handlers.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
 import com.kirakishou.photoexchange.handlers.admin.BanPhotoHandler
+import com.kirakishou.photoexchange.handlers.admin.BanUserAndAllTheirPhotosHandler
 import com.kirakishou.photoexchange.handlers.admin.BanUserHandler
 import com.kirakishou.photoexchange.handlers.admin.StartCleanupHandler
 import com.kirakishou.photoexchange.handlers.count.GetFreshGalleryPhotosCountHandler
@@ -65,6 +66,7 @@ fun myBeans(adminToken: String) = beans {
   bean<RemoteAddressExtractorService>()
   bean<PushNotificationSenderService>()
   bean<DiskManipulationService>()
+  bean<WebClientService>()
   bean {
     CleanupService(
       ref(),
@@ -94,6 +96,7 @@ fun myBeans(adminToken: String) = beans {
   bean<BanUserHandler>()
   bean<StartCleanupHandler>()
   bean<GetPhotosAdditionalInfoHandler>()
+  bean<BanUserAndAllTheirPhotosHandler>()
 
   //etc
   bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }

@@ -6,6 +6,7 @@ import com.kirakishou.photoexchange.handlers.GetGalleryPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
 import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
 import com.kirakishou.photoexchange.handlers.admin.BanPhotoHandler
+import com.kirakishou.photoexchange.handlers.admin.BanUserAndAllTheirPhotosHandler
 import com.kirakishou.photoexchange.handlers.admin.BanUserHandler
 import com.kirakishou.photoexchange.handlers.admin.StartCleanupHandler
 import com.kirakishou.photoexchange.handlers.count.GetFreshGalleryPhotosCountHandler
@@ -34,7 +35,8 @@ class Router(
 	private val banPhotoHandler: BanPhotoHandler,
 	private val banUserHandler: BanUserHandler,
 	private val startCleanupHandler: StartCleanupHandler,
-	private val getPhotosAdditionalInfoHandler: GetPhotosAdditionalInfoHandler
+	private val getPhotosAdditionalInfoHandler: GetPhotosAdditionalInfoHandler,
+	private val banUserAndAllTheirPhotosHandler: BanUserAndAllTheirPhotosHandler
 ) {
 	private fun hasAuthHeaderPredicate() = { headers: ServerRequest.Headers ->
 		headers.header(ServerSettings.authTokenHeaderName).isNotEmpty()
@@ -70,7 +72,9 @@ class Router(
 
 				headers(hasAuthHeaderPredicate()).nest {
 					PUT("/ban_photo/{photo_name}", banPhotoHandler::handle)
-					PUT("/ban_user/{photo_name}", banUserHandler::handle)
+					PUT("/ban_user/{user_id}", banUserHandler::handle)
+					PUT("/ban_user_with_photos/{user_id}", banUserAndAllTheirPhotosHandler::handle)
+
 					//used to forcefully start cleaning up of old photos
 					GET("/start_cleanup", startCleanupHandler::handle)
 				}

@@ -1,30 +1,23 @@
 package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.config.ServerSettings.PHOTO_MAP_SUFFIX
 import com.kirakishou.photoexchange.database.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.extensions.deleteIfExists
 import com.kirakishou.photoexchange.database.entity.LocationMap
+import com.kirakishou.photoexchange.extensions.deleteIfExists
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.reactive.awaitFirst
-import kotlinx.coroutines.reactive.awaitLast
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpStatus
-import org.springframework.web.reactive.function.BodyExtractors
-import org.springframework.web.reactive.function.client.ClientResponse
-import org.springframework.web.reactive.function.client.WebClient
 import java.io.File
-import java.time.Duration
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
 
 open class StaticMapDownloaderService(
-  private val client: WebClient,
+  private val webClientService: WebClientService,
   private val photoInfoRepository: PhotoInfoRepository,
   private val locationMapRepository: LocationMapRepository,
   private val diskManipulationService: DiskManipulationService
@@ -117,44 +110,28 @@ open class StaticMapDownloaderService(
         return true
       }
 
-      val lon = photoInfo.lon
-      val lat = photoInfo.lat
-      val photoMapName = "${photoInfo.photoName}$PHOTO_MAP_SUFFIX"
-      val requestString = String.format(requestStringFormat, lon, lat, lon, lat)
+      val photoMapName = "${photoInfo.photoName}${ServerSettings.PHOTO_MAP_SUFFIX}"
 
-      logger.debug("[$photoMapName], Trying to get map from google services")
-      val response = client.get()
-        .uri(requestString)
-        .exchange()
-        .timeout(Duration.ofSeconds(MAX_TIMEOUT_SECONDS))
+      val dataBufferList = webClientService.downloadLocationMap(
+        photoInfo,
+        photoMapName,
+        MAX_TIMEOUT_SECONDS
+      )
+        .collectList()
         .awaitFirst()
 
-      //TODO: handle TOO_MANY_REQUESTS status
-      if (!response.statusCode().is2xxSuccessful) {
-        if (response.statusCode() == HttpStatus.FORBIDDEN) {
-          logger.debug("StatusCode is FORBIDDEN. Probably should check the developer account")
-        }
-
-        if (response.statusCode() == HttpStatus.TOO_MANY_REQUESTS) {
-          logger.debug("StatusCode is TOO_MANY_REQUESTS. Probably exceeded request quota")
-        }
-
-        throw ResponseIsNot2xxSuccessful("[$photoMapName], Response status code is not 2xxSuccessful (${response.statusCode()})")
-      }
-
-      val filePath = "${ServerSettings.FILE_DIR_PATH}\\$photoMapName"
-      val outFile = File(filePath)
+      val outFile = File("${ServerSettings.FILE_DIR_PATH}\\$photoMapName")
 
       try {
-        if (!saveFileToDisk(outFile, response)) {
-          throw CouldNotSaveToDiskException("[$photoMapName], Could not save file to disk")
-        }
-
+        diskManipulationService.copyDataBuffersToFile(dataBufferList, outFile)
         locationMapRepository.setMapReady(locationMap.photoId, locationMap.id)
 
         logger.debug("[$photoMapName], Map has been successfully downloaded")
       } catch (error: Throwable) {
-        cleanup(outFile)
+        if (!outFile.deleteIfExists()) {
+          logger.warn("Could not delete file ${outFile.absolutePath}")
+        }
+
         throw error
       }
     } catch (error: Throwable) {
@@ -200,42 +177,6 @@ open class StaticMapDownloaderService(
     }
   }
 
-  private fun cleanup(outFile: File) {
-    outFile.deleteIfExists()
-  }
-
-  private suspend fun saveFileToDisk(outFile: File, response: ClientResponse): Boolean {
-    try {
-      outFile.outputStream().use { outputStream ->
-        response.body(BodyExtractors.toDataBuffers())
-          .doOnNext { chunk ->
-            chunk.asInputStream().use { inputStream ->
-              val chunkSize = inputStream.available()
-              val buffer = ByteArray(chunkSize)
-
-              //copy chunks from one stream to another
-              inputStream.read(buffer, 0, chunkSize)
-              outputStream.write(buffer, 0, chunkSize)
-            }
-          }.awaitLast()
-      }
-
-    } catch (error: Throwable) {
-      logger.error("Error while trying to store static map image onto the disk", error)
-      return false
-    }
-
-    return true
-  }
-
   class CouldNotFindPhotoInfo(message: String) : Exception(message)
   class ResponseIsNot2xxSuccessful(message: String) : Exception(message)
-  class CouldNotSaveToDiskException(message: String) : Exception(message)
-
-  companion object {
-    //apparently mapbox uses longitude as the first parameter and latitude as the second (as opposite to google maps)
-    const val lonLatFormat = "%9.7f,%9.7f"
-    val requestStringFormat ="https://api.mapbox.com/styles/v1/mapbox/streets-v10/static/" +
-      "pin-l-x+050c09($lonLatFormat)/$lonLatFormat,8/600x600?access_token=${ServerSettings.MAPBOX_ACCESS_TOKEN}"
-  }
 }
