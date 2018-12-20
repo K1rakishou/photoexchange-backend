@@ -70,7 +70,9 @@ open class PushNotificationSenderService(
   }
 
   private suspend fun startSendingPushNotifications() {
-    if (requests.isEmpty()) {
+    val requestsCopy = mutex.withLock { requests.clone() as LinkedHashSet<PhotoInfo> }
+
+    if (requestsCopy.isEmpty()) {
       logger.debug("No requests")
       return
     }
@@ -80,8 +82,6 @@ open class PushNotificationSenderService(
       logger.debug("Access token is empty")
       return
     }
-
-    val requestsCopy = mutex.withLock { requests.clone() as LinkedHashSet<PhotoInfo> }
 
     try {
       for (chunk in requestsCopy.chunked(chunkSize)) {
