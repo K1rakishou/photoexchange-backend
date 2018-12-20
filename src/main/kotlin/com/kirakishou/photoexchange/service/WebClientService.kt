@@ -57,7 +57,7 @@ open class WebClientService(
     accessToken: String,
     notificationBody: String,
     maxTimeoutSeconds: Long
-  ): Mono<HttpStatus> {
+  ): Mono<Unit> {
     return client.post()
       .uri(URL)
       .contentType(MediaType.APPLICATION_JSON)
@@ -66,6 +66,13 @@ open class WebClientService(
       .exchange()
       .timeout(Duration.ofSeconds(maxTimeoutSeconds))
       .map { it.statusCode() }
+      .map { statusCode ->
+        if (!statusCode.is2xxSuccessful) {
+          logger.debug("Status code is not 2xxSuccessful ($statusCode)")
+        } else {
+          logger.debug("PushNotification sent")
+        }
+      }
   }
 
   companion object {

@@ -3,7 +3,6 @@ package com.kirakishou.photoexchange.service
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.gson.annotations.Expose
 import com.google.gson.annotations.SerializedName
-import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
@@ -17,11 +16,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
-import org.springframework.http.MediaType
-import org.springframework.web.reactive.function.BodyInserters
-import org.springframework.web.reactive.function.client.WebClient
-import java.lang.RuntimeException
-import java.time.Duration
 import kotlin.coroutines.CoroutineContext
 
 
@@ -123,7 +117,7 @@ open class PushNotificationSenderService(
       throw RuntimeException("firebase token is ${SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN}. This should not happen here!!!")
     }
 
-    val packet = PhotoExchangedData(
+    val data = PhotoExchangedData(
       myPhoto.photoName,
       theirPhoto.photoName,
       theirPhoto.lon.toString(),
@@ -131,32 +125,15 @@ open class PushNotificationSenderService(
       theirPhoto.uploadedOn.toString()
     )
 
-    sendPushNotification(accessToken, firebaseToken, packet)
-  }
-
-  private suspend fun sendPushNotification(
-    accessToken: String,
-    firebaseToken: String,
-    data: PhotoExchangedData
-  ) {
     val packet = Packet(Message(firebaseToken, data))
     val body = jsonConverterService.toJson(packet)
 
     //TODO: find out whether there is a way to send notifications in batches and not one at a time
-    val statusCode = try {
+    try {
       webClientService.sendPushNotification(accessToken, body, maxTimeoutSeconds).awaitFirst()
     } catch (error: Throwable) {
       logger.error("Exception while executing web request", error)
-      return
     }
-
-    if (!statusCode.is2xxSuccessful) {
-      logger.debug("Status code is not 2xxSuccessful ($statusCode)")
-      return
-    }
-
-    logger.debug("PushNotification sent")
-    return
   }
 
   private fun getAccessToken(): String {
