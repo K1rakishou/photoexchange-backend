@@ -42,6 +42,7 @@ class LocationMapRepository(
 	suspend fun setMapReady(photoId: Long, locationMapId: Long) {
 		withContext(coroutineContext) {
 			mutex.withLock {
+				//FIXME
 				template.transactional(this) {
 					if (!locationMapDao.updateSetMapReady(photoId).awaitFirst()) {
 						throw CouldNotUpdateMapReadyFlag("Could not update map ready flag in the DB, " +
@@ -60,6 +61,7 @@ class LocationMapRepository(
 	suspend fun setMapAnonymous(photoId: Long, locationMapId: Long) {
 		withContext(coroutineContext) {
 			mutex.withLock {
+				//FIXME
 				template.transactional(this) {
 					if (!locationMapDao.updateSetMapAnonymous(photoId).awaitFirst()) {
 						throw CouldNotUpdateMapAnonymousFlag("Could not update map anonymous flag in the DB, " +

@@ -66,6 +66,7 @@ fun myBeans(adminToken: String) = beans {
   bean<RemoteAddressExtractorService>()
   bean<PushNotificationSenderService>()
   bean<DiskManipulationService>()
+  bean<WebClientService>()
   bean {
     CleanupService(
       ref(),
