@@ -145,11 +145,12 @@ open class StaticMapDownloaderService(
       val filePath = "${ServerSettings.FILE_DIR_PATH}\\$photoMapName"
       val outFile = File(filePath)
 
-      try {
-        if (!saveFileToDisk(outFile, response)) {
-          throw CouldNotSaveToDiskException("[$photoMapName], Could not save file to disk")
-        }
+      val bodyBufferList = response.body(BodyExtractors.toDataBuffers())
+        .collectList()
+        .awaitFirst()
 
+      try {
+        diskManipulationService.copyDataBuffersToFile(bodyBufferList, outFile)
         locationMapRepository.setMapReady(locationMap.photoId, locationMap.id)
 
         logger.debug("[$photoMapName], Map has been successfully downloaded")
@@ -204,33 +205,8 @@ open class StaticMapDownloaderService(
     outFile.deleteIfExists()
   }
 
-  private suspend fun saveFileToDisk(outFile: File, response: ClientResponse): Boolean {
-    try {
-      outFile.outputStream().use { outputStream ->
-        response.body(BodyExtractors.toDataBuffers())
-          .doOnNext { chunk ->
-            chunk.asInputStream().use { inputStream ->
-              val chunkSize = inputStream.available()
-              val buffer = ByteArray(chunkSize)
-
-              //copy chunks from one stream to another
-              inputStream.read(buffer, 0, chunkSize)
-              outputStream.write(buffer, 0, chunkSize)
-            }
-          }.awaitLast()
-      }
-
-    } catch (error: Throwable) {
-      logger.error("Error while trying to store static map image onto the disk", error)
-      return false
-    }
-
-    return true
-  }
-
   class CouldNotFindPhotoInfo(message: String) : Exception(message)
   class ResponseIsNot2xxSuccessful(message: String) : Exception(message)
-  class CouldNotSaveToDiskException(message: String) : Exception(message)
 
   companion object {
     //apparently mapbox uses longitude as the first parameter and latitude as the second (as opposite to google maps)
