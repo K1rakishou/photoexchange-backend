@@ -17,7 +17,7 @@ import core.ErrorCode
 import core.SharedConstants
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.mono
-import net.request.SendPhotoPacket
+import net.request.UploadPhotoPacket
 import net.response.UploadPhotoResponse
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBuffer
@@ -78,10 +78,8 @@ class UploadPhotoHandler(
         return formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ErrorCode.ExceededMaxPacketSize))
       }
 
-      val packet = jsonConverter.fromJson<SendPhotoPacket>(packetParts)
-
-      //TODO: move isPacketOk from commons project to backend
-      if (!packet.isPacketOk()) {
+      val packet = jsonConverter.fromJson<UploadPhotoPacket>(packetParts)
+      if (!isPacketOk(packet)) {
         logger.error("One or more of the packet's fields are incorrect")
         return formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ErrorCode.BadRequest))
       }
@@ -186,6 +184,18 @@ class UploadPhotoHandler(
       logger.error("Unknown error", error)
       return formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ErrorCode.UnknownError))
     }
+  }
+
+  private fun isPacketOk(packet: UploadPhotoPacket): Boolean {
+    if (packet.lon == null || packet.lat == null || packet.userId == null || packet.isPublic == null) {
+      return false
+    }
+
+    if (packet.lon < -180.0 || packet.lon > 180.0 || packet.lat < -90.0 || packet.lat > 90.0 || packet.userId.isEmpty()) {
+      return false
+    }
+
+    return true
   }
 
   private fun getIpAddressHash(ipAddress: String): String {

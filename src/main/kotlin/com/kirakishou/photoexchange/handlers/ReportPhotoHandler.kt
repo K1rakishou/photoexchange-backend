@@ -31,9 +31,7 @@ class ReportPhotoHandler(
 					.awaitSingle()
 
 				val packet = jsonConverter.fromJson<ReportPhotoPacket>(packetBuffers)
-
-				//TODO: move isPacketOk from commons project to backend
-				if (!packet.isPacketOk()) {
+				if (!isPacketOk(packet)) {
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						ReportPhotoResponse.fail(ErrorCode.BadRequest))
 				}
@@ -64,5 +62,9 @@ class ReportPhotoHandler(
 					ReportPhotoResponse.fail(ErrorCode.UnknownError))
 			}
 		}.flatMap { it }
+	}
+
+	private fun isPacketOk(packet: ReportPhotoPacket): Boolean {
+		return !(packet.userId.isNullOrEmpty() || packet.photoName.isNullOrEmpty())
 	}
 }

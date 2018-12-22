@@ -9,8 +9,7 @@ import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
 import com.kirakishou.photoexchange.service.*
 import com.mongodb.ConnectionString
-import net.request.SendPhotoPacket
-import net.response.UploadPhotoResponse
+import net.request.UploadPhotoPacket
 import org.mockito.Mockito
 import org.springframework.core.io.ClassPathResource
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
@@ -164,7 +163,7 @@ abstract class AbstractHandlerTest {
 		clearFilesDir()
 	}
 
-	fun createTestMultipartFile(fileResourceName: String, packet: SendPhotoPacket): MultiValueMap<String, Any> {
+	fun createTestMultipartFile(fileResourceName: String, packet: UploadPhotoPacket): MultiValueMap<String, Any> {
 		val fileResource = ClassPathResource(fileResourceName)
 
 		val photoPart = HttpEntity(fileResource, HttpHeaders().also { it.contentType = MediaType.IMAGE_JPEG })
@@ -177,7 +176,7 @@ abstract class AbstractHandlerTest {
 		return parts
 	}
 
-	fun createMultipartFileWithEmptyPhoto(packet: SendPhotoPacket): MultiValueMap<String, Any> {
+	fun createMultipartFileWithEmptyPhoto(packet: UploadPhotoPacket): MultiValueMap<String, Any> {
 		val photoPart = HttpEntity("",  HttpHeaders().also { it.contentType = MediaType.IMAGE_JPEG })
 		val packetPart = HttpEntity(jsonConverterService.toJson(packet), HttpHeaders().also { it.contentType = MediaType.APPLICATION_JSON })
 

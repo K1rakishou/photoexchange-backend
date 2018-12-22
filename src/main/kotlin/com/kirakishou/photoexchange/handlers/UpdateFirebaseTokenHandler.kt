@@ -37,9 +37,7 @@ class UpdateFirebaseTokenHandler(
           .awaitFirst()
 
         val packet = jsonConverter.fromJson<UpdateFirebaseTokenPacket>(packetParts)
-
-        //TODO: move isPacketOk from commons project to backend
-        if (!packet.isPacketOk()) {
+        if (!isPacketOk(packet)) {
           logger.error("One or more of the packet's fields is incorrect")
 
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
@@ -49,15 +47,13 @@ class UpdateFirebaseTokenHandler(
         if (!userInfoRepository.accountExists(packet.userId)) {
           logger.error("One or more of the packet's fields are incorrect")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            //TODO: should probably add new AccountNotFound error code
-            UpdateFirebaseTokenResponse.fail(ErrorCode.BadRequest))
+            UpdateFirebaseTokenResponse.fail(ErrorCode.AccountNotFound))
         }
 
         if (!userInfoRepository.updateFirebaseToken(packet.userId, packet.token)) {
           logger.error("One or more of the packet's fields are incorrect")
           return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-            //TODO: should probably add new AccountNotFound error code
-            UpdateFirebaseTokenResponse.fail(ErrorCode.DatabaseError))
+            UpdateFirebaseTokenResponse.fail(ErrorCode.AccountNotFound))
         }
 
         return@mono formatResponse(HttpStatus.OK, UpdateFirebaseTokenResponse.success())
@@ -69,15 +65,11 @@ class UpdateFirebaseTokenHandler(
     }.flatMap { it }
   }
 
-  private fun collectPart(map: MultiValueMap<String, Part>, partName: String): Mono<MutableList<DataBuffer>> {
-    return map.getFirst(partName)!!
-      .content()
-      .doOnNext { dataBuffer ->
-        if (dataBuffer.readableByteCount() == 0) {
-          throw EmptyPacket()
-        }
-      }
-      .buffer()
-      .single()
+  private fun isPacketOk(packet: UpdateFirebaseTokenPacket): Boolean {
+    if (packet.userId.isNullOrEmpty() || packet.token.isNullOrEmpty()) {
+      return false
+    }
+
+    return true
   }
 }
