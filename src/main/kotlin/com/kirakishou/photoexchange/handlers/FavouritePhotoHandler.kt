@@ -31,9 +31,7 @@ class FavouritePhotoHandler(
 					.awaitSingle()
 
 				val packet = jsonConverter.fromJson<FavouritePhotoPacket>(packetBuffers)
-
-				//TODO: move isPacketOk from commons project to backend
-				if (!packet.isPacketOk()) {
+				if (!isPacketOk(packet)) {
 					return@mono formatResponse(HttpStatus.BAD_REQUEST,
 						FavouritePhotoResponse.fail(ErrorCode.BadRequest))
 				}
@@ -64,5 +62,9 @@ class FavouritePhotoHandler(
 					FavouritePhotoResponse.fail(ErrorCode.UnknownError))
 			}
 		}.flatMap { it }
+	}
+
+	private fun isPacketOk(packet: FavouritePhotoPacket): Boolean {
+		return !(packet.userId.isNullOrEmpty() || packet.photoName.isNullOrEmpty())
 	}
 }

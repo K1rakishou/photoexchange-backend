@@ -29,7 +29,7 @@
         <dependency>
             <groupId>com.github.K1rakishou</groupId>
             <artifactId>photoexchange-common</artifactId>
-            <version>0a90f333f0</version>
+            <version>a8cbc436d7</version>
         </dependency>
 
         <dependency>
