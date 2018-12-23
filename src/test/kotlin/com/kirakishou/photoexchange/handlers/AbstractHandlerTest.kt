@@ -3,10 +3,7 @@ package com.kirakishou.photoexchange.handler
 import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.dao.*
-import com.kirakishou.photoexchange.database.repository.BanListRepository
-import com.kirakishou.photoexchange.database.repository.LocationMapRepository
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.database.repository.UserInfoRepository
+import com.kirakishou.photoexchange.database.repository.*
 import com.kirakishou.photoexchange.service.*
 import com.mongodb.ConnectionString
 import net.request.UploadPhotoPacket
@@ -62,6 +59,7 @@ abstract class AbstractHandlerTest {
 	lateinit var photoInfoRepository: PhotoInfoRepository
   lateinit var userInfoRepository: UserInfoRepository
 	lateinit var banListRepository: BanListRepository
+	lateinit var adminInfoRepository: AdminInfoRepository
 
 	fun clearFilesDir() {
 		val dir = File(filesDir)
@@ -126,6 +124,7 @@ abstract class AbstractHandlerTest {
 		pushNotificationSenderService = Mockito.mock(PushNotificationSenderService::class.java)
 		remoteAddressExtractorService = Mockito.mock(RemoteAddressExtractorService::class.java)
 		cleanupService = Mockito.mock(CleanupService::class.java)
+		diskManipulationService = Mockito.spy(DiskManipulationService())
 
 		locationMapRepository = LocationMapRepository(
 			template,
@@ -134,9 +133,9 @@ abstract class AbstractHandlerTest {
 			photoInfoDao
 		)
 
-		diskManipulationService = Mockito.spy(DiskManipulationService())
 		userInfoRepository = Mockito.spy(UserInfoRepository(mongoSequenceDao, userInfoDao, generator))
 		banListRepository = Mockito.spy(BanListRepository(mongoSequenceDao, banListDao))
+		adminInfoRepository = Mockito.spy(AdminInfoRepository::class.java)
 
 		photoInfoRepository = PhotoInfoRepository(
 			template,
