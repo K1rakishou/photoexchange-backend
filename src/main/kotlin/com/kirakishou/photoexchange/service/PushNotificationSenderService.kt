@@ -77,20 +77,16 @@ open class PushNotificationSenderService(
       return
     }
 
-    try {
-      for (chunk in requestsCopy.chunked(chunkSize)) {
-        //only requests that were executed successfully will be removed from the requests set
-        try {
-          chunk
-            .map { photo -> async { processRequest(photo, accessToken) } }
-            .forEach { it.await() }
-        } catch (error: Throwable) {
-          logger.error("Error while processing chunk of notifications", error)
-        }
+    for (chunk in requestsCopy.chunked(chunkSize)) {
+      try {
+        chunk
+          .map { photo -> async { processRequest(photo, accessToken) } }
+          .forEach { it.await() }
+      } catch (error: Throwable) {
+        logger.error("Error while processing chunk of notifications", error)
+      } finally {
+        mutex.withLock { requests.removeAll(chunk) }
       }
-    } finally {
-      //clear requests regardless of the result
-      mutex.withLock { requests.clear() }
     }
   }
 
