@@ -16,7 +16,7 @@ import kotlinx.coroutines.withContext
 import net.response.data.*
 import org.slf4j.LoggerFactory
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
-import reactor.core.publisher.Flux
+import reactor.core.publisher.toFlux
 
 open class PhotoInfoRepository(
   private val template: ReactiveMongoTemplate,
@@ -287,19 +287,19 @@ open class PhotoInfoRepository(
         }
 
         val transactionResult = template.transactional { txTemplate ->
-          return@transactional Flux.merge(
-            photoInfoDao.updatePhotoSetReceiverId(
-              oldestPhoto.photoId,
-              newUploadingPhoto.photoId,
-              txTemplate
-            ),
-
-            photoInfoDao.updatePhotoSetReceiverId(
-              newUploadingPhoto.photoId,
-              oldestPhoto.photoId,
-              txTemplate
-            )
+          return@transactional photoInfoDao.updatePhotoSetReceiverId(
+            oldestPhoto.photoId,
+            newUploadingPhoto.photoId,
+            txTemplate
           )
+            .toFlux()
+            .flatMap {
+              photoInfoDao.updatePhotoSetReceiverId(
+                newUploadingPhoto.photoId,
+                oldestPhoto.photoId,
+                txTemplate
+              )
+            }
         }.awaitFirst()
 
         if (!transactionResult) {
@@ -333,20 +333,17 @@ open class PhotoInfoRepository(
     }
   }
 
+  //FIXME: doesn't work in tests
   //should be called from within locked mutex
   private suspend fun deletePhotoInternalInTransaction(photoInfo: PhotoInfo): Boolean {
-    if (photoInfo.isEmpty()) {
-      return false
-    }
+    check(!photoInfo.isEmpty())
 
     val transactionMono = template.transactional { txTemplate ->
-      return@transactional Flux.merge(
-        photoInfoDao.deleteById(photoInfo.photoId, txTemplate),
-        favouritedPhotoDao.deleteFavouriteByPhotoName(photoInfo.photoName, txTemplate),
-        reportedPhotoDao.deleteReportByPhotoName(photoInfo.photoName, txTemplate),
-        locationMapDao.deleteById(photoInfo.photoId, txTemplate),
-        galleryPhotoDao.deleteByPhotoName(photoInfo.photoName, txTemplate)
-      )
+      return@transactional photoInfoDao.deleteById(photoInfo.photoId, txTemplate).toFlux()
+        .flatMap { favouritedPhotoDao.deleteFavouriteByPhotoName(photoInfo.photoName, txTemplate) }
+        .flatMap { reportedPhotoDao.deleteReportByPhotoName(photoInfo.photoName, txTemplate) }
+        .flatMap { locationMapDao.deleteById(photoInfo.photoId, txTemplate) }
+        .flatMap { galleryPhotoDao.deleteByPhotoName(photoInfo.photoName, txTemplate) }
     }
 
     return try {

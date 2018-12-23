@@ -158,6 +158,7 @@ abstract class AbstractHandlerTest {
 		reportedPhotoDao.clear()
 		userInfoDao.clear()
 		locationMapDao.clear()
+		banListDao.clear()
 
 		clearFilesDir()
 	}

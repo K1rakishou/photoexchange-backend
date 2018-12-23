@@ -5,9 +5,9 @@ import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
-fun <T> ReactiveMongoTemplate.transactional(
-  block: (ReactiveMongoOperations) -> Flux<T>
-): Mono<T> {
+fun ReactiveMongoTemplate.transactional(
+  block: (ReactiveMongoOperations) -> Flux<Boolean>
+): Mono<Boolean> {
   return inTransaction().execute { txTemplate ->
     return@execute block(txTemplate)
   }.next()
