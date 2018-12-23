@@ -67,6 +67,7 @@ fun myBeans(adminToken: String) = beans {
   bean<PushNotificationSenderService>()
   bean<DiskManipulationService>()
   bean<WebClientService>()
+  bean<GoogleCredentialsService>()
   bean {
     CleanupService(
       ref(),

@@ -57,7 +57,7 @@ class BanUserAndAllTheirPhotosHandler(
         val userId = request.pathVariable(USER_ID_VARIABLE_PATH)
         val allUserPhotos = photoInfoRepository.findAllPhotosByUserId(userId)
 
-        if (!banAlluserIpHashes(allUserPhotos)) {
+        if (!banAllUserIpHashes(allUserPhotos)) {
           logger.debug("Could not ban one of the ip hashes for user ${userId}")
           return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
             BanUserAndAllTheirPhotosResponse.fail(ErrorCode.DatabaseError))
@@ -91,7 +91,7 @@ class BanUserAndAllTheirPhotosHandler(
     }
   }
 
-  private suspend fun banAlluserIpHashes(allUserPhotos: List<PhotoInfo>): Boolean {
+  private suspend fun banAllUserIpHashes(allUserPhotos: List<PhotoInfo>): Boolean {
     val ipHashList = allUserPhotos
       .distinctBy { it.ipHash }
       .map { it.ipHash }

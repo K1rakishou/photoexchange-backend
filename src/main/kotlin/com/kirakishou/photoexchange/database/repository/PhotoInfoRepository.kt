@@ -92,7 +92,7 @@ open class PhotoInfoRepository(
     }
   }
 
-  suspend fun findOneById(photoId: Long): PhotoInfo {
+  open suspend fun findOneById(photoId: Long): PhotoInfo {
     return withContext(coroutineContext) {
       return@withContext photoInfoDao.findById(photoId).awaitFirst()
     }
