@@ -57,7 +57,7 @@ open class WebClientService(
     accessToken: String,
     notificationBody: String,
     maxTimeoutSeconds: Long
-  ): Mono<Unit> {
+  ): Mono<Boolean> {
     return client.post()
       .uri(URL)
       .contentType(MediaType.APPLICATION_JSON)
@@ -69,9 +69,10 @@ open class WebClientService(
       .map { statusCode ->
         if (!statusCode.is2xxSuccessful) {
           logger.debug("Status code is not 2xxSuccessful ($statusCode)")
-        } else {
-          logger.debug("PushNotification sent")
+          return@map false
         }
+
+        return@map true
       }
   }
 

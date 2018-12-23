@@ -109,6 +109,28 @@ data class PhotoInfo(
     }
   }
 
+  override fun equals(other: Any?): Boolean {
+    if (other == null) {
+      return false
+    }
+
+    if (other === this) {
+      return true
+    }
+
+    if (other::class.java != this::class.java) {
+      return false
+    }
+
+    other as PhotoInfo
+
+    return other.photoId == photoId && other.photoName == photoName
+  }
+
+  override fun hashCode(): Int {
+    return photoId.hashCode() * photoName.hashCode()
+  }
+
   object Mongo {
     object Field {
       const val PHOTO_ID = "_id"

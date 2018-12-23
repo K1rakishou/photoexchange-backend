@@ -4,7 +4,7 @@ import com.google.gson.Gson
 import core.SharedConstants
 import org.springframework.core.io.buffer.DataBuffer
 
-class JsonConverterService(
+open class JsonConverterService(
 	val gson: Gson
 ) {
 
@@ -13,7 +13,7 @@ class JsonConverterService(
 		return gson.fromJson(dataBufferToString(dataBufferList, maxSize), T::class.java) as T
 	}
 
-	fun <T> toJson(data: T): String {
+	open fun <T> toJson(data: T): String {
 		return gson.toJson(data)
 	}
 
