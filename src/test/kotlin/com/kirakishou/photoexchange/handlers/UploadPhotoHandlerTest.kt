@@ -1,7 +1,7 @@
-package com.kirakishou.photoexchange.handler
+package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
-import com.kirakishou.photoexchange.handlers.UploadPhotoHandler
+import com.kirakishou.photoexchange.handler.AbstractHandlerTest
 import com.nhaarman.mockito_kotlin.any
 import core.ErrorCode
 import core.SharedConstants

@@ -1,4 +1,4 @@
-package com.kirakishou.photoexchange.handlers.gallery_photos
+package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
 import com.kirakishou.photoexchange.handler.AbstractHandlerTest
