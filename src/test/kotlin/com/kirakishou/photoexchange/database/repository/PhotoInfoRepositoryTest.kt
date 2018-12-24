@@ -1,6 +1,5 @@
 package com.kirakishou.photoexchange.database.repository
 
-import com.kirakishou.photoexchange.Utils
 import com.kirakishou.photoexchange.database.entity.*
 import com.kirakishou.photoexchange.exception.DatabaseTransactionException
 import com.nhaarman.mockito_kotlin.any
@@ -44,6 +43,7 @@ class PhotoInfoRepositoryTest : AbstractRepositoryTest() {
 
       assertFalse(photoInfoRepository.delete(photoInfo))
 
+      assertEquals(1, photoInfoDao.testFindAll().awaitFirst().size)
       assertEquals(photoInfo.photoName, photoInfoDao.testFindAll().awaitFirst().first().photoName)
       assertEquals(photoInfo.photoName, favouritedPhotoDao.testFindAll().awaitFirst().first().photoName)
       assertEquals(photoInfo.photoName, reportedPhotoDao.testFindAll().awaitFirst().first().photoName)
