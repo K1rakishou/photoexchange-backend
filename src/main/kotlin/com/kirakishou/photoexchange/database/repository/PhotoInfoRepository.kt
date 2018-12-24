@@ -338,13 +338,13 @@ open class PhotoInfoRepository(
   private suspend fun deletePhotoInternalInTransaction(photoInfo: PhotoInfo): Boolean {
     check(!photoInfo.isEmpty())
 
-    val transactionMono = template.transactional { txTemplate ->
-      return@transactional photoInfoDao.deleteById(photoInfo.photoId, txTemplate).toFlux()
+    val transactionMono = template.inTransaction().execute { txTemplate ->
+      return@execute photoInfoDao.deleteById(photoInfo.photoId, txTemplate)
         .flatMap { favouritedPhotoDao.deleteFavouriteByPhotoName(photoInfo.photoName, txTemplate) }
         .flatMap { reportedPhotoDao.deleteReportByPhotoName(photoInfo.photoName, txTemplate) }
         .flatMap { locationMapDao.deleteById(photoInfo.photoId, txTemplate) }
         .flatMap { galleryPhotoDao.deleteByPhotoName(photoInfo.photoName, txTemplate) }
-    }
+    }.next()
 
     return try {
       transactionMono.awaitFirst()

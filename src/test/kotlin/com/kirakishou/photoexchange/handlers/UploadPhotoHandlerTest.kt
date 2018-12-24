@@ -69,6 +69,45 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
   }
 
   @Test
+  fun `photo should not be uploaded if could not enqueue static map downloading request`() {
+    val webClient = getWebTestClient()
+    val userId = "1234235236"
+    val token = "fwerwe"
+
+    runBlocking {
+      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
+      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
+      Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(true)
+      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
+      Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(false)
+    }
+
+    kotlin.run {
+      val packet = UploadPhotoPacket(33.4, 55.2, userId, true)
+      val multipartData = createTestMultipartFile(PHOTO1, packet)
+
+      val content = webClient
+        .post()
+        .uri("/v1/api/upload")
+        .contentType(MediaType.MULTIPART_FORM_DATA)
+        .body(BodyInserters.fromMultipartData(multipartData))
+        .exchange()
+        .expectStatus().is5xxServerError
+        .expectBody()
+
+      val response = fromBodyContent<UploadPhotoResponse>(content)
+      assertEquals(ErrorCode.DatabaseError.value, response.errorCode)
+
+      assertEquals(0, findAllFiles().size)
+
+      runBlocking {
+        assertEquals(0, galleryPhotoDao.testFindAll().awaitFirst().size)
+        assertEquals(0, photoInfoDao.testFindAll().awaitFirst().size)
+      }
+    }
+  }
+
+  @Test
   fun `photo should not be uploaded when resizeAndSavePhotos throws an exception`() {
     val webClient = getWebTestClient()
     val userId = "1234235236"
@@ -142,45 +181,6 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
       val response = fromBodyContent<UploadPhotoResponse>(content)
       assertEquals(ErrorCode.ServerDiskError.value, response.errorCode)
-
-      assertEquals(0, findAllFiles().size)
-
-      runBlocking {
-        assertEquals(0, galleryPhotoDao.testFindAll().awaitFirst().size)
-        assertEquals(0, photoInfoDao.testFindAll().awaitFirst().size)
-      }
-    }
-  }
-
-  @Test
-  fun `photo should not be uploaded if could not enqueue static map downloading request`() {
-    val webClient = getWebTestClient()
-    val userId = "1234235236"
-    val token = "fwerwe"
-
-    runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
-      Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(true)
-      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
-      Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(false)
-    }
-
-    kotlin.run {
-      val packet = UploadPhotoPacket(33.4, 55.2, userId, true)
-      val multipartData = createTestMultipartFile(PHOTO1, packet)
-
-      val content = webClient
-        .post()
-        .uri("/v1/api/upload")
-        .contentType(MediaType.MULTIPART_FORM_DATA)
-        .body(BodyInserters.fromMultipartData(multipartData))
-        .exchange()
-        .expectStatus().is5xxServerError
-        .expectBody()
-
-      val response = fromBodyContent<UploadPhotoResponse>(content)
-      assertEquals(ErrorCode.DatabaseError.value, response.errorCode)
 
       assertEquals(0, findAllFiles().size)
 

@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono
 fun ReactiveMongoTemplate.transactional(
   block: (ReactiveMongoOperations) -> Flux<Boolean>
 ): Mono<Boolean> {
-  return inTransaction().execute { txTemplate ->
+  return inTransaction().execute({ txTemplate ->
     return@execute block(txTemplate)
-  }.next()
+  }).next()
 }
