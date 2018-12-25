@@ -435,6 +435,8 @@ open class PhotoInfoRepository(
       val countMap = hashMapOf<String, Long>()
 
       photoNames
+        //FIXME: there may be up to 200 requests to the database.
+        //Should probably optimise this somehow to use just a single request (if it's even possible with mongodb)
         .map { photoName -> favouritedPhotoDao.countFavouritesByPhotoName(photoName) to photoName }
         .map { (future, photoName) -> future.awaitFirst() to photoName }
         .forEach { (count, photoName) -> countMap.put(photoName, count) }

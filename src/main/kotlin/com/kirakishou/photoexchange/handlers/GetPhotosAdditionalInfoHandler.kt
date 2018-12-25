@@ -45,9 +45,13 @@ class GetPhotosAdditionalInfoHandler(
 
         val photoNames = Utils.parsePhotoNames(
           photoNamesString,
-          ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT,
+          ServerSettings.MAX_PHOTO_ADDITIONAL_INFO_PER_REQUEST,
           ServerSettings.PHOTOS_DELIMITER
         )
+
+        if (photoNames.isEmpty()) {
+          return@mono formatResponse(HttpStatus.OK, GetPhotosAdditionalInfoResponse.success(emptyList()))
+        }
 
         val additionalInfoResponseData = photoInfoRepository.findPhotoAdditionalInfo(userId, photoNames)
         logger.debug("Found ${additionalInfoResponseData.size} photo additional info")
