@@ -1,19 +1,16 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.database.repository.UserInfoRepository
-import com.kirakishou.photoexchange.exception.EmptyPacket
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
+import core.SharedConstants
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactor.mono
 import net.request.UpdateFirebaseTokenPacket
 import net.response.UpdateFirebaseTokenResponse
 import org.slf4j.LoggerFactory
-import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
-import org.springframework.http.codec.multipart.Part
-import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
@@ -66,7 +63,23 @@ class UpdateFirebaseTokenHandler(
   }
 
   private fun isPacketOk(packet: UpdateFirebaseTokenPacket): Boolean {
-    if (packet.userId.isNullOrEmpty() || packet.token.isNullOrEmpty()) {
+    if (packet.userId.isNullOrEmpty()) {
+      logger.debug("Bad param userId (${packet.userId})")
+      return false
+    }
+
+    if (packet.token.isNullOrEmpty()) {
+      logger.debug("Bad param token (${packet.token})")
+      return false
+    }
+
+    if (packet.userId.length > SharedConstants.MAX_USER_ID_LEN) {
+      logger.debug("Bad param userId (${packet.userId})")
+      return false
+    }
+
+    if (packet.token.length > SharedConstants.MAX_FIREBASE_TOKEN_LEN) {
+      logger.debug("Bad param token (${packet.token})")
       return false
     }
 

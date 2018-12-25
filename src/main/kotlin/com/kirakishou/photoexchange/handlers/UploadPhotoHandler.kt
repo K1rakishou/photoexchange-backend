@@ -187,11 +187,23 @@ class UploadPhotoHandler(
   }
 
   private fun isPacketOk(packet: UploadPhotoPacket): Boolean {
-    if (packet.lon == null || packet.lat == null || packet.userId == null || packet.isPublic == null) {
+    if (packet.lon == null || packet.lon < -180.0 || packet.lon > 180.0) {
+      logger.debug("Bad param lon (${packet.lon})")
       return false
     }
 
-    if (packet.lon < -180.0 || packet.lon > 180.0 || packet.lat < -90.0 || packet.lat > 90.0 || packet.userId.isEmpty()) {
+    if (packet.lat == null || packet.lat < -90.0 || packet.lat > 90.0) {
+      logger.debug("Bad param lat (${packet.lat})")
+      return false
+    }
+
+    if (packet.userId == null || packet.userId.isEmpty() || packet.userId.length > SharedConstants.MAX_USER_ID_LEN) {
+      logger.debug("Bad param userId (${packet.userId})")
+      return false
+    }
+
+    if (packet.isPublic == null) {
+      logger.debug("Bad param isPublic (${packet.isPublic})")
       return false
     }
 

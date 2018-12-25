@@ -2,9 +2,10 @@ package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
 import com.kirakishou.photoexchange.config.ServerSettings.PHOTO_SIZES
-import com.kirakishou.photoexchange.extensions.containsAllPathVars
+import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
+import core.SharedConstants
 import kotlinx.coroutines.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.FileSystemResource
@@ -19,48 +20,63 @@ import reactor.core.publisher.Mono
 import java.io.File
 
 class GetPhotoHandler(
-	jsonConverter: JsonConverterService
+  jsonConverter: JsonConverterService
 ) : AbstractWebHandler(jsonConverter) {
-	private val logger = LoggerFactory.getLogger(GetPhotoHandler::class.java)
-	private val readChuckSize = 16384
-	private val PHOTO_NAME_PATH_VARIABLE = "photo_name"
-	private val PHOTO_SIZE_PATH_VARIABLE = "photo_size"
+  private val logger = LoggerFactory.getLogger(GetPhotoHandler::class.java)
+  private val readChuckSize = 16384
+  private val PHOTO_NAME_PATH_VARIABLE = "photo_name"
+  private val PHOTO_SIZE_PATH_VARIABLE = "photo_size"
 
-	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		return mono {
-			logger.debug("New GetPhoto request")
+  override fun handle(request: ServerRequest): Mono<ServerResponse> {
+    return mono {
+      logger.debug("New GetPhoto request")
 
-			try {
-				if (!request.containsAllPathVars(PHOTO_NAME_PATH_VARIABLE, PHOTO_SIZE_PATH_VARIABLE)) {
-					logger.debug("Request does not contain one of the required path variables")
-					return@mono ServerResponse.badRequest().build()
-				}
+      try {
+        val photoName = request.getStringVariable(
+          PHOTO_NAME_PATH_VARIABLE,
+          SharedConstants.MAX_PHOTO_NAME_LEN
+        )
 
-				val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
-				val photoSize = request.pathVariable(PHOTO_SIZE_PATH_VARIABLE)
+        if (photoName == null) {
+          logger.debug("Bad param photoName ($photoName)")
+          return@mono ServerResponse.badRequest().build()
+        }
 
-				if (!PHOTO_SIZES.contains(photoSize)) {
-					logger.debug("Photo size $photoSize param is neither of $PHOTO_SIZES")
-					return@mono ServerResponse.badRequest().build()
-				}
+        val photoSize = request.getStringVariable(
+          PHOTO_SIZE_PATH_VARIABLE,
+          2
+        )
 
-				val file = File("$FILE_DIR_PATH\\${photoName}_$photoSize")
-				if (!file.exists()) {
-					logger.debug("Photo $photoName not found on the disk")
-					return@mono ServerResponse.notFound().build()
-				}
+        if (photoSize == null) {
+          logger.debug("Bad param photoSize ($photoSize)")
+          return@mono ServerResponse.badRequest().build()
+        }
 
-				val photoStreamFlux = DataBufferUtils.read(FileSystemResource(file),
-					DefaultDataBufferFactory(false, readChuckSize), readChuckSize)
+        if (!PHOTO_SIZES.contains(photoSize)) {
+          logger.debug("Photo size $photoSize param is neither of $PHOTO_SIZES")
+          return@mono ServerResponse.badRequest().build()
+        }
 
-				return@mono ServerResponse.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=$photoName")
-					.body(photoStreamFlux)
-			} catch (error: Throwable) {
-				logger.error("Unknown error", error)
-				return@mono ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR)
-					.build()
-			}
-		}.flatMap { it }
-	}
+        val file = File("$FILE_DIR_PATH\\${photoName}_$photoSize")
+        if (!file.exists()) {
+          logger.debug("Photo $photoName not found on the disk")
+          return@mono ServerResponse.notFound().build()
+        }
+
+        val photoStreamFlux = DataBufferUtils.read(
+          FileSystemResource(file),
+          DefaultDataBufferFactory(false, readChuckSize), readChuckSize
+        )
+
+        return@mono ServerResponse.ok()
+          .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=$photoName")
+          .body(photoStreamFlux)
+
+      } catch (error: Throwable) {
+        logger.error("Unknown error", error)
+        return@mono ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .build()
+      }
+    }.flatMap { it }
+  }
 }

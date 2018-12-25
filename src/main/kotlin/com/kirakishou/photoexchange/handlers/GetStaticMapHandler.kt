@@ -1,9 +1,10 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.extensions.containsAllPathVars
+import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
+import core.SharedConstants
 import kotlinx.coroutines.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.FileSystemResource
@@ -18,41 +19,47 @@ import reactor.core.publisher.Mono
 import java.io.File
 
 class GetStaticMapHandler(
-	jsonConverter: JsonConverterService
+  jsonConverter: JsonConverterService
 ) : AbstractWebHandler(jsonConverter) {
-	private val logger = LoggerFactory.getLogger(GetStaticMapHandler::class.java)
-	private val readChuckSize = 16384
-	private val PHOTO_NAME_PATH_VARIABLE = "photo_name"
+  private val logger = LoggerFactory.getLogger(GetStaticMapHandler::class.java)
+  private val readChuckSize = 16384
+  private val PHOTO_NAME_PATH_VARIABLE = "photo_name"
 
-	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		return mono {
-			logger.debug("New GetStaticMap request")
+  override fun handle(request: ServerRequest): Mono<ServerResponse> {
+    return mono {
+      logger.debug("New GetStaticMap request")
 
-			try {
-				if (!request.containsAllPathVars(PHOTO_NAME_PATH_VARIABLE)) {
-					logger.debug("Request does not contain photoName variable")
-					return@mono ServerResponse.badRequest().build()
-				}
+      try {
+        val photoName = request.getStringVariable(
+          PHOTO_NAME_PATH_VARIABLE,
+          SharedConstants.MAX_PHOTO_NAME_LEN
+        )
 
-				val photoName = request.pathVariable(PHOTO_NAME_PATH_VARIABLE)
+        if (photoName == null) {
+          logger.debug("Bad param photoName ($photoName)")
+          return@mono ServerResponse.badRequest().build()
+        }
 
-				val file = File("${ServerSettings.FILE_DIR_PATH}\\${photoName}_map")
-				if (!file.exists()) {
-					logger.debug("Static map $photoName not found on the disk")
-					return@mono ServerResponse.notFound().build()
-				}
+        val file = File("${ServerSettings.FILE_DIR_PATH}\\${photoName}_map")
+        if (!file.exists()) {
+          logger.debug("Static map $photoName not found on the disk")
+          return@mono ServerResponse.notFound().build()
+        }
 
-				val photoStreamFlux = DataBufferUtils.read(FileSystemResource(file),
-					DefaultDataBufferFactory(false, readChuckSize), readChuckSize)
+        val photoStreamFlux = DataBufferUtils.read(
+          FileSystemResource(file),
+          DefaultDataBufferFactory(false, readChuckSize), readChuckSize
+        )
 
-				return@mono ServerResponse.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=$photoName")
-					.body(photoStreamFlux)
-			} catch (error: Throwable) {
-				logger.error("Unknown error", error)
-				return@mono ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR)
-					.build()
-			}
-		}.flatMap { it }
-	}
+        return@mono ServerResponse.ok()
+          .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=$photoName")
+          .body(photoStreamFlux)
+
+      } catch (error: Throwable) {
+        logger.error("Unknown error", error)
+        return@mono ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .build()
+      }
+    }.flatMap { it }
+  }
 }

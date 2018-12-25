@@ -2,7 +2,8 @@ package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.extensions.containsAllPathVars
+import com.kirakishou.photoexchange.extensions.getIntVariable
+import com.kirakishou.photoexchange.extensions.getLongVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
@@ -28,32 +29,27 @@ class GetGalleryPhotosHandler(
       logger.debug("New GetGalleryPhotos request")
 
       try {
-        if (!request.containsAllPathVars(LAST_UPLOADED_ON, COUNT)) {
-          logger.debug("Request does not contain one of the required path variables")
-          return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GalleryPhotosResponse.fail(ErrorCode.BadRequest))
+        val lastUploadedOn = request.getLongVariable(LAST_UPLOADED_ON, 0L, Long.MAX_VALUE)
+        if (lastUploadedOn == null) {
+          logger.debug("Bad param lastUploadedOn ($lastUploadedOn)")
+          return@mono formatResponse(
+            HttpStatus.BAD_REQUEST,
+            GalleryPhotosResponse.fail(ErrorCode.BadRequest)
+          )
         }
 
-        val lastUploadedOn = try {
-          request.pathVariable(LAST_UPLOADED_ON).toLong()
-        } catch (error: Throwable) {
-          error.printStackTrace()
+        val count = request.getIntVariable(
+          COUNT,
+          ServerSettings.MIN_GALLERY_PHOTOS_PER_REQUEST_COUNT,
+          ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT
+        )
 
-          logger.debug("Bad param last_uploaded_on (${request.pathVariable(LAST_UPLOADED_ON)})")
-          return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GalleryPhotosResponse.fail(ErrorCode.BadRequest))
-        }
-
-        val count = try {
-          request.pathVariable(COUNT)
-            .toInt()
-            .coerceIn(ServerSettings.MIN_GALLERY_PHOTOS_PER_REQUEST_COUNT, ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT)
-        } catch (error: Throwable) {
-          error.printStackTrace()
-
-          logger.debug("Bad param count (${request.pathVariable(COUNT)})")
-          return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GalleryPhotosResponse.fail(ErrorCode.BadRequest))
+        if (count == null) {
+          logger.debug("Bad param count ($count)")
+          return@mono formatResponse(
+            HttpStatus.BAD_REQUEST,
+            GalleryPhotosResponse.fail(ErrorCode.BadRequest)
+          )
         }
 
         val galleryPhotoResponseData = photoInfoRepository.findGalleryPhotos(lastUploadedOn, count)
@@ -66,8 +62,10 @@ class GetGalleryPhotosHandler(
         return@mono formatResponse(HttpStatus.OK, response)
       } catch (error: Throwable) {
         logger.error("Unknown error", error)
-        return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-          GalleryPhotosResponse.fail(ErrorCode.UnknownError))
+        return@mono formatResponse(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          GalleryPhotosResponse.fail(ErrorCode.UnknownError)
+        )
       }
     }.flatMap { it }
   }

@@ -2,11 +2,12 @@ package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.extensions.containsAllPathVars
+import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.Utils
 import core.ErrorCode
+import core.SharedConstants
 import kotlinx.coroutines.reactor.mono
 import net.response.GetPhotosAdditionalInfoResponse
 import org.slf4j.LoggerFactory
@@ -28,19 +29,38 @@ class GetPhotosAdditionalInfoHandler(
       logger.debug("New GetGalleryPhotoInfo request")
 
       try {
-        if (!request.containsAllPathVars(USER_ID_VARIABLE, PHOTO_NAMES_VARIABLE)) {
-          logger.debug("Request does not contain one of the required path variables")
-          return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GetPhotosAdditionalInfoResponse.fail(ErrorCode.BadRequest))
-        }
+        val photoNamesString = request.getStringVariable(
+          PHOTO_NAMES_VARIABLE,
+          ServerSettings.MAX_PHOTO_ADDITIONAL_INFO_PER_REQUEST * SharedConstants.MAX_PHOTO_NAME_LEN
+        )
 
-        val photoNamesString = request.pathVariable(PHOTO_NAMES_VARIABLE)
-        val userId = request.pathVariable(USER_ID_VARIABLE)
+        if (photoNamesString == null) {
+          logger.debug("Bad param photoNamesString ($photoNamesString)")
+          return@mono formatResponse(
+            HttpStatus.BAD_REQUEST,
+            GetPhotosAdditionalInfoResponse.fail(ErrorCode.BadRequest)
+          )
+        }
 
         if (photoNamesString.isEmpty()) {
           logger.debug("photoNamesString is empty")
-          return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GetPhotosAdditionalInfoResponse.fail(ErrorCode.NoPhotosInRequest))
+          return@mono formatResponse(
+            HttpStatus.BAD_REQUEST,
+            GetPhotosAdditionalInfoResponse.fail(ErrorCode.NoPhotosInRequest)
+          )
+        }
+
+        val userId = request.getStringVariable(
+          USER_ID_VARIABLE,
+          SharedConstants.MAX_USER_ID_LEN
+        )
+
+        if (userId == null) {
+          logger.debug("Bad param userId ($userId)")
+          return@mono formatResponse(
+            HttpStatus.BAD_REQUEST,
+            GetPhotosAdditionalInfoResponse.fail(ErrorCode.BadRequest)
+          )
         }
 
         val photoNames = Utils.parsePhotoNames(
@@ -50,17 +70,25 @@ class GetPhotosAdditionalInfoHandler(
         )
 
         if (photoNames.isEmpty()) {
-          return@mono formatResponse(HttpStatus.OK, GetPhotosAdditionalInfoResponse.success(emptyList()))
+          return@mono formatResponse(
+            HttpStatus.OK,
+            GetPhotosAdditionalInfoResponse.success(emptyList())
+          )
         }
 
         val additionalInfoResponseData = photoInfoRepository.findPhotoAdditionalInfo(userId, photoNames)
         logger.debug("Found ${additionalInfoResponseData.size} photo additional info")
 
-        return@mono formatResponse(HttpStatus.OK, GetPhotosAdditionalInfoResponse.success(additionalInfoResponseData))
+        return@mono formatResponse(
+          HttpStatus.OK,
+          GetPhotosAdditionalInfoResponse.success(additionalInfoResponseData)
+        )
       } catch (error: Throwable) {
         logger.error("Unknown error", error)
-        return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-          GetPhotosAdditionalInfoResponse.fail(ErrorCode.UnknownError))
+        return@mono formatResponse(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          GetPhotosAdditionalInfoResponse.fail(ErrorCode.UnknownError)
+        )
       }
     }.flatMap { it }
   }

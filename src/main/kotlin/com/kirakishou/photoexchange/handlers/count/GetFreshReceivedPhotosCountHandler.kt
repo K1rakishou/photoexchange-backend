@@ -1,10 +1,12 @@
 package com.kirakishou.photoexchange.handlers.count
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.extensions.containsAllPathVars
+import com.kirakishou.photoexchange.extensions.getLongVariable
+import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
+import core.SharedConstants
 import kotlinx.coroutines.reactor.mono
 import net.response.GetFreshPhotosCountResponse
 import org.slf4j.LoggerFactory
@@ -12,7 +14,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
-import java.lang.NumberFormatException
 
 class GetFreshReceivedPhotosCountHandler(
   jsonConverter: JsonConverterService,
@@ -27,31 +28,38 @@ class GetFreshReceivedPhotosCountHandler(
       logger.debug("New GetFreshReceivedPhotosCount request")
 
       try {
-        if (!request.containsAllPathVars(TIME_PATH_VARIABLE, USER_ID_PATH_VARIABLE)) {
-          logger.debug("Request does not contain one of the required path variables")
-          return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GetFreshPhotosCountResponse.fail(ErrorCode.BadRequest))
+        val userId = request.getStringVariable(USER_ID_PATH_VARIABLE, SharedConstants.MAX_USER_ID_LEN)
+        if (userId == null) {
+          logger.debug("Bad param userId ($userId)")
+          return@mono formatResponse(
+            HttpStatus.BAD_REQUEST,
+            GetFreshPhotosCountResponse.fail(ErrorCode.BadRequest)
+          )
         }
 
-        val userId = request.pathVariable(USER_ID_PATH_VARIABLE)
-        val time = try {
-          request.pathVariable(TIME_PATH_VARIABLE).toLong()
-        } catch (error: NumberFormatException) {
-          logger.error("Could not convert TIME_PATH_VARIABLE param to long ", error)
-
-          logger.debug("Bad param time (${request.pathVariable(TIME_PATH_VARIABLE)})")
-          return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GetFreshPhotosCountResponse.fail(ErrorCode.BadRequest))
+        val time = request.getLongVariable(TIME_PATH_VARIABLE, 0L, Long.MAX_VALUE)
+        if (time == null) {
+          logger.debug("Bad param time ($time)")
+          return@mono formatResponse(
+            HttpStatus.BAD_REQUEST,
+            GetFreshPhotosCountResponse.fail(ErrorCode.BadRequest)
+          )
         }
 
         val freshPhotosCount = photoInfoRepo.countFreshReceivedPhotosSince(userId, time)
-
         logger.debug("Found ${freshPhotosCount} fresh received photos")
-        return@mono formatResponse(HttpStatus.OK, GetFreshPhotosCountResponse.success(freshPhotosCount))
+
+        return@mono formatResponse(
+          HttpStatus.OK,
+          GetFreshPhotosCountResponse.success(freshPhotosCount)
+        )
+
       } catch (error: Throwable) {
         logger.error("Unknown error", error)
-        return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-          GetFreshPhotosCountResponse.fail(ErrorCode.UnknownError))
+        return@mono formatResponse(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          GetFreshPhotosCountResponse.fail(ErrorCode.UnknownError)
+        )
       }
     }.flatMap { it }
   }

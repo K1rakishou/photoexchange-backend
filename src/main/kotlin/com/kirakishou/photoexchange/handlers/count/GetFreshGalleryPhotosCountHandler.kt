@@ -1,7 +1,7 @@
 package com.kirakishou.photoexchange.handlers.count
 
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.extensions.containsAllPathVars
+import com.kirakishou.photoexchange.extensions.getLongVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
@@ -12,7 +12,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
-import java.lang.NumberFormatException
 
 class GetFreshGalleryPhotosCountHandler(
   jsonConverter: JsonConverterService,
@@ -26,18 +25,9 @@ class GetFreshGalleryPhotosCountHandler(
       logger.debug("New GetFreshGalleryPhotosCount request")
 
       try {
-        if (!request.containsAllPathVars(TIME_PATH_VARIABLE)) {
-          logger.debug("Request does not contain one of the required path variables")
-          return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            GetFreshPhotosCountResponse.fail(ErrorCode.BadRequest))
-        }
-
-        val time = try {
-          request.pathVariable(TIME_PATH_VARIABLE).toLong()
-        } catch (error: NumberFormatException) {
-          logger.error("Could not convert TIME_PATH_VARIABLE param to long ", error)
-
-          logger.debug("Bad param time (${request.pathVariable(TIME_PATH_VARIABLE)})")
+        val time = request.getLongVariable(TIME_PATH_VARIABLE, 0L, Long.MAX_VALUE)
+        if (time == null) {
+          logger.debug("Bad param time ($time)")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
             GetFreshPhotosCountResponse.fail(ErrorCode.BadRequest))
         }
