@@ -68,6 +68,19 @@ open class StaticMapDownloaderService(
     return !saveResult.isEmpty()
   }
 
+  //this method is for tests only
+  open suspend fun testEnqueue(photoId: Long?): Boolean {
+    if (photoId != null) {
+      val saveResult = locationMapRepository.save(LocationMap.create(photoId))
+      if (saveResult.isEmpty()) {
+        return false
+      }
+    }
+
+    startDownloadingMapFiles()
+    return true
+  }
+
   private suspend fun startDownloadingMapFiles() {
     val requestsBatch = locationMapRepository.getOldest(REQUESTS_PER_BATCH, TimeUtils.getTimeFast())
     if (requestsBatch.isEmpty()) {
@@ -112,24 +125,23 @@ open class StaticMapDownloaderService(
 
       val photoMapName = "${photoInfo.photoName}${ServerSettings.PHOTO_MAP_SUFFIX}"
 
-      val dataBufferList = webClientService.downloadLocationMap(
+      val outFile = webClientService.downloadLocationMap(
         photoInfo,
         photoMapName,
         MAX_TIMEOUT_SECONDS
       )
-        .collectList()
-        .awaitFirst()
 
-      val outFile = File("${ServerSettings.FILE_DIR_PATH}\\$photoMapName")
+      if (outFile.isEmpty()) {
+        throw CouldNotDownloadMap()
+      }
 
       try {
-        diskManipulationService.copyDataBuffersToFile(dataBufferList, outFile)
         locationMapRepository.setMapReady(locationMap.photoId, locationMap.id)
 
         logger.debug("[$photoMapName], Map has been successfully downloaded")
       } catch (error: Throwable) {
         if (!outFile.deleteIfExists()) {
-          logger.warn("Could not delete file ${outFile.absolutePath}")
+          logger.warn("Could not delete file ${outFile.getFile()!!.absolutePath}")
         }
 
         throw error
@@ -150,10 +162,9 @@ open class StaticMapDownloaderService(
       //no more attempts left
       updateMapAsFailed(locationMap)
     } else {
-      val nextAttemptTime = TimeUtils.getTimeFast() + repeatTimeDelta
-      if (!locationMapRepository.increaseAttemptsCountAndNextAttemptTime(locationMap.photoId, nextAttemptTime)) {
+      if (!locationMapRepository.increaseAttemptsCountAndNextAttemptTime(locationMap.photoId, repeatTimeDelta)) {
         logger.error("Could not increase attempts count for " +
-          "photo with id (${locationMap.photoId}) and nextAttemptTime ($nextAttemptTime)")
+          "photo with id (${locationMap.photoId}) and repeatTimeDelta ($repeatTimeDelta)")
       }
     }
   }
@@ -172,11 +183,13 @@ open class StaticMapDownloaderService(
 
     try {
       diskManipulationService.replaceMapOnDiskWithNoMapAvailablePlaceholder(photoInfo.photoName)
+      logger.debug("Successfully updated location map as failed for photo (${photoInfo.photoName})")
     } catch (error: Throwable) {
       logger.error("Could not replace map with placeholder for photo with name (${photoInfo.photoName})", error)
     }
   }
 
   class CouldNotFindPhotoInfo(message: String) : Exception(message)
+  class CouldNotDownloadMap : Exception()
   class ResponseIsNot2xxSuccessful(message: String) : Exception(message)
 }

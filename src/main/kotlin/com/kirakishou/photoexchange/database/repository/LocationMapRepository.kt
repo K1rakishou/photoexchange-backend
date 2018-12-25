@@ -5,6 +5,7 @@ import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
 import com.kirakishou.photoexchange.database.entity.LocationMap
 import com.kirakishou.photoexchange.extensions.transactional
+import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.sync.Mutex
@@ -77,9 +78,10 @@ open class LocationMapRepository(
     }
   }
 
-  open suspend fun increaseAttemptsCountAndNextAttemptTime(photoId: Long, nextAttemptTime: Long): Boolean {
+  open suspend fun increaseAttemptsCountAndNextAttemptTime(photoId: Long, repeatTimeDelta: Long): Boolean {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
+        val nextAttemptTime = TimeUtils.getTimeFast() + repeatTimeDelta
         return@withLock locationMapDao.increaseAttemptsCountAndNextAttemptTime(photoId, nextAttemptTime).awaitFirst()
       }
     }

@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.core
 
+import com.kirakishou.photoexchange.extensions.deleteIfExists
 import java.io.File
 
 /**
@@ -12,11 +13,7 @@ open class FileWrapper(
   fun isEmpty(): Boolean = file == null
   fun getFile() = file
 
-  fun deleteIfExists(){
-    file?.let {
-      if (it.exists()) {
-        it.delete()
-      }
-    }
+  fun deleteIfExists(): Boolean {
+    return file?.deleteIfExists() ?: true
   }
 }
