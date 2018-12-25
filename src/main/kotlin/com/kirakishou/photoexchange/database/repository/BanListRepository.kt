@@ -4,6 +4,7 @@ import com.kirakishou.photoexchange.database.dao.BanListDao
 import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.entity.BanEntry
 import com.kirakishou.photoexchange.util.TimeUtils
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -12,8 +13,9 @@ import org.slf4j.LoggerFactory
 
 open class BanListRepository(
   private val mongoSequenceDao: MongoSequenceDao,
-  private val banListDao: BanListDao
-) : AbstractRepository() {
+  private val banListDao: BanListDao,
+  dispatcher: CoroutineDispatcher
+) : AbstractRepository(dispatcher) {
   private val mutex = Mutex()
   private val logger = LoggerFactory.getLogger(BanListRepository::class.java)
 

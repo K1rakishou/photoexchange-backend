@@ -5,6 +5,7 @@ import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.GeneratorService
 import com.mongodb.ConnectionString
+import kotlinx.coroutines.Dispatchers
 import org.mockito.Mockito
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory
@@ -65,7 +66,8 @@ abstract class AbstractRepositoryTest {
 			reportedPhotoDao,
 			locationMapDao,
 			generator,
-			diskManipulationService
+			diskManipulationService,
+			Dispatchers.Unconfined
 		)
 	}
 

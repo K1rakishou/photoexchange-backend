@@ -1,13 +1,15 @@
 package com.kirakishou.photoexchange.database.repository
 
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlin.coroutines.CoroutineContext
 
-abstract class AbstractRepository : CoroutineScope {
+abstract class AbstractRepository(
+  private val dispatchers: CoroutineDispatcher
+) : CoroutineScope {
   private val job = Job()
 
   override val coroutineContext: CoroutineContext
-    get() = job + Dispatchers.IO
+    get() = job + dispatchers
 }

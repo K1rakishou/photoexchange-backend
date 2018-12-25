@@ -9,6 +9,7 @@ import com.kirakishou.photoexchange.exception.ExchangeException
 import com.kirakishou.photoexchange.extensions.transactional
 import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.GeneratorService
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -27,8 +28,9 @@ open class PhotoInfoRepository(
   private val reportedPhotoDao: ReportedPhotoDao,
   private val locationMapDao: LocationMapDao,
   private val generator: GeneratorService,
-  private val diskManipulationService: DiskManipulationService
-) : AbstractRepository() {
+  private val diskManipulationService: DiskManipulationService,
+  dispatcher: CoroutineDispatcher
+) : AbstractRepository(dispatcher) {
   private val mutex = Mutex()
   private val logger = LoggerFactory.getLogger(PhotoInfoRepository::class.java)
 

@@ -20,14 +20,14 @@ open class StaticMapDownloaderService(
   private val webClientService: WebClientService,
   private val photoInfoRepository: PhotoInfoRepository,
   private val locationMapRepository: LocationMapRepository,
-  private val diskManipulationService: DiskManipulationService
+  private val diskManipulationService: DiskManipulationService,
+  private val dispatcher: CoroutineDispatcher
 ) : CoroutineScope {
   private val logger = LoggerFactory.getLogger(StaticMapDownloaderService::class.java)
   private val job = Job()
   private val REQUESTS_PER_BATCH = 100
   private val MAX_TIMEOUT_SECONDS = 15L
   private val CHUNCKS_COUNT = 4
-  private val dispatcher = newFixedThreadPoolContext(CHUNCKS_COUNT, "map-downloader")
 
   private val repeatTimesList = listOf(
     0L,

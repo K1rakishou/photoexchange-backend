@@ -1,17 +1,15 @@
 package com.kirakishou.photoexchange.service
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.newFixedThreadPoolContext
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
 import kotlin.coroutines.CoroutineContext
 
-open class GoogleCredentialsService : CoroutineScope {
+open class GoogleCredentialsService(
+  private val dispatcher: CoroutineDispatcher
+) : CoroutineScope {
   private val logger = LoggerFactory.getLogger(GoogleCredentialsService::class.java)
-  private val dispatcher = newFixedThreadPoolContext(1, "google-token-refresher")
   private val job = Job()
   private val minTimeUntilRefresh = 30L
 
