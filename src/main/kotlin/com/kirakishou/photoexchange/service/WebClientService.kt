@@ -1,7 +1,10 @@
 package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.config.ServerSettings
+import com.kirakishou.photoexchange.core.FileWrapper
 import com.kirakishou.photoexchange.database.entity.PhotoInfo
+import com.kirakishou.photoexchange.extensions.deleteIfExists
+import kotlinx.coroutines.reactive.awaitFirst
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
@@ -11,46 +14,57 @@ import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.io.File
 import java.time.Duration
 
 open class WebClientService(
-  private val client: WebClient
+  private val client: WebClient,
+  private val diskManipulationService: DiskManipulationService
 ) {
   private val logger = LoggerFactory.getLogger(WebClientService::class.java)
 
-  open fun downloadLocationMap(
+  open suspend fun downloadLocationMap(
     photoInfo: PhotoInfo,
     photoMapName: String,
     maxTimeoutSeconds: Long
-  ): Flux<DataBuffer> {
-    val lon = photoInfo.lon
-    val lat = photoInfo.lat
-    val requestString = String.format(requestStringFormat, lon, lat, lon, lat)
+  ): FileWrapper {
+    try {
+      val lon = photoInfo.lon
+      val lat = photoInfo.lat
+      val requestString = String.format(requestStringFormat, lon, lat, lon, lat)
 
-    logger.debug("[$photoMapName], Trying to get map from google services")
+      logger.debug("[$photoMapName], Trying to get map from google services")
 
-    return client.get()
-      .uri(requestString)
-      .exchange()
-      .timeout(Duration.ofSeconds(maxTimeoutSeconds))
-      .doOnNext { response ->
-        if (!response.statusCode().is2xxSuccessful) {
-          if (response.statusCode() == HttpStatus.FORBIDDEN) {
-            logger.debug("StatusCode is FORBIDDEN. Probably should check the developer account")
+      val dataBufferList = client.get()
+        .uri(requestString)
+        .exchange()
+        .timeout(Duration.ofSeconds(maxTimeoutSeconds))
+        .doOnNext { response ->
+          if (!response.statusCode().is2xxSuccessful) {
+            throw StaticMapDownloaderService.ResponseIsNot2xxSuccessful(
+              "[$photoMapName], Response status code is not 2xxSuccessful (${response.statusCode()})"
+            )
           }
-
-          if (response.statusCode() == HttpStatus.TOO_MANY_REQUESTS) {
-            logger.debug("StatusCode is TOO_MANY_REQUESTS. Probably exceeded request quota")
-          }
-
-          throw StaticMapDownloaderService.ResponseIsNot2xxSuccessful(
-            "[$photoMapName], Response status code is not 2xxSuccessful (${response.statusCode()})"
-          )
         }
+        .flatMapMany { response ->
+          response.body(BodyExtractors.toDataBuffers())
+        }
+        .collectList()
+        .awaitFirst()
+
+      val outFile = File("${ServerSettings.FILE_DIR_PATH}\\$photoMapName")
+
+      try {
+        diskManipulationService.copyDataBuffersToFile(dataBufferList, outFile)
+        return FileWrapper(outFile)
+      } catch (error: Throwable) {
+        outFile.deleteIfExists()
+        throw error
       }
-      .flatMapMany { response ->
-        response.body(BodyExtractors.toDataBuffers())
-      }
+    } catch (error: Throwable) {
+      logger.error("Error while trying to download static map", error)
+      return FileWrapper()
+    }
   }
 
   open fun sendPushNotification(

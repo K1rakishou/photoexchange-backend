@@ -6,6 +6,7 @@ import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.*
 import com.kirakishou.photoexchange.service.*
 import com.mongodb.ConnectionString
+import kotlinx.coroutines.Dispatchers
 import net.request.UploadPhotoPacket
 import org.mockito.Mockito
 import org.springframework.core.io.ClassPathResource
@@ -130,11 +131,12 @@ abstract class AbstractHandlerTest {
 			template,
 			mongoSequenceDao,
 			locationMapDao,
-			photoInfoDao
+			photoInfoDao,
+			Dispatchers.Unconfined
 		)
 
-		userInfoRepository = Mockito.spy(UserInfoRepository(mongoSequenceDao, userInfoDao, generator))
-		banListRepository = Mockito.spy(BanListRepository(mongoSequenceDao, banListDao))
+		userInfoRepository = Mockito.spy(UserInfoRepository(mongoSequenceDao, userInfoDao, generator, Dispatchers.Unconfined))
+		banListRepository = Mockito.spy(BanListRepository(mongoSequenceDao, banListDao, Dispatchers.Unconfined))
 		adminInfoRepository = Mockito.spy(AdminInfoRepository::class.java)
 
 		photoInfoRepository = PhotoInfoRepository(
@@ -146,7 +148,8 @@ abstract class AbstractHandlerTest {
 			reportedPhotoDao,
 			locationMapDao,
 			generator,
-			diskManipulationService
+			diskManipulationService,
+			Dispatchers.Unconfined
 		)
 	}
 

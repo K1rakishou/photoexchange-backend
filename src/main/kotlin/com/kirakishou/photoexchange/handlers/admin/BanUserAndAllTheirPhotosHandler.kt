@@ -5,11 +5,12 @@ import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.database.repository.AdminInfoRepository
 import com.kirakishou.photoexchange.database.repository.BanListRepository
 import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.extensions.containsAllPathVars
+import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
+import core.SharedConstants
 import kotlinx.coroutines.reactor.mono
 import net.response.BanUserAndAllTheirPhotosResponse
 import org.slf4j.LoggerFactory
@@ -37,40 +38,50 @@ class BanUserAndAllTheirPhotosHandler(
         if (authToken == null) {
           logger.debug("No auth token")
 
-          return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            BanUserAndAllTheirPhotosResponse.fail(ErrorCode.BadRequest))
+          return@mono formatResponse(
+            HttpStatus.BAD_REQUEST,
+            BanUserAndAllTheirPhotosResponse.fail(ErrorCode.BadRequest)
+          )
         }
 
         if (adminInfoRepository.adminToken != authToken) {
           logger.debug("Bad auth token: ${authToken}")
 
-          return@mono formatResponse(HttpStatus.FORBIDDEN,
-            BanUserAndAllTheirPhotosResponse.fail(ErrorCode.BadRequest))
+          return@mono formatResponse(
+            HttpStatus.FORBIDDEN,
+            BanUserAndAllTheirPhotosResponse.fail(ErrorCode.BadRequest)
+          )
         }
 
-        if (!request.containsAllPathVars(USER_ID_VARIABLE_PATH)) {
-          logger.debug("Request does not contain one of the required path variables")
-          return@mono formatResponse(HttpStatus.BAD_REQUEST,
-            BanUserAndAllTheirPhotosResponse.fail(ErrorCode.BadRequest))
+        val userId = request.getStringVariable(USER_ID_VARIABLE_PATH, SharedConstants.MAX_USER_ID_LEN)
+        if (userId == null) {
+          logger.debug("Bad param userId ($userId)")
+          return@mono formatResponse(
+            HttpStatus.BAD_REQUEST,
+            BanUserAndAllTheirPhotosResponse.fail(ErrorCode.BadRequest)
+          )
         }
 
-        val userId = request.pathVariable(USER_ID_VARIABLE_PATH)
         val allUserPhotos = photoInfoRepository.findAllPhotosByUserId(userId)
 
         if (!banAllUserIpHashes(allUserPhotos)) {
           logger.debug("Could not ban one of the ip hashes for user ${userId}")
-          return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-            BanUserAndAllTheirPhotosResponse.fail(ErrorCode.DatabaseError))
+          return@mono formatResponse(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            BanUserAndAllTheirPhotosResponse.fail(ErrorCode.DatabaseError)
+          )
         }
 
         replaceAllUserPhotos(allUserPhotos)
 
-        logger.debug("User $userId has been banned with all their photos being replaced with placeholders")
+        logger.debug("User ($userId) has been banned with all their photos being replaced with placeholders")
         return@mono formatResponse(HttpStatus.OK, BanUserAndAllTheirPhotosResponse.success())
       } catch (error: Throwable) {
         logger.error("Unknown error", error)
-        return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-          BanUserAndAllTheirPhotosResponse.fail(ErrorCode.UnknownError))
+        return@mono formatResponse(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          BanUserAndAllTheirPhotosResponse.fail(ErrorCode.UnknownError)
+        )
       }
     }.flatMap { it }
   }
@@ -85,7 +96,10 @@ class BanUserAndAllTheirPhotosHandler(
         try {
           diskManipulationService.replaceImagesOnDiskWithRemovedImagePlaceholder(photoName)
         } catch (error: Throwable) {
-          logger.error("Error while trying to replace photo with removed photo placeholder, photoName = ${photoName}", error)
+          logger.error(
+            "Error while trying to replace photo with removed photo placeholder, photoName = ${photoName}",
+            error
+          )
         }
       }
     }

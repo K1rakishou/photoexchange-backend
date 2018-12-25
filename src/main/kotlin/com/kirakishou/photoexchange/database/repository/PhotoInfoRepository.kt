@@ -9,6 +9,7 @@ import com.kirakishou.photoexchange.exception.ExchangeException
 import com.kirakishou.photoexchange.extensions.transactional
 import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.GeneratorService
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -27,8 +28,9 @@ open class PhotoInfoRepository(
   private val reportedPhotoDao: ReportedPhotoDao,
   private val locationMapDao: LocationMapDao,
   private val generator: GeneratorService,
-  private val diskManipulationService: DiskManipulationService
-) : AbstractRepository() {
+  private val diskManipulationService: DiskManipulationService,
+  dispatcher: CoroutineDispatcher
+) : AbstractRepository(dispatcher) {
   private val mutex = Mutex()
   private val logger = LoggerFactory.getLogger(PhotoInfoRepository::class.java)
 
@@ -433,6 +435,8 @@ open class PhotoInfoRepository(
       val countMap = hashMapOf<String, Long>()
 
       photoNames
+        //FIXME: there may be up to 200 requests to the database.
+        //Should probably optimise this somehow to use just a single request (if it's even possible with mongodb)
         .map { photoName -> favouritedPhotoDao.countFavouritesByPhotoName(photoName) to photoName }
         .map { (future, photoName) -> future.awaitFirst() to photoName }
         .forEach { (count, photoName) -> countMap.put(photoName, count) }

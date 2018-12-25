@@ -5,35 +5,44 @@ import core.SharedConstants
 import org.springframework.core.io.buffer.DataBuffer
 
 open class JsonConverterService(
-	val gson: Gson
+  val gson: Gson
 ) {
 
-	@Suppress("UNCHECKED_CAST")
-	inline fun <reified T> fromJson(dataBufferList: List<DataBuffer>, maxSize: Long = SharedConstants.MAX_PACKET_SIZE): T {
-		return gson.fromJson(dataBufferToString(dataBufferList, maxSize), T::class.java) as T
-	}
+  @Suppress("UNCHECKED_CAST")
+  inline fun <reified T> fromJson(
+    dataBufferList: List<DataBuffer>,
+    maxSize: Long = SharedConstants.MAX_PACKET_SIZE
+  ): T {
+    return gson.fromJson(
+      dataBufferToString(dataBufferList, maxSize),
+      T::class.java
+    ) as T
+  }
 
-	open fun <T> toJson(data: T): String {
-		return gson.toJson(data)
-	}
+  open fun <T> toJson(data: T): String {
+    return gson.toJson(data)
+  }
 
-	fun dataBufferToString(dataBufferList: List<DataBuffer>, maxSize: Long): String {
-		val fullLength = dataBufferList.sumBy { it.readableByteCount() }
-		if (fullLength > maxSize) {
-			throw PacketSizeExceeded()
-		}
+  fun dataBufferToString(
+    dataBufferList: List<DataBuffer>,
+    maxSize: Long
+  ): String {
+    val fullLength = dataBufferList.sumBy { it.readableByteCount() }
+    if (fullLength > maxSize) {
+      throw PacketSizeExceeded()
+    }
 
-		val array = ByteArray(fullLength)
-		var offset = 0
+    val array = ByteArray(fullLength)
+    var offset = 0
 
-		for (dataBuffer in dataBufferList) {
-			val arrayLength = dataBuffer.readableByteCount()
-			dataBuffer.read(array, offset, arrayLength)
-			offset += arrayLength
-		}
+    for (dataBuffer in dataBufferList) {
+      val arrayLength = dataBuffer.readableByteCount()
+      dataBuffer.read(array, offset, arrayLength)
+      offset += arrayLength
+    }
 
-		return String(array)
-	}
+    return String(array)
+  }
 
-	class PacketSizeExceeded() : Exception()
+  class PacketSizeExceeded() : Exception()
 }

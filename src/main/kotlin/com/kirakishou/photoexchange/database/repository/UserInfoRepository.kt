@@ -4,6 +4,7 @@ import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.dao.UserInfoDao
 import com.kirakishou.photoexchange.database.entity.UserInfo
 import com.kirakishou.photoexchange.service.GeneratorService
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -12,8 +13,9 @@ import kotlinx.coroutines.withContext
 open class UserInfoRepository(
   private val mongoSequenceDao: MongoSequenceDao,
   private val userInfoDao: UserInfoDao,
-  private val generator: GeneratorService
-) : AbstractRepository() {
+  private val generator: GeneratorService,
+  dispatcher: CoroutineDispatcher
+) : AbstractRepository(dispatcher) {
   private val mutex = Mutex()
 
   private suspend fun generateUserId(): String {

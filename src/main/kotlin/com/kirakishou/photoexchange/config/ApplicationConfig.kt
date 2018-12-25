@@ -21,8 +21,10 @@ import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.*
 import com.mongodb.ConnectionString
 import com.samskivert.mustache.Mustache
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.newFixedThreadPoolContext
 import org.springframework.boot.autoconfigure.mustache.MustacheResourceTemplateLoader
 import org.springframework.boot.web.reactive.result.view.MustacheViewResolver
 import org.springframework.context.support.beans
@@ -39,7 +41,6 @@ fun myBeans(adminToken: String) = beans {
 
   bean { WebClient.builder().build() }
   bean { GsonBuilder().excludeFieldsWithoutExposeAnnotation().create() }
-  bean { JsonConverterService(ref()) }
   bean { ReactiveMongoRepositoryFactory(ref()) }
   bean { ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(ConnectionString("mongodb://$HOST:$PORT/$DB_NAME"))) }
 
@@ -55,19 +56,36 @@ fun myBeans(adminToken: String) = beans {
   bean { BanListDao(ref()).also { it.create() } }
 
   //repository
-  bean<PhotoInfoRepository>()
-  bean<UserInfoRepository>()
-  bean<LocationMapRepository>()
-  bean<BanListRepository>()
+  bean {
+    PhotoInfoRepository(ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref(), Dispatchers.IO)
+  }
+  bean {
+    UserInfoRepository(ref(), ref(), ref(), Dispatchers.IO)
+  }
+  bean {
+    LocationMapRepository(ref(), ref(), ref(), ref(), Dispatchers.IO)
+  }
+  bean {
+    BanListRepository(ref(), ref(), Dispatchers.IO)
+  }
 
   //service
-  bean { StaticMapDownloaderService(ref(), ref(), ref(), ref()).also { it.init() } }
+  bean {
+    StaticMapDownloaderService(ref(), ref(), ref(), ref(), newFixedThreadPoolContext(4, "map-downloader"))
+      .also { it.init() }
+  }
+  bean {
+    PushNotificationSenderService(ref(), ref(), ref(), ref(), ref(), newFixedThreadPoolContext(4, "push-sender"))
+  }
+  bean {
+    GoogleCredentialsService(newFixedThreadPoolContext(1, "google-token-refresher"))
+  }
+
+  bean { JsonConverterService(ref()) }
   bean<GeneratorService>()
   bean<RemoteAddressExtractorService>()
-  bean<PushNotificationSenderService>()
   bean<DiskManipulationService>()
   bean<WebClientService>()
-  bean<GoogleCredentialsService>()
   bean {
     CleanupService(
       ref(),

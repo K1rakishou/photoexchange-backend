@@ -23,13 +23,13 @@ open class PushNotificationSenderService(
   private val userInfoRepository: UserInfoRepository,
   private val photoInfoRepository: PhotoInfoRepository,
   private val googleCredentialsService: GoogleCredentialsService,
-  private val jsonConverterService: JsonConverterService
+  private val jsonConverterService: JsonConverterService,
+  private val dispatcher: CoroutineDispatcher
 ) : CoroutineScope {
   private val logger = LoggerFactory.getLogger(PushNotificationSenderService::class.java)
   private val job = Job()
   private val mutex = Mutex()
   private val chunkSize = 4
-  private val dispatcher = newFixedThreadPoolContext(chunkSize, "push-sender")
   private val maxTimeoutSeconds = 10L
 
   //these are just notifications not some important data so it's not a problem if we loose them due to a server crash
@@ -85,12 +85,18 @@ open class PushNotificationSenderService(
       } catch (error: Throwable) {
         logger.error("Error while processing chunk of notifications", error)
       } finally {
-        mutex.withLock { requests.removeAll(chunk) }
+        mutex.withLock {
+          logger.debug("old requests = ${requests.map { it.photoName }}, chunk = ${chunk.map { it.photoName }}")
+          requests.removeAll(chunk)
+          logger.debug("after removing requests = ${requests.map { it.photoName }}")
+        }
       }
     }
   }
 
   private suspend fun processRequest(myPhoto: PhotoInfo, accessToken: String) {
+    logger.debug("Processing request for photo ${myPhoto.photoName}")
+
     val theirPhoto = photoInfoRepository.findOneById(myPhoto.exchangedPhotoId)
     if (theirPhoto.isEmpty()) {
       logger.debug("No photo with id ${myPhoto.exchangedPhotoId}, photoName = ${myPhoto.photoName}")

@@ -13,31 +13,36 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
 
 class GetUserIdHandler(
-	jsonConverter: JsonConverterService,
-	private val userInfoRepository: UserInfoRepository
+  jsonConverter: JsonConverterService,
+  private val userInfoRepository: UserInfoRepository
 ) : AbstractWebHandler(jsonConverter) {
+  private val logger = LoggerFactory.getLogger(GetUserIdHandler::class.java)
 
-	private val logger = LoggerFactory.getLogger(GetUserIdHandler::class.java)
+  override fun handle(request: ServerRequest): Mono<ServerResponse> {
+    return mono {
+      try {
+        logger.debug("New GetUserIdHandler request")
 
-	override fun handle(request: ServerRequest): Mono<ServerResponse> {
-		return mono {
-			try {
-				logger.debug("New GetUserIdHandler request")
+        val userInfo = userInfoRepository.createNew()
+        if (userInfo.isEmpty()) {
+          return@mono formatResponse(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            GetUserIdResponse.fail(ErrorCode.DatabaseError)
+          )
+        }
 
-				val userInfo = userInfoRepository.createNew()
-				if (userInfo.isEmpty()) {
-					return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-						GetUserIdResponse.fail(ErrorCode.DatabaseError))
-				}
-
-				logger.debug("Successfully created new uploaderPhotoId = ${userInfo.userId}")
-				return@mono formatResponse(HttpStatus.OK,
-					GetUserIdResponse.success(userInfo.userId))
-			} catch (error: Throwable) {
-				logger.error("Unknown error", error)
-				return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-					GetUserIdResponse.fail(ErrorCode.UnknownError))
-			}
-		}.flatMap { it }
-	}
+        logger.debug("Successfully created new uploaderPhotoId = ${userInfo.userId}")
+        return@mono formatResponse(
+          HttpStatus.OK,
+          GetUserIdResponse.success(userInfo.userId)
+        )
+      } catch (error: Throwable) {
+        logger.error("Unknown error", error)
+        return@mono formatResponse(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          GetUserIdResponse.fail(ErrorCode.UnknownError)
+        )
+      }
+    }.flatMap { it }
+  }
 }

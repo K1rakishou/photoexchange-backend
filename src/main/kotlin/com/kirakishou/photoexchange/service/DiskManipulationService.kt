@@ -109,8 +109,16 @@ open class DiskManipulationService {
   open suspend fun replaceImagesOnDiskWithRemovedImagePlaceholder(photoName: String) {
     fun replacePhotoFile(photoName: String, photoSuffix: String) {
       val path = "files\\photo_removed_image\\$photoRemovedPlaceholderName${photoSuffix}.png"
-      val placeholderFile = ClassPathResource(path).file
+
+      val resource = ClassPathResource(path)
+      if (!resource.exists()) {
+        logger.debug("Resource with path ($path) does not exist")
+        return
+      }
+
+      val placeholderFile = resource.file
       if (!placeholderFile.exists()) {
+        logger.debug("Placeholder file (${placeholderFile.absolutePath}) does not exist")
         return
       }
 
@@ -134,8 +142,16 @@ open class DiskManipulationService {
   @Throws(IOException::class)
   open suspend fun replaceMapOnDiskWithNoMapAvailablePlaceholder(photoName: String) {
     val path = "files\\photo_removed_image\\$noMapAvailablePlaceholderName.png"
-    val placeholderFile = ClassPathResource(path).file
+
+    val resource = ClassPathResource(path)
+    if (!resource.exists()) {
+      logger.debug("Resource with path ($path) does not exist")
+      return
+    }
+
+    val placeholderFile = resource.file
     if (!placeholderFile.exists()) {
+      logger.debug("Placeholder file (${placeholderFile.absolutePath}) does not exist")
       return
     }
 
@@ -180,6 +196,7 @@ open class DiskManipulationService {
   @Throws(IOException::class)
   private fun deleteFile(fileToDelete: File) {
     if (!fileToDelete.exists()) {
+      logger.debug("File (${fileToDelete.absolutePath}) does not exist")
       return
     }
 
