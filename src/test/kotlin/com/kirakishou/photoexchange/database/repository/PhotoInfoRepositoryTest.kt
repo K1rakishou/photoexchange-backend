@@ -196,4 +196,43 @@ class PhotoInfoRepositoryTest : AbstractRepositoryTest() {
       assertTrue(favouritedPhotoDao.testFindAll().awaitFirst().isEmpty())
     }
   }
+
+  @Test
+  fun `should report and then unreport photos`() {
+    runBlocking {
+      val generatedPhotos = Utils.createExchangedPhotoPairs(2, listOf("111", "222"))
+
+      for (generatedPhoto in generatedPhotos) {
+        photoInfoDao.save(generatedPhoto).awaitFirst()
+      }
+
+      for (generatedPhoto in generatedPhotos) {
+        photoInfoRepository.reportPhoto("333", generatedPhoto.photoName)
+        photoInfoRepository.reportPhoto("444", generatedPhoto.photoName)
+        photoInfoRepository.reportPhoto("555", generatedPhoto.photoName)
+      }
+
+      val reportedPhotos = reportedPhotoDao.testFindAll().awaitFirst()
+      assertEquals(6, reportedPhotos.size)
+
+      val groupedByNamePhotos = reportedPhotos.groupBy { it.photoName }
+      val groupedByUserIdPhotos = reportedPhotos.groupBy { it.userId }
+
+      for (generatedPhoto in generatedPhotos) {
+        assertEquals(3, groupedByNamePhotos[generatedPhoto.photoName]!!.size)
+      }
+
+      assertEquals(2, groupedByUserIdPhotos["333"]!!.size)
+      assertEquals(2, groupedByUserIdPhotos["444"]!!.size)
+      assertEquals(2, groupedByUserIdPhotos["555"]!!.size)
+
+      for (generatedPhoto in generatedPhotos) {
+        photoInfoRepository.reportPhoto("333", generatedPhoto.photoName)
+        photoInfoRepository.reportPhoto("444", generatedPhoto.photoName)
+        photoInfoRepository.reportPhoto("555", generatedPhoto.photoName)
+      }
+
+      assertTrue(reportedPhotoDao.testFindAll().awaitFirst().isEmpty())
+    }
+  }
 }
