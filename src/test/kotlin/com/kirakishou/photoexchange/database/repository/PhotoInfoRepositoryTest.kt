@@ -1,5 +1,8 @@
 package com.kirakishou.photoexchange.database.repository
 
+import com.kirakishou.photoexchange.Utils
+import com.kirakishou.photoexchange.config.ServerSettings
+import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
 import com.kirakishou.photoexchange.database.entity.*
 import com.kirakishou.photoexchange.exception.DatabaseTransactionException
 import com.nhaarman.mockito_kotlin.any
@@ -9,7 +12,9 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito
+import org.springframework.core.io.ClassPathResource
 import reactor.core.publisher.Mono
+import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -100,6 +105,134 @@ class PhotoInfoRepositoryTest : AbstractRepositoryTest() {
 
       assertEquals(1L, resultPhoto.photoId)
       assertEquals(2L, resultPhoto.exchangedPhotoId)
+    }
+  }
+
+  @Test
+  fun `should mark as deleted 4 photos`() {
+    runBlocking {
+      val generatedPhotos = Utils.createExchangedPhotoPairs(10, listOf("111", "222"))
+
+      for (generatedPhoto in generatedPhotos) {
+        photoInfoDao.save(generatedPhoto).awaitFirst()
+      }
+
+      val count = photoInfoRepository.markAsDeletedPhotosUploadedEarlierThan(
+        104L,
+        999L,
+        100
+      )
+
+      assertEquals(4, count)
+
+      val found = photoInfoDao.testFindAll().awaitFirst()
+      assertEquals(4, found.count { it.deletedOn == 999L })
+    }
+  }
+
+  @Test
+  fun `should delete all photos with deletedOn field greater than zero`() {
+    runBlocking {
+      val generatedPhotos = Utils.createExchangedPhotoPairs(10, listOf("111", "222"))
+        .map { it.copy(deletedOn = 111L) }
+
+      for (generatedPhoto in generatedPhotos) {
+        photoInfoDao.save(generatedPhoto).awaitFirst()
+
+        val path = "files\\no_map_available\\no_map_available.png"
+        val file = ClassPathResource(path).file
+
+        file.copyTo(File("${FILE_DIR_PATH}\\${generatedPhoto.photoName}${ServerSettings.VERY_BIG_PHOTO_SUFFIX}"))
+        file.copyTo(File("${FILE_DIR_PATH}\\${generatedPhoto.photoName}${ServerSettings.BIG_PHOTO_SUFFIX}"))
+        file.copyTo(File("${FILE_DIR_PATH}\\${generatedPhoto.photoName}${ServerSettings.MEDIUM_PHOTO_SUFFIX}"))
+        file.copyTo(File("${FILE_DIR_PATH}\\${generatedPhoto.photoName}${ServerSettings.SMALL_PHOTO_SUFFIX}"))
+        file.copyTo(File("${FILE_DIR_PATH}\\${generatedPhoto.photoName}${ServerSettings.PHOTO_MAP_SUFFIX}"))
+      }
+
+      photoInfoRepository.cleanDatabaseAndPhotos(200L, 100)
+
+      assertTrue(File(FILE_DIR_PATH).list().isEmpty())
+
+      //FIXME: this assert does not work now because transactions do not work (but should work once transactions are fixed)
+      assertTrue(photoInfoDao.testFindAll().awaitFirst().isEmpty())
+    }
+  }
+
+  @Test
+  fun `should favourite and then unfavourite photos`() {
+    runBlocking {
+      val generatedPhotos = Utils.createExchangedPhotoPairs(2, listOf("111", "222"))
+
+      for (generatedPhoto in generatedPhotos) {
+        photoInfoDao.save(generatedPhoto).awaitFirst()
+      }
+
+      for (generatedPhoto in generatedPhotos) {
+        photoInfoRepository.favouritePhoto("333", generatedPhoto.photoName)
+        photoInfoRepository.favouritePhoto("444", generatedPhoto.photoName)
+        photoInfoRepository.favouritePhoto("555", generatedPhoto.photoName)
+      }
+
+      val favouritedPhotos = favouritedPhotoDao.testFindAll().awaitFirst()
+      assertEquals(6, favouritedPhotos.size)
+
+      val groupedByNamePhotos = favouritedPhotos.groupBy { it.photoName }
+      val groupedByUserIdPhotos = favouritedPhotos.groupBy { it.userId }
+
+      for (generatedPhoto in generatedPhotos) {
+        assertEquals(3, groupedByNamePhotos[generatedPhoto.photoName]!!.size)
+      }
+
+      assertEquals(2, groupedByUserIdPhotos["333"]!!.size)
+      assertEquals(2, groupedByUserIdPhotos["444"]!!.size)
+      assertEquals(2, groupedByUserIdPhotos["555"]!!.size)
+
+      for (generatedPhoto in generatedPhotos) {
+        photoInfoRepository.favouritePhoto("333", generatedPhoto.photoName)
+        photoInfoRepository.favouritePhoto("444", generatedPhoto.photoName)
+        photoInfoRepository.favouritePhoto("555", generatedPhoto.photoName)
+      }
+
+      assertTrue(favouritedPhotoDao.testFindAll().awaitFirst().isEmpty())
+    }
+  }
+
+  @Test
+  fun `should report and then unreport photos`() {
+    runBlocking {
+      val generatedPhotos = Utils.createExchangedPhotoPairs(2, listOf("111", "222"))
+
+      for (generatedPhoto in generatedPhotos) {
+        photoInfoDao.save(generatedPhoto).awaitFirst()
+      }
+
+      for (generatedPhoto in generatedPhotos) {
+        photoInfoRepository.reportPhoto("333", generatedPhoto.photoName)
+        photoInfoRepository.reportPhoto("444", generatedPhoto.photoName)
+        photoInfoRepository.reportPhoto("555", generatedPhoto.photoName)
+      }
+
+      val reportedPhotos = reportedPhotoDao.testFindAll().awaitFirst()
+      assertEquals(6, reportedPhotos.size)
+
+      val groupedByNamePhotos = reportedPhotos.groupBy { it.photoName }
+      val groupedByUserIdPhotos = reportedPhotos.groupBy { it.userId }
+
+      for (generatedPhoto in generatedPhotos) {
+        assertEquals(3, groupedByNamePhotos[generatedPhoto.photoName]!!.size)
+      }
+
+      assertEquals(2, groupedByUserIdPhotos["333"]!!.size)
+      assertEquals(2, groupedByUserIdPhotos["444"]!!.size)
+      assertEquals(2, groupedByUserIdPhotos["555"]!!.size)
+
+      for (generatedPhoto in generatedPhotos) {
+        photoInfoRepository.reportPhoto("333", generatedPhoto.photoName)
+        photoInfoRepository.reportPhoto("444", generatedPhoto.photoName)
+        photoInfoRepository.reportPhoto("555", generatedPhoto.photoName)
+      }
+
+      assertTrue(reportedPhotoDao.testFindAll().awaitFirst().isEmpty())
     }
   }
 }

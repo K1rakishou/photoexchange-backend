@@ -19,15 +19,15 @@ object Utils {
     val photosVisibilityList = generatePhotoVisibilityList(count, privatePhotosAmount)
 
     for (i in 0 until count step 2) {
-      val currentPhotoId = i.toLong()
-      val exchangedPhotoId = (i + 1).toLong()
+      val currentPhotoId = i.toLong() + 1
+      val exchangedPhotoId = (i + 2).toLong()
       val locationMapId = i.toLong()
       val uploadedOn = i.toLong() + 100
 
       resultList += PhotoInfo(
         currentPhotoId,
         exchangedPhotoId,
-        locationMapId,
+        locationMapId + 1,
         userIdList[i % 2],
         "photoName_${SecurityUtils.Generation.generateRandomString(10)}",
         photosVisibilityList[i],
@@ -41,7 +41,7 @@ object Utils {
       resultList += PhotoInfo(
         exchangedPhotoId,
         currentPhotoId,
-        locationMapId + 1,
+        locationMapId + 2,
         userIdList[(i + 1) % 2],
         "photoName_${SecurityUtils.Generation.generateRandomString(10)}",
         photosVisibilityList[i + 1],

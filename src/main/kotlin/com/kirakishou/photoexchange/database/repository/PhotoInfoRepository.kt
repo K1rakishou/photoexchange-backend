@@ -18,6 +18,7 @@ import net.response.data.*
 import org.slf4j.LoggerFactory
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import reactor.core.publisher.toFlux
+import java.io.IOException
 
 open class PhotoInfoRepository(
   private val template: ReactiveMongoTemplate,
@@ -136,7 +137,8 @@ open class PhotoInfoRepository(
           myPhoto.lon,
           myPhoto.lat,
           receiverInfo,
-          myPhoto.uploadedOn)
+          myPhoto.uploadedOn
+        )
       }
 
       return@withContext result
@@ -159,8 +161,10 @@ open class PhotoInfoRepository(
       for (theirPhoto in theirPhotos) {
         val myPhoto = myPhotos.firstOrNull { it.photoId == theirPhoto.exchangedPhotoId }
         if (myPhoto == null) {
-          logger.warn("Could not find myPhoto by theirPhoto.exchangedPhotoId (${theirPhoto.exchangedPhotoId}). " +
-            "This may be because it got deleted without theirPhoto being deleted as well (inconsistency).")
+          logger.warn(
+            "Could not find myPhoto by theirPhoto.exchangedPhotoId (${theirPhoto.exchangedPhotoId}). " +
+              "This may be because it got deleted without theirPhoto being deleted as well (inconsistency)."
+          )
           continue
         }
 
@@ -178,69 +182,97 @@ open class PhotoInfoRepository(
     }
   }
 
+  /**
+   * Finds the "count" amount of photos that were uploaded earlier than "uploadedEarlierThanTime". Then groups them in pairs
+   * "photo - exchanged photo" and checks that both of the photos we uploaded earlier than "uploadedEarlierThanTime".
+   * If it's true then adds them to the list of photos which deletedOn is to be updated with "currentTime" and after that
+   * makes an update.
+   *
+   * @param uploadedEarlierThanTime - photos should be uploaded earlier than this date
+   * @param currentTime - current time
+   * @param count - the maximum amount of photos to be found
+   * @return -1 if something went wrong or amount of updated photos
+   * */
   suspend fun markAsDeletedPhotosUploadedEarlierThan(
-    uploadedEarlierThan: Long,
-    now: Long,
+    uploadedEarlierThanTime: Long,
+    currentTime: Long,
     count: Int
   ): Int {
     return withContext(coroutineContext) {
       return@withContext mutex.withLock {
-        val oldPhotos = photoInfoDao.findPhotosUploadedEarlierThan(uploadedEarlierThan, count).awaitFirst()
-        val oldPhotosMap = oldPhotos.associateBy { it.photoId }
-        val exchangedPhotosMap = oldPhotos.associateBy { it.exchangedPhotoId }
+        try {
+          val oldPhotos = photoInfoDao.findPhotosUploadedEarlierThan(uploadedEarlierThanTime, count).awaitFirst()
+          val oldPhotosMap = oldPhotos.associateBy { it.photoId }
+          val exchangedPhotosMap = oldPhotos.associateBy { it.exchangedPhotoId }
 
-        val toBeUpdated = hashSetOf<Long>()
+          val toBeUpdated = hashSetOf<Long>()
 
-        for (photo in oldPhotosMap) {
-          if (toBeUpdated.contains(photo.key)) {
-            continue
+          for (photo in oldPhotosMap) {
+            if (toBeUpdated.contains(photo.key)) {
+              continue
+            }
+
+            val exchangedPhoto = exchangedPhotosMap[photo.key]
+            if (exchangedPhoto == null) {
+              continue
+            }
+
+            if (toBeUpdated.contains(exchangedPhoto.photoId)) {
+              continue
+            }
+
+            if (photo.value.photoId != exchangedPhoto.exchangedPhotoId
+              || photo.value.exchangedPhotoId != exchangedPhoto.photoId) {
+
+              // Photos do not have each other's ids for some unknown reason. We can't delete such photos because
+              // this may create inconsistency.
+              logger.debug(
+                "exchanged photos does not have each other's ids: " +
+                  "photo.value.photoId = ${photo.value.photoId}, " +
+                  "exchangedPhoto.exchangedPhotoId = ${exchangedPhoto.exchangedPhotoId}, " +
+                  "photo.value.exchangedPhotoId = ${photo.value.exchangedPhotoId}, " +
+                  "exchangedPhoto.photoId = ${exchangedPhoto.photoId}"
+              )
+              continue
+            }
+
+            //if both of the photos were uploaded earlier than "uploadedEarlierThanTime" - add them both to the list
+            if (photo.value.uploadedOn < uploadedEarlierThanTime
+              && exchangedPhoto.uploadedOn < uploadedEarlierThanTime) {
+
+              toBeUpdated.add(photo.key)
+              toBeUpdated.add(exchangedPhoto.photoId)
+            }
           }
 
-          val exchangedPhoto = exchangedPhotosMap[photo.key]
-          if (exchangedPhoto == null) {
-            continue
+          //update photos as deleted
+          if (!photoInfoDao.updateManySetDeletedOn(currentTime, toBeUpdated.toList()).awaitFirst()) {
+            return@withLock -1
           }
 
-          if (toBeUpdated.contains(exchangedPhoto.photoId)) {
-            continue
-          }
-
-          if (photo.value.photoId != exchangedPhoto.exchangedPhotoId
-            || photo.value.exchangedPhotoId != exchangedPhoto.photoId) {
-
-            logger.debug("exchanged photos does not have each other's ids: " +
-              "photo.value.photoId = ${photo.value.photoId}, " +
-              "exchangedPhoto.exchangedPhotoId = ${exchangedPhoto.exchangedPhotoId}, " +
-              "photo.value.exchangedPhotoId = ${photo.value.exchangedPhotoId}, " +
-              "exchangedPhoto.photoId = ${exchangedPhoto.photoId}")
-            continue
-          }
-
-          //if both of the photos were uploaded earlier than "uploadedEarlierThan" - mark them as deleted
-          if (photo.value.uploadedOn < uploadedEarlierThan
-            && exchangedPhoto.uploadedOn < uploadedEarlierThan) {
-
-            toBeUpdated.add(photo.key)
-            toBeUpdated.add(exchangedPhoto.photoId)
-          }
-        }
-
-        if (!photoInfoDao.updateManySetDeletedOn(now, toBeUpdated.toList()).awaitFirst()) {
+          return@withLock toBeUpdated.size
+        } catch (error: Throwable) {
+          logger.error("Could not mark photos as deleted", error)
           return@withLock -1
         }
-
-        return@withLock toBeUpdated.size
       }
     }
   }
 
+  /**
+   * Find "count" amount of photos with "deletedOn" field greater than zero and deletes them one by one.
+   * After that deletes all files associated with those photos.
+   *
+   * @param deletedEarlierThanTime - photos should be marked as deleted earlier than this date
+   * @param count - the maximum amount of photos to be found
+   * */
   suspend fun cleanDatabaseAndPhotos(
-    deletedEarlierThan: Long,
-    photosPerQuery: Int
+    deletedEarlierThanTime: Long,
+    count: Int
   ) {
     withContext(coroutineContext) {
       mutex.withLock {
-        val photosToDelete = photoInfoDao.findDeletedEarlierThan(deletedEarlierThan, photosPerQuery).awaitFirst()
+        val photosToDelete = photoInfoDao.findDeletedEarlierThan(deletedEarlierThanTime, count).awaitFirst()
         if (photosToDelete.isEmpty()) {
           logger.debug("No photos to delete")
           return@withLock
@@ -262,7 +294,15 @@ open class PhotoInfoRepository(
         }
 
         if (photoFilesToDelete.isNotEmpty()) {
-          photoFilesToDelete.forEach { diskManipulationService.deleteAllPhotoFiles(it) }
+          photoFilesToDelete.forEach {
+            try {
+              diskManipulationService.deleteAllPhotoFiles(it)
+            } catch (error: IOException) {
+              // If an error occurs here just skip the file. There would be files left on the disk but at least
+              // that won't stop the whole process
+              logger.error("Error while trying to delete files of photo with name (${it})")
+            }
+          }
         }
       }
     }
