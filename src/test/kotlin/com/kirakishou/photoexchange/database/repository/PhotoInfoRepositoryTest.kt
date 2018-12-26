@@ -1,6 +1,8 @@
 package com.kirakishou.photoexchange.database.repository
 
 import com.kirakishou.photoexchange.Utils
+import com.kirakishou.photoexchange.config.ServerSettings
+import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
 import com.kirakishou.photoexchange.database.entity.*
 import com.kirakishou.photoexchange.exception.DatabaseTransactionException
 import com.nhaarman.mockito_kotlin.any
@@ -10,7 +12,9 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito
+import org.springframework.core.io.ClassPathResource
 import reactor.core.publisher.Mono
+import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -123,6 +127,34 @@ class PhotoInfoRepositoryTest : AbstractRepositoryTest() {
 
       val found = photoInfoDao.testFindAll().awaitFirst()
       assertEquals(4, found.count { it.deletedOn == 999L })
+    }
+  }
+
+  @Test
+  fun `should delete all photos with deletedOn field greater than zero`() {
+    runBlocking {
+      val generatedPhotos = Utils.createExchangedPhotoPairs(10, listOf("111", "222"))
+        .map { it.copy(deletedOn = 111L) }
+
+      for (generatedPhoto in generatedPhotos) {
+        photoInfoDao.save(generatedPhoto).awaitFirst()
+
+        val path = "files\\no_map_available\\no_map_available.png"
+        val file = ClassPathResource(path).file
+
+        file.copyTo(File("${FILE_DIR_PATH}\\${generatedPhoto.photoName}${ServerSettings.VERY_BIG_PHOTO_SUFFIX}"))
+        file.copyTo(File("${FILE_DIR_PATH}\\${generatedPhoto.photoName}${ServerSettings.BIG_PHOTO_SUFFIX}"))
+        file.copyTo(File("${FILE_DIR_PATH}\\${generatedPhoto.photoName}${ServerSettings.MEDIUM_PHOTO_SUFFIX}"))
+        file.copyTo(File("${FILE_DIR_PATH}\\${generatedPhoto.photoName}${ServerSettings.SMALL_PHOTO_SUFFIX}"))
+        file.copyTo(File("${FILE_DIR_PATH}\\${generatedPhoto.photoName}${ServerSettings.PHOTO_MAP_SUFFIX}"))
+      }
+
+      photoInfoRepository.cleanDatabaseAndPhotos(200L, 100)
+
+      assertTrue(File(FILE_DIR_PATH).list().isEmpty())
+
+      //FIXME: this assert does not work now because transactions do not work (but should work once transactions are fixed)
+      assertTrue(photoInfoDao.testFindAll().awaitFirst().isEmpty())
     }
   }
 }
