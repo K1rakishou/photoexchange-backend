@@ -9,6 +9,7 @@ open class JsonConverterService(
 ) {
 
   @Suppress("UNCHECKED_CAST")
+  @Throws(PacketSizeExceeded::class)
   inline fun <reified T> fromJson(
     dataBufferList: List<DataBuffer>,
     maxSize: Long = SharedConstants.MAX_PACKET_SIZE
@@ -23,6 +24,7 @@ open class JsonConverterService(
     return gson.toJson(data)
   }
 
+  @Throws(PacketSizeExceeded::class)
   fun dataBufferToString(
     dataBufferList: List<DataBuffer>,
     maxSize: Long
@@ -44,5 +46,5 @@ open class JsonConverterService(
     return String(array)
   }
 
-  class PacketSizeExceeded() : Exception()
+  class PacketSizeExceeded : Exception()
 }
