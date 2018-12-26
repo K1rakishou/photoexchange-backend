@@ -18,6 +18,7 @@ import net.response.data.*
 import org.slf4j.LoggerFactory
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import reactor.core.publisher.toFlux
+import java.io.IOException
 
 open class PhotoInfoRepository(
   private val template: ReactiveMongoTemplate,
@@ -258,13 +259,20 @@ open class PhotoInfoRepository(
     }
   }
 
+  /**
+   * Find "count" amount of photos with "deletedOn" field greater than zero and deletes them one by one.
+   * After that deletes all files associated with those photos.
+   *
+   * @param deletedEarlierThanTime - photos should be marked as deleted earlier than this date
+   * @param count - the maximum amount of photos to be found
+   * */
   suspend fun cleanDatabaseAndPhotos(
-    deletedEarlierThan: Long,
-    photosPerQuery: Int
+    deletedEarlierThanTime: Long,
+    count: Int
   ) {
     withContext(coroutineContext) {
       mutex.withLock {
-        val photosToDelete = photoInfoDao.findDeletedEarlierThan(deletedEarlierThan, photosPerQuery).awaitFirst()
+        val photosToDelete = photoInfoDao.findDeletedEarlierThan(deletedEarlierThanTime, count).awaitFirst()
         if (photosToDelete.isEmpty()) {
           logger.debug("No photos to delete")
           return@withLock
@@ -286,7 +294,15 @@ open class PhotoInfoRepository(
         }
 
         if (photoFilesToDelete.isNotEmpty()) {
-          photoFilesToDelete.forEach { diskManipulationService.deleteAllPhotoFiles(it) }
+          photoFilesToDelete.forEach {
+            try {
+              diskManipulationService.deleteAllPhotoFiles(it)
+            } catch (error: IOException) {
+              // If an error occurs here just skip the file. There would be files left on the disk but at least
+              // that won't stop the whole process
+              logger.error("Error while trying to delete files of photo with name (${it})")
+            }
+          }
         }
       }
     }

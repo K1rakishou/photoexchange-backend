@@ -210,9 +210,9 @@ open class PhotoInfoDao(
       .onErrorReturn(emptyList())
   }
 
-  open fun findDeletedEarlierThan(earlierThanTime: Long, count: Int): Mono<List<PhotoInfo>> {
+  open fun findDeletedEarlierThan(deletedEarlierThanTime: Long, count: Int): Mono<List<PhotoInfo>> {
     val query = Query().with(Sort(Sort.Direction.DESC, PhotoInfo.Mongo.Field.UPLOADED_ON))
-      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).lt(earlierThanTime)
+      .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).lt(deletedEarlierThanTime)
         .andOperator(Criteria.where(PhotoInfo.Mongo.Field.DELETED_ON).gt(0L)))
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.EXCHANGED_PHOTO_ID).gt(0L))
       .limit(count)
