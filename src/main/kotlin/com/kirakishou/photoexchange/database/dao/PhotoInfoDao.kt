@@ -241,12 +241,12 @@ open class PhotoInfoDao(
       .onErrorReturn(false)
   }
 
-  open fun updateManySetDeletedOn(now: Long, toBeUpdated: List<Long>): Mono<Boolean> {
+  open fun updateManySetDeletedOn(currentTime: Long, toBeUpdated: List<Long>): Mono<Boolean> {
     val query = Query()
       .addCriteria(Criteria.where(PhotoInfo.Mongo.Field.PHOTO_ID).`in`(toBeUpdated))
 
     val update = Update()
-      .set(PhotoInfo.Mongo.Field.DELETED_ON, now)
+      .set(PhotoInfo.Mongo.Field.DELETED_ON, currentTime)
 
     return reactiveTemplate.updateMulti(query, update, PhotoInfo::class.java)
       .map { updateResult -> updateResult.wasAcknowledged() }

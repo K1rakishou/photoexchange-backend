@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.database.repository
 
+import com.kirakishou.photoexchange.Utils
 import com.kirakishou.photoexchange.database.entity.*
 import com.kirakishou.photoexchange.exception.DatabaseTransactionException
 import com.nhaarman.mockito_kotlin.any
@@ -100,6 +101,28 @@ class PhotoInfoRepositoryTest : AbstractRepositoryTest() {
 
       assertEquals(1L, resultPhoto.photoId)
       assertEquals(2L, resultPhoto.exchangedPhotoId)
+    }
+  }
+
+  @Test
+  fun `should mark as deleted 4 photos`() {
+    runBlocking {
+      val generatedPhotos = Utils.createExchangedPhotoPairs(10, listOf("111", "222"))
+
+      for (generatedPhoto in generatedPhotos) {
+        photoInfoDao.save(generatedPhoto).awaitFirst()
+      }
+
+      val count = photoInfoRepository.markAsDeletedPhotosUploadedEarlierThan(
+        104L,
+        999L,
+        100
+      )
+
+      assertEquals(4, count)
+
+      val found = photoInfoDao.testFindAll().awaitFirst()
+      assertEquals(4, found.count { it.deletedOn == 999L })
     }
   }
 }
