@@ -1,7 +1,7 @@
 package com.kirakishou.photoexchange.handlers.admin
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.handler.AbstractHandlerTest
+import com.kirakishou.photoexchange.handlers.AbstractHandlerTest
 import core.ErrorCode
 import net.response.BanPhotoResponse
 import org.junit.After

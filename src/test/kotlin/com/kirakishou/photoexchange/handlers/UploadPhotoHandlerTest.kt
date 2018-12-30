@@ -1,17 +1,13 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
-import com.kirakishou.photoexchange.handler.AbstractHandlerTest
 import com.nhaarman.mockito_kotlin.any
 import core.ErrorCode
-import core.SharedConstants
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
 import net.request.UploadPhotoPacket
 import net.response.UploadPhotoResponse
 import org.junit.After
-import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,12 +17,8 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.server.router
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
-import reactor.core.scheduler.Schedulers
 import java.io.IOException
 import java.time.Duration
-import java.util.concurrent.Executors
 
 @RunWith(SpringJUnit4ClassRunner::class)
 class UploadPhotoHandlerTest : AbstractHandlerTest() {
@@ -191,7 +183,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     }
   }
 
-  @Test
+  /*@Test
   fun `should not be allowed to upload photo that exceeds MaxPhotoSize`() {
     val webClient = getWebTestClient()
     val userId = "1234235236"
@@ -852,7 +844,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
         assertEquals(photo.exchangedPhotoId, mapByPhotoId[photo.photoId]!!.exchangedPhotoId)
       }
     }
-  }
+  }*/
 }
 
 

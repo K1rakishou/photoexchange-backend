@@ -53,7 +53,7 @@ object ServerSettings {
 
 	object TestDatabaseInfo {
 		const val HOST = "192.168.99.100"
-		const val PORT = 27017
+		const val PORT = 30001
 		const val DB_NAME = "photoexchange_test"
 	}
 
