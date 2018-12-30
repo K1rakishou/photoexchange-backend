@@ -2,10 +2,9 @@ package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.core.FileWrapper
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
-import com.kirakishou.photoexchange.database.repository.BanListRepository
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.database.repository.UserInfoRepository
+import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository
+import com.kirakishou.photoexchange.database.mongo.repository.UserInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.exception.EmptyPacket
 import com.kirakishou.photoexchange.exception.RequestSizeExceeded
 import com.kirakishou.photoexchange.extensions.containsAllParts
@@ -33,7 +32,7 @@ import java.io.IOException
 
 class UploadPhotoHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepo: PhotoInfoRepository,
+  private val photosRepository: PhotosRepository,
   private val userInfoRepository: UserInfoRepository,
   private val banListRepository: BanListRepository,
   private val staticMapDownloaderService: StaticMapDownloaderService,
@@ -106,7 +105,7 @@ class UploadPhotoHandler(
         return formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ErrorCode.ExceededMaxPhotoSize))
       }
 
-      val newUploadingPhoto = photoInfoRepo.save(
+      val newUploadingPhoto = photosRepository.save(
         packet.userId,
         packet.lon,
         packet.lat,
@@ -154,7 +153,7 @@ class UploadPhotoHandler(
         }
 
         val exchangedPhoto = try {
-          photoInfoRepo.tryDoExchange(packet.userId, newUploadingPhoto)
+          photosRepository.tryDoExchange(packet.userId, newUploadingPhoto)
         } catch (error: Throwable) {
           logger.error("Unknown error while trying to do photo exchange", error)
 
@@ -263,7 +262,7 @@ class UploadPhotoHandler(
   }
 
   private suspend fun deletePhotoWithFile(photoInfo: PhotoInfo) {
-    if (!photoInfoRepo.delete(photoInfo)) {
+    if (!photosRepository.delete(photoInfo)) {
       logger.error("Could not deletePhotoWithFile photo ${photoInfo.photoName}")
       return
     }

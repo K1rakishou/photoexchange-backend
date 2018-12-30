@@ -1,8 +1,8 @@
 package com.kirakishou.photoexchange.handlers.admin
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.repository.AdminInfoRepository
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.mongo.repository.AdminInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.DiskManipulationService
@@ -19,7 +19,7 @@ import reactor.core.publisher.Mono
 
 class BanPhotoHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepository: PhotoInfoRepository,
+  private val photosRepository: PhotosRepository,
   private val adminInfoRepository: AdminInfoRepository,
   private val diskManipulationService: DiskManipulationService
 ) : AbstractWebHandler(jsonConverter) {
@@ -59,7 +59,7 @@ class BanPhotoHandler(
           )
         }
 
-        val photoInfo = photoInfoRepository.findOneByPhotoName(photoName)
+        val photoInfo = photosRepository.findOneByPhotoName(photoName)
         if (photoInfo.isEmpty()) {
           logger.debug("Photo does not exist")
           return@mono formatResponse(

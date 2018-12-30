@@ -2,15 +2,12 @@ package com.kirakishou.photoexchange.service
 
 import com.google.gson.Gson
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.dao.*
-import com.kirakishou.photoexchange.database.repository.LocationMapRepository
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.database.repository.UserInfoRepository
-import com.mongodb.ConnectionString
+import com.kirakishou.photoexchange.database.mongo.dao.*
+import com.kirakishou.photoexchange.database.mongo.repository.LocationMapRepository
+import com.kirakishou.photoexchange.database.mongo.repository.UserInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import kotlinx.coroutines.Dispatchers
 import org.mockito.Mockito
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate
-import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory
 
 abstract class AbstractServiceTest {
 
@@ -34,7 +31,7 @@ abstract class AbstractServiceTest {
   lateinit var googleCredentialsService: GoogleCredentialsService
 
   lateinit var userInfoRepository: UserInfoRepository
-  lateinit var photoInfoRepository: PhotoInfoRepository
+  lateinit var photosRepository: PhotosRepository
   lateinit var locationMapRepository: LocationMapRepository
 
   open fun setUp() {
@@ -84,8 +81,8 @@ abstract class AbstractServiceTest {
       )
     )
 
-    photoInfoRepository = Mockito.spy(
-      PhotoInfoRepository(
+    photosRepository = Mockito.spy(
+      PhotosRepository(
         template,
         mongoSequenceDao,
         photoInfoDao,

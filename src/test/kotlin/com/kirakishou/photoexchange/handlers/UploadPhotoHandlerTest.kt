@@ -26,7 +26,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
   private fun getWebTestClient(): WebTestClient {
     val handler = UploadPhotoHandler(
       jsonConverterService,
-      photoInfoRepository,
+      photosRepository,
       userInfoRepository,
       banListRepository,
       staticMapDownloaderService,

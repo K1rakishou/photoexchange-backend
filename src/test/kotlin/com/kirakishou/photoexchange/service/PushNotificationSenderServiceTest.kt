@@ -1,6 +1,5 @@
 package com.kirakishou.photoexchange.service
 
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import core.SharedConstants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -16,7 +15,7 @@ class PushNotificationSenderServiceTest : AbstractServiceTest() {
   private val pushNotificationSenderService = PushNotificationSenderService(
     webClientService,
     userInfoRepository,
-    photoInfoRepository,
+    photosRepository,
     googleCredentialsService,
     jsonConverterService,
     Dispatchers.Unconfined
@@ -73,7 +72,7 @@ class PushNotificationSenderServiceTest : AbstractServiceTest() {
       pushNotificationSenderService.enqueue(photoInfo1)
 
       assertTrue(pushNotificationSenderService.testGetRequests().isEmpty())
-      Mockito.verify(photoInfoRepository, Mockito.never()).findOneById(Mockito.anyLong())
+      Mockito.verify(photosRepository, Mockito.never()).findOneById(Mockito.anyLong())
     }
   }
 
@@ -88,7 +87,7 @@ class PushNotificationSenderServiceTest : AbstractServiceTest() {
       pushNotificationSenderService.enqueue(photoInfo1)
 
       assertTrue(pushNotificationSenderService.testGetRequests().isNotEmpty())
-      Mockito.verify(photoInfoRepository, Mockito.never()).findOneById(Mockito.anyLong())
+      Mockito.verify(photosRepository, Mockito.never()).findOneById(Mockito.anyLong())
     }
   }
 
@@ -100,7 +99,7 @@ class PushNotificationSenderServiceTest : AbstractServiceTest() {
       Mockito.doReturn(GOOD_GOOGLE_TOKEN)
         .`when`(googleCredentialsService).getAccessToken()
       Mockito.doReturn(PhotoInfo.empty())
-        .`when`(photoInfoRepository).findOneById(Mockito.anyLong())
+        .`when`(photosRepository).findOneById(Mockito.anyLong())
 
       pushNotificationSenderService.enqueue(photoInfo1)
 
@@ -122,7 +121,7 @@ class PushNotificationSenderServiceTest : AbstractServiceTest() {
       Mockito.doReturn(GOOD_GOOGLE_TOKEN)
         .`when`(googleCredentialsService).getAccessToken()
       Mockito.doReturn(photoInfo2)
-        .`when`(photoInfoRepository).findOneById(Mockito.anyLong())
+        .`when`(photosRepository).findOneById(Mockito.anyLong())
       Mockito.doReturn(Mono.just(true))
         .`when`(webClientService).sendPushNotification(Mockito.anyString(), Mockito.anyString(), Mockito.anyLong())
 

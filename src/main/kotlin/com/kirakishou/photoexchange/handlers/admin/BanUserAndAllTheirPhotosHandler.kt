@@ -1,10 +1,9 @@
 package com.kirakishou.photoexchange.handlers.admin
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
-import com.kirakishou.photoexchange.database.repository.AdminInfoRepository
-import com.kirakishou.photoexchange.database.repository.BanListRepository
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.mongo.repository.AdminInfoRepository
+import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.DiskManipulationService
@@ -21,7 +20,7 @@ import reactor.core.publisher.Mono
 
 class BanUserAndAllTheirPhotosHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepository: PhotoInfoRepository,
+  private val photosRepository: PhotosRepository,
   private val adminInfoRepository: AdminInfoRepository,
   private val banListRepository: BanListRepository,
   private val diskManipulationService: DiskManipulationService
@@ -62,7 +61,7 @@ class BanUserAndAllTheirPhotosHandler(
           )
         }
 
-        val allUserPhotos = photoInfoRepository.findAllPhotosByUserId(userId)
+        val allUserPhotos = photosRepository.findAllPhotosByUserId(userId)
 
         if (!banAllUserIpHashes(allUserPhotos)) {
           logger.debug("Could not ban one of the ip hashes for user ${userId}")

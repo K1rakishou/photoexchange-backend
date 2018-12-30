@@ -1,8 +1,7 @@
 package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.core.FileWrapper
-import com.kirakishou.photoexchange.database.entity.LocationMap
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
+import com.kirakishou.photoexchange.database.mongo.entity.LocationMap
 import com.nhaarman.mockito_kotlin.any
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.reactive.awaitFirst
@@ -20,7 +19,7 @@ class StaticMapDownloaderServiceTest : AbstractServiceTest() {
   private val staticMapDownloaderService by lazy {
     StaticMapDownloaderService(
       webClientService,
-      photoInfoRepository,
+      photosRepository,
       locationMapRepository,
       diskManipulationService,
       Dispatchers.Unconfined
@@ -41,7 +40,7 @@ class StaticMapDownloaderServiceTest : AbstractServiceTest() {
   fun `should not start downloading map when there is no photo info associated with this map id`() {
     runBlocking {
       Mockito.doReturn(PhotoInfo.empty())
-        .`when`(photoInfoRepository).findOneById(Mockito.anyLong())
+        .`when`(photosRepository).findOneById(Mockito.anyLong())
 
       assertTrue(staticMapDownloaderService.testEnqueue(1))
 
@@ -58,7 +57,7 @@ class StaticMapDownloaderServiceTest : AbstractServiceTest() {
       val photo = PhotoInfo(1L, 2L, -1L, "111", "222", true, -1.0, -1.0, 999L, 0L, "34234")
 
       Mockito.doReturn(photo)
-        .`when`(photoInfoRepository).findOneById(Mockito.anyLong())
+        .`when`(photosRepository).findOneById(Mockito.anyLong())
 
       assertTrue(staticMapDownloaderService.testEnqueue(1))
 
@@ -75,7 +74,7 @@ class StaticMapDownloaderServiceTest : AbstractServiceTest() {
       val photo = PhotoInfo(1L, 2L, -1L, "111", "222", true, 11.0, 22.0, 999L, 0L, "34234")
 
       Mockito.doReturn(photo)
-        .`when`(photoInfoRepository).findOneById(Mockito.anyLong())
+        .`when`(photosRepository).findOneById(Mockito.anyLong())
       Mockito.doReturn(null)
         .`when`(webClientService).downloadLocationMap(any(), any(), any())
 
@@ -94,7 +93,7 @@ class StaticMapDownloaderServiceTest : AbstractServiceTest() {
       val photo = PhotoInfo(1L, 2L, -1L, "111", "222", true, 11.0, 22.0, 999L, 0L, "34234")
 
       Mockito.doReturn(photo)
-        .`when`(photoInfoRepository).findOneById(Mockito.anyLong())
+        .`when`(photosRepository).findOneById(Mockito.anyLong())
       Mockito.doReturn(FileWrapper(File("test")))
         .`when`(webClientService).downloadLocationMap(any(), any(), any())
 
@@ -118,7 +117,7 @@ class StaticMapDownloaderServiceTest : AbstractServiceTest() {
       val photo = PhotoInfo(1L, 2L, -1L, "111", "222", true, 11.0, 22.0, 999L, 0L, "34234")
 
       Mockito.doReturn(photo)
-        .`when`(photoInfoRepository).findOneById(Mockito.anyLong())
+        .`when`(photosRepository).findOneById(Mockito.anyLong())
       Mockito.doReturn(null)
         .`when`(webClientService).downloadLocationMap(any(), any(), any())
 
@@ -130,7 +129,7 @@ class StaticMapDownloaderServiceTest : AbstractServiceTest() {
         .downloadLocationMap(any(), any(), any())
       Mockito.verify(locationMapRepository)
         .setMapFailed(any())
-      Mockito.verify(photoInfoRepository, Mockito.times(2))
+      Mockito.verify(photosRepository, Mockito.times(2))
         .findOneById(any())
       Mockito.verify(diskManipulationService)
         .replaceMapOnDiskWithNoMapAvailablePlaceholder("222")

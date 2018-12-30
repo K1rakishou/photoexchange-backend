@@ -1,13 +1,13 @@
 package com.kirakishou.photoexchange.service
 
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.util.TimeUtils
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 open class CleanupService(
-  private val photoInfoRepository: PhotoInfoRepository,
+  private val photosRepository: PhotosRepository,
   private val cleanupInterval: Long,
   private val uploadedEarlierThanTimeDelta: Long,
   private val deletedEarlierThanTimeDelta: Long
@@ -39,7 +39,7 @@ open class CleanupService(
       val now = TimeUtils.getTimeFast()
       logger.debug("Start cleanDatabaseAndPhotos routine")
 
-      val markedAsDeletedCount = photoInfoRepository.markAsDeletedPhotosUploadedEarlierThan(
+      val markedAsDeletedCount = photosRepository.markAsDeletedPhotosUploadedEarlierThan(
         now - uploadedEarlierThanTimeDelta,
         now,
         photosPerQuery
@@ -52,7 +52,7 @@ open class CleanupService(
 
       logger.debug("Marked as deleted $markedAsDeletedCount photos")
 
-      photoInfoRepository.cleanDatabaseAndPhotos(
+      photosRepository.cleanDatabaseAndPhotos(
         now - deletedEarlierThanTimeDelta,
         photosPerQuery
       )

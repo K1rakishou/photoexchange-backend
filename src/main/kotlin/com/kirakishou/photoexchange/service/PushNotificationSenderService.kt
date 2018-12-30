@@ -2,9 +2,8 @@ package com.kirakishou.photoexchange.service
 
 import com.google.gson.annotations.Expose
 import com.google.gson.annotations.SerializedName
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.database.repository.UserInfoRepository
+import com.kirakishou.photoexchange.database.mongo.repository.UserInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import core.SharedConstants
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -21,7 +20,7 @@ import kotlin.coroutines.CoroutineContext
 open class PushNotificationSenderService(
   private val webClientService: WebClientService,
   private val userInfoRepository: UserInfoRepository,
-  private val photoInfoRepository: PhotoInfoRepository,
+  private val photosRepository: PhotosRepository,
   private val googleCredentialsService: GoogleCredentialsService,
   private val jsonConverterService: JsonConverterService,
   private val dispatcher: CoroutineDispatcher
@@ -97,7 +96,7 @@ open class PushNotificationSenderService(
   private suspend fun processRequest(myPhoto: PhotoInfo, accessToken: String) {
     logger.debug("Processing request for photo ${myPhoto.photoName}")
 
-    val theirPhoto = photoInfoRepository.findOneById(myPhoto.exchangedPhotoId)
+    val theirPhoto = photosRepository.findOneById(myPhoto.exchangedPhotoId)
     if (theirPhoto.isEmpty()) {
       logger.debug("No photo with id ${myPhoto.exchangedPhotoId}, photoName = ${myPhoto.photoName}")
       return

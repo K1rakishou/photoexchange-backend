@@ -43,6 +43,8 @@ object ServerSettings {
 	const val SMALL_PHOTO_SUFFIX = "_s"
 	const val PHOTO_MAP_SUFFIX = "_map"
 
+	const val IP_HASH_LENGTH = 128
+
 	val PHOTO_SIZES = arrayOf("vb", "b", "m", "s")
 
 	object DatabaseInfo {

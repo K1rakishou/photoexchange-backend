@@ -1,24 +1,21 @@
 package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.repository.LocationMapRepository
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.database.entity.LocationMap
-import com.kirakishou.photoexchange.extensions.deleteIfExists
+import com.kirakishou.photoexchange.database.mongo.entity.LocationMap
+import com.kirakishou.photoexchange.database.mongo.repository.LocationMapRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.reactive.awaitFirst
 import org.slf4j.LoggerFactory
-import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
 
 open class StaticMapDownloaderService(
   private val webClientService: WebClientService,
-  private val photoInfoRepository: PhotoInfoRepository,
+  private val photosRepository: PhotosRepository,
   private val locationMapRepository: LocationMapRepository,
   private val diskManipulationService: DiskManipulationService,
   private val dispatcher: CoroutineDispatcher
@@ -112,7 +109,7 @@ open class StaticMapDownloaderService(
    * */
   private suspend fun getLocationMap(locationMap: LocationMap): Boolean {
     try {
-      val photoInfo = photoInfoRepository.findOneById(locationMap.photoId)
+      val photoInfo = photosRepository.findOneById(locationMap.photoId)
       if (photoInfo.isEmpty()) {
         throw CouldNotFindPhotoInfo("Could not find photoInfo with photoId = ${locationMap.photoId}")
       }
@@ -175,7 +172,7 @@ open class StaticMapDownloaderService(
       return
     }
 
-    val photoInfo = photoInfoRepository.findOneById(locationMap.photoId)
+    val photoInfo = photosRepository.findOneById(locationMap.photoId)
     if (photoInfo.isEmpty()) {
       logger.error("Could not find photo by photoId (${locationMap.photoId})")
       return

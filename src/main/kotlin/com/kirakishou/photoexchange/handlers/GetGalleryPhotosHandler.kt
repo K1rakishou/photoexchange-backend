@@ -1,7 +1,7 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getIntVariable
 import com.kirakishou.photoexchange.extensions.getLongVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono
 
 class GetGalleryPhotosHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepository: PhotoInfoRepository
+  private val photosRepository: PhotosRepository
 ) : AbstractWebHandler(jsonConverter) {
 
   private val logger = LoggerFactory.getLogger(GetGalleryPhotosHandler::class.java)
@@ -52,7 +52,7 @@ class GetGalleryPhotosHandler(
           )
         }
 
-        val galleryPhotoResponseData = photoInfoRepository.findGalleryPhotos(lastUploadedOn, count)
+        val galleryPhotoResponseData = photosRepository.findGalleryPhotos(lastUploadedOn, count)
         logger.debug("Found ${galleryPhotoResponseData.size} photos from gallery")
 
         val response = GalleryPhotosResponse.success(

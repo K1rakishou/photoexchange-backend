@@ -1,6 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono
 
 class ReportPhotoHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepository: PhotoInfoRepository
+  private val photosRepository: PhotosRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(ReportPhotoHandler::class.java)
 
@@ -39,22 +39,22 @@ class ReportPhotoHandler(
           )
         }
 
-        val result = photoInfoRepository.reportPhoto(packet.userId, packet.photoName)
+        val result = photosRepository.reportPhoto(packet.userId, packet.photoName)
 
         return@mono when (result) {
-          is PhotoInfoRepository.ReportPhotoResult.Error -> {
+          is PhotosRepository.ReportPhotoResult.Error -> {
             logger.debug("Could not report photo (${packet.photoName})")
             formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ReportPhotoResponse.fail(ErrorCode.UnknownError))
           }
-          is PhotoInfoRepository.ReportPhotoResult.Unreported -> {
+          is PhotosRepository.ReportPhotoResult.Unreported -> {
             logger.debug("A photo (${packet.photoName}) has been unreported")
             formatResponse(HttpStatus.OK, ReportPhotoResponse.success(false))
           }
-          is PhotoInfoRepository.ReportPhotoResult.Reported -> {
+          is PhotosRepository.ReportPhotoResult.Reported -> {
             logger.debug("A photo (${packet.photoName}) has been reported")
             formatResponse(HttpStatus.OK, ReportPhotoResponse.success(true))
           }
-          is PhotoInfoRepository.ReportPhotoResult.PhotoDoesNotExist -> {
+          is PhotosRepository.ReportPhotoResult.PhotoDoesNotExist -> {
             logger.debug("A photo (${packet.photoName}) does not exist")
             formatResponse(HttpStatus.NOT_FOUND, ReportPhotoResponse.fail(ErrorCode.PhotoDoesNotExist))
           }

@@ -18,7 +18,7 @@ class BanUserAndAllTheirPhotosHandlerTest : AbstractHandlerTest() {
   private fun getWebTestClient(): WebTestClient {
     val handler = BanUserAndAllTheirPhotosHandler(
       jsonConverterService,
-      photoInfoRepository,
+      photosRepository,
       adminInfoRepository,
       banListRepository,
       diskManipulationService

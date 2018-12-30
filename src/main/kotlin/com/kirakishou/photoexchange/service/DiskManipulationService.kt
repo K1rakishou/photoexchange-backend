@@ -2,7 +2,6 @@ package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.core.FileWrapper
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import net.coobird.thumbnailator.Thumbnails
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
@@ -10,7 +9,6 @@ import org.springframework.core.io.buffer.DataBuffer
 import java.awt.Dimension
 import java.io.File
 import java.io.IOException
-import java.lang.RuntimeException
 import java.nio.file.Files
 import javax.imageio.ImageIO
 

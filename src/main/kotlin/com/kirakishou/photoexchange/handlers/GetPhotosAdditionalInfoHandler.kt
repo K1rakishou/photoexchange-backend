@@ -1,7 +1,7 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono
 
 class GetPhotosAdditionalInfoHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepository: PhotoInfoRepository
+  private val photosRepository: PhotosRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(GetPhotosAdditionalInfoHandler::class.java)
   private val USER_ID_VARIABLE = "user_id"
@@ -76,7 +76,7 @@ class GetPhotosAdditionalInfoHandler(
           )
         }
 
-        val additionalInfoResponseData = photoInfoRepository.findPhotoAdditionalInfo(userId, photoNames)
+        val additionalInfoResponseData = photosRepository.findPhotoAdditionalInfo(userId, photoNames)
         logger.debug("Found ${additionalInfoResponseData.size} photo additional info")
 
         return@mono formatResponse(

@@ -1,9 +1,9 @@
 package com.kirakishou.photoexchange.handlers.admin
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.repository.AdminInfoRepository
-import com.kirakishou.photoexchange.database.repository.BanListRepository
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.mongo.repository.AdminInfoRepository
+import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -19,7 +19,7 @@ import reactor.core.publisher.Mono
 
 class BanUserHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepository: PhotoInfoRepository,
+  private val photosRepository: PhotosRepository,
   private val adminInfoRepository: AdminInfoRepository,
   private val banListRepository: BanListRepository
 ) : AbstractWebHandler(jsonConverter) {
@@ -59,7 +59,7 @@ class BanUserHandler(
           )
         }
 
-        val ipHashList = photoInfoRepository.findAllPhotosByUserId(userId)
+        val ipHashList = photosRepository.findAllPhotosByUserId(userId)
           .distinctBy { it.ipHash }
           .map { it.ipHash }
 

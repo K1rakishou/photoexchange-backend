@@ -19,7 +19,7 @@ class BanPhotoHandlerTest : AbstractHandlerTest() {
   private fun getWebTestClient(): WebTestClient {
     val handler = BanPhotoHandler(
       jsonConverterService,
-      photoInfoRepository,
+      photosRepository,
       adminInfoRepository,
       diskManipulationService
     )

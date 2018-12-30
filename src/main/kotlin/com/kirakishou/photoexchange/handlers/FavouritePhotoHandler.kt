@@ -1,6 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono
 
 class FavouritePhotoHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepository: PhotoInfoRepository
+  private val photosRepository: PhotosRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(FavouritePhotoHandler::class.java)
 
@@ -39,34 +39,34 @@ class FavouritePhotoHandler(
           )
         }
 
-        val result = photoInfoRepository.favouritePhoto(
+        val result = photosRepository.favouritePhoto(
           packet.userId,
           packet.photoName
         )
 
         return@mono when (result) {
-          is PhotoInfoRepository.FavouritePhotoResult.Error -> {
+          is PhotosRepository.FavouritePhotoResult.Error -> {
             logger.debug("Could not favoutite photo (${packet.photoName})")
             formatResponse(
               HttpStatus.INTERNAL_SERVER_ERROR,
               FavouritePhotoResponse.fail(ErrorCode.UnknownError)
             )
           }
-          is PhotoInfoRepository.FavouritePhotoResult.Unfavourited -> {
+          is PhotosRepository.FavouritePhotoResult.Unfavourited -> {
             logger.debug("A photo (${packet.photoName}) has been unfavourited")
             formatResponse(
               HttpStatus.OK,
               FavouritePhotoResponse.success(false, result.count)
             )
           }
-          is PhotoInfoRepository.FavouritePhotoResult.Favourited -> {
+          is PhotosRepository.FavouritePhotoResult.Favourited -> {
             logger.debug("A photo (${packet.photoName}) has been favourited")
             formatResponse(
               HttpStatus.OK,
               FavouritePhotoResponse.success(true, result.count)
             )
           }
-          is PhotoInfoRepository.FavouritePhotoResult.PhotoDoesNotExist -> {
+          is PhotosRepository.FavouritePhotoResult.PhotoDoesNotExist -> {
             logger.debug("A photo (${packet.photoName}) does not exist")
             formatResponse(
               HttpStatus.NOT_FOUND,

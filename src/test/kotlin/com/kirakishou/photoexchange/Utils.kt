@@ -1,6 +1,5 @@
 package com.kirakishou.photoexchange
 
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
 import com.kirakishou.photoexchange.util.SecurityUtils
 import java.util.*
 

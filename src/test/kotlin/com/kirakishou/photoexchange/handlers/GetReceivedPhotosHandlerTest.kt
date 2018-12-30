@@ -1,11 +1,9 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
 import net.response.ReceivedPhotosResponse
 import org.junit.After
@@ -22,8 +20,8 @@ import java.time.Duration
 class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
-								 photoInfoRepository: PhotoInfoRepository): WebTestClient {
-		val handler = GetReceivedPhotosHandler(jsonConverterService, photoInfoRepository)
+                               photosRepository: PhotosRepository): WebTestClient {
+		val handler = GetReceivedPhotosHandler(jsonConverterService, photosRepository)
 
 		return WebTestClient.bindToRouterFunction(router {
 			"/v1".nest {
@@ -50,7 +48,7 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 
 	@Test
 	fun `should return received photos with receiver coordinates`() {
-		val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
+		val webClient = getWebTestClient(jsonConverterService, photosRepository)
 
 		runBlocking {
       photoInfoDao.save(PhotoInfo(1, 9, -1L, "111", "photo1", true, 11.1, 11.1, 1L, 0L, "123")).awaitFirst()

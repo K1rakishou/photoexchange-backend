@@ -1,6 +1,6 @@
 package com.kirakishou.photoexchange.handlers.count
 
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getLongVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -15,7 +15,7 @@ import reactor.core.publisher.Mono
 
 class GetFreshGalleryPhotosCountHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepo: PhotoInfoRepository
+  private val photosRepository: PhotosRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(GetFreshGalleryPhotosCountHandler::class.java)
   private val TIME_PATH_VARIABLE = "time"
@@ -32,7 +32,7 @@ class GetFreshGalleryPhotosCountHandler(
             GetFreshPhotosCountResponse.fail(ErrorCode.BadRequest))
         }
 
-        val freshPhotosCount = photoInfoRepo.countFreshGalleryPhotosSince(time)
+        val freshPhotosCount = photosRepository.countFreshGalleryPhotosSince(time)
 
         logger.debug("Found ${freshPhotosCount} fresh gallery photos")
         return@mono formatResponse(HttpStatus.OK,

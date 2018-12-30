@@ -4,12 +4,13 @@ import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.DB_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.HOST
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
-import com.kirakishou.photoexchange.database.dao.*
-import com.kirakishou.photoexchange.database.repository.*
+import com.kirakishou.photoexchange.database.mongo.dao.*
+import com.kirakishou.photoexchange.database.mongo.repository.AdminInfoRepository
+import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository
+import com.kirakishou.photoexchange.database.mongo.repository.LocationMapRepository
+import com.kirakishou.photoexchange.database.mongo.repository.UserInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.handlers.*
-import com.kirakishou.photoexchange.handlers.GetGalleryPhotosHandler
-import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
-import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
 import com.kirakishou.photoexchange.handlers.admin.BanPhotoHandler
 import com.kirakishou.photoexchange.handlers.admin.BanUserAndAllTheirPhotosHandler
 import com.kirakishou.photoexchange.handlers.admin.BanUserHandler
@@ -19,7 +20,6 @@ import com.kirakishou.photoexchange.handlers.count.GetFreshReceivedPhotosCountHa
 import com.kirakishou.photoexchange.handlers.count.GetFreshUploadedPhotosCountHandler
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.*
-import com.mongodb.ConnectionString
 import com.samskivert.mustache.Mustache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -28,9 +28,6 @@ import kotlinx.coroutines.newFixedThreadPoolContext
 import org.springframework.boot.autoconfigure.mustache.MustacheResourceTemplateLoader
 import org.springframework.boot.web.reactive.result.view.MustacheViewResolver
 import org.springframework.context.support.beans
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate
-import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory
-import org.springframework.data.mongodb.repository.support.ReactiveMongoRepositoryFactory
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.server.HandlerStrategies
 import org.springframework.web.reactive.function.server.RouterFunctions
@@ -57,7 +54,18 @@ fun myBeans(adminToken: String) = beans {
 
   //repository
   bean {
-    PhotoInfoRepository(ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref(), Dispatchers.IO)
+    PhotosRepository(
+      ref(),
+      ref(),
+      ref(),
+      ref(),
+      ref(),
+      ref(),
+      ref(),
+      ref(),
+      ref(),
+      Dispatchers.IO
+    )
   }
   bean {
     UserInfoRepository(ref(), ref(), ref(), Dispatchers.IO)

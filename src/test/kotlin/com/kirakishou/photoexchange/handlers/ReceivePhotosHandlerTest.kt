@@ -1,11 +1,9 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
 import net.response.ReceivedPhotosResponse
 import org.junit.After
@@ -22,8 +20,8 @@ import java.time.Duration
 class ReceivePhotosHandlerTest : AbstractHandlerTest() {
 
   private fun getWebTestClient(jsonConverterService: JsonConverterService,
-                               photoInfoRepository: PhotoInfoRepository): WebTestClient {
-    val handler = ReceivePhotosHandler(jsonConverterService, photoInfoRepository)
+                               photosRepository: PhotosRepository): WebTestClient {
+    val handler = ReceivePhotosHandler(jsonConverterService, photosRepository)
 
     return WebTestClient.bindToRouterFunction(router {
       "/v1".nest {
@@ -50,7 +48,7 @@ class ReceivePhotosHandlerTest : AbstractHandlerTest() {
 
   @Test
   fun `should return uploaded photo name and exchanged photo name list with receiver coordinates`() {
-    val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
+    val webClient = getWebTestClient(jsonConverterService, photosRepository)
 
     runBlocking {
       photoInfoDao.save(PhotoInfo(1, 6, 1, "111", "photo1", true, 11.1, 11.1, 5L, 0L, "123")).awaitFirst()
@@ -154,7 +152,7 @@ class ReceivePhotosHandlerTest : AbstractHandlerTest() {
 
   @Test
   fun `should not return photo if it does not have location map`() {
-    val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
+    val webClient = getWebTestClient(jsonConverterService, photosRepository)
 
     runBlocking {
       photoInfoDao.save(PhotoInfo(1, 6, -1, "111", "photo1", true, 11.1, 11.1, 5L, 0L, "123")).awaitFirst()

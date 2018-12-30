@@ -1,16 +1,17 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.google.gson.GsonBuilder
-import com.kirakishou.photoexchange.database.dao.*
-import com.kirakishou.photoexchange.database.repository.*
+import com.kirakishou.photoexchange.database.mongo.dao.*
+import com.kirakishou.photoexchange.database.mongo.repository.AdminInfoRepository
+import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository
+import com.kirakishou.photoexchange.database.mongo.repository.LocationMapRepository
+import com.kirakishou.photoexchange.database.mongo.repository.UserInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.service.*
-import com.mongodb.ConnectionString
 import kotlinx.coroutines.Dispatchers
 import net.request.UploadPhotoPacket
 import org.mockito.Mockito
 import org.springframework.core.io.ClassPathResource
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate
-import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
@@ -56,7 +57,7 @@ abstract class AbstractHandlerTest {
   lateinit var cleanupService: CleanupService
 
   lateinit var locationMapRepository: LocationMapRepository
-  lateinit var photoInfoRepository: PhotoInfoRepository
+  lateinit var photosRepository: PhotosRepository
   lateinit var userInfoRepository: UserInfoRepository
   lateinit var banListRepository: BanListRepository
   lateinit var adminInfoRepository: AdminInfoRepository
@@ -144,7 +145,7 @@ abstract class AbstractHandlerTest {
     banListRepository = Mockito.spy(BanListRepository(mongoSequenceDao, banListDao, Dispatchers.Unconfined))
     adminInfoRepository = Mockito.spy(AdminInfoRepository::class.java)
 
-    photoInfoRepository = PhotoInfoRepository(
+    photosRepository = PhotosRepository(
       template,
       mongoSequenceDao,
       photoInfoDao,
