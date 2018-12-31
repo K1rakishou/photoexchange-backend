@@ -1,6 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.mongo.repository.UserInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.UsersRepository
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
@@ -14,7 +14,7 @@ import reactor.core.publisher.Mono
 
 class GetUserIdHandler(
   jsonConverter: JsonConverterService,
-  private val userInfoRepository: UserInfoRepository
+  private val usersRepository: UsersRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(GetUserIdHandler::class.java)
 
@@ -23,7 +23,7 @@ class GetUserIdHandler(
       try {
         logger.debug("New GetUserIdHandler request")
 
-        val userInfo = userInfoRepository.createNew()
+        val userInfo = usersRepository.createNew()
         if (userInfo.isEmpty()) {
           return@mono formatResponse(
             HttpStatus.INTERNAL_SERVER_ERROR,

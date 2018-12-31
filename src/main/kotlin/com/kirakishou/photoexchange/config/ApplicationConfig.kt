@@ -8,8 +8,8 @@ import com.kirakishou.photoexchange.database.mongo.dao.*
 import com.kirakishou.photoexchange.database.mongo.repository.AdminInfoRepository
 import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository
 import com.kirakishou.photoexchange.database.mongo.repository.LocationMapRepository
-import com.kirakishou.photoexchange.database.mongo.repository.UserInfoRepository
 import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.UsersRepository
 import com.kirakishou.photoexchange.handlers.*
 import com.kirakishou.photoexchange.handlers.admin.BanPhotoHandler
 import com.kirakishou.photoexchange.handlers.admin.BanUserAndAllTheirPhotosHandler
@@ -68,7 +68,7 @@ fun myBeans(adminToken: String) = beans {
     )
   }
   bean {
-    UserInfoRepository(ref(), ref(), ref(), Dispatchers.IO)
+    UsersRepository(ref(), ref(), ref(), Dispatchers.IO)
   }
   bean {
     LocationMapRepository(ref(), ref(), ref(), ref(), Dispatchers.IO)

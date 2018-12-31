@@ -1,6 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.mongo.repository.UserInfoRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.UsersRepository
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 
 class CheckAccountExistsHandler(
   jsonConverter: JsonConverterService,
-  private val userInfoRepository: UserInfoRepository
+  private val usersRepository: UsersRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(CheckAccountExistsHandler::class.java)
   private val USER_ID_PATH_VARIABLE = "user_id"
@@ -39,7 +39,7 @@ class CheckAccountExistsHandler(
           )
         }
 
-        if (!userInfoRepository.accountExists(userId)) {
+        if (!usersRepository.accountExists(userId)) {
           logger.debug("Account with userId ${userId} does not exist")
           return@mono formatResponse(
             HttpStatus.OK,

@@ -1,5 +1,9 @@
 package com.kirakishou.photoexchange.database.pgsql.dao
 
+import com.kirakishou.photoexchange.core.ExchangedPhotoId
+import com.kirakishou.photoexchange.core.PhotoId
+import com.kirakishou.photoexchange.core.PhotoName
+import com.kirakishou.photoexchange.core.UserId
 import com.kirakishou.photoexchange.database.pgsql.entity.PhotoEntity
 import com.kirakishou.photoexchange.database.pgsql.table.Photos
 import org.jetbrains.exposed.sql.*
@@ -8,22 +12,22 @@ open class PhotosDao {
 
   open fun save(photoEntity: PhotoEntity): PhotoEntity {
     val id = Photos.insert {
-      it[exchangedPhotoId] = photoEntity.exchangedPhotoId
-      it[locationMapId] = photoEntity.locationMapId
-      it[userId] = photoEntity.userId
-      it[photoName] = photoEntity.photoName
+      it[userId] = photoEntity.userId.id
+      it[exchangedPhotoId] = photoEntity.exchangedPhotoId.id
+      it[locationMapId] = photoEntity.locationMapId.id
+      it[photoName] = photoEntity.photoName.name
       it[isPublic] = photoEntity.isPublic
       it[lon] = photoEntity.lon
       it[lat] = photoEntity.lat
       it[uploadedOn] = photoEntity.uploadedOn
       it[deletedOn] = photoEntity.deletedOn
-      it[ipHash] = photoEntity.ipHash
+      it[ipHash] = photoEntity.ipHash.hash
     } get Photos.id
 
-    return photoEntity.copy(photoId = id!!)
+    return photoEntity.copy(photoId = PhotoId(id!!))
   }
 
-  open fun findOldestEmptyPhoto(userId: String): PhotoEntity {
+  open fun findOldestEmptyPhoto(userId: UserId): PhotoEntity {
     return Photos.select {
       withUserIdNot(userId) and
         notExchanged() and
@@ -37,19 +41,19 @@ open class PhotosDao {
       ?: PhotoEntity.empty()
   }
 
-  open fun updatePhotoAsEmpty(photoId: Long): Boolean {
+  open fun updatePhotoAsEmpty(photoId: PhotoId): Boolean {
     return Photos.update({ withPhotoId(photoId) }) {
-      it[exchangedPhotoId] = PhotoEntity.EMPTY_PHOTO_ID
+      it[exchangedPhotoId] = ExchangedPhotoId.empty().id
     } == 1
   }
 
-  open fun updatePhotoSetReceiverId(photoId: Long, receiverId: Long): Boolean {
+  open fun updatePhotoSetReceiverId(photoId: PhotoId, receiverId: ExchangedPhotoId): Boolean {
     return Photos.update({ withPhotoId(photoId) }) {
-      it[exchangedPhotoId] = receiverId
+      it[exchangedPhotoId] = receiverId.id
     } == 1
   }
 
-  open fun findAllByUserId(userId: String): List<PhotoEntity> {
+  open fun findAllByUserId(userId: UserId): List<PhotoEntity> {
     return Photos.select {
       withUserId(userId)
     }
@@ -57,7 +61,7 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findPhotosByNames(userId: String, photoNameList: List<String>): List<PhotoEntity> {
+  open fun findPhotosByNames(userId: UserId, photoNameList: List<PhotoName>): List<PhotoEntity> {
     return Photos.select {
       withUserId(userId) and
         withPhotoNameIn(photoNameList) and
@@ -68,7 +72,7 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findPhotosByName(photoNameList: List<String>): List<PhotoEntity> {
+  open fun findPhotosByName(photoNameList: List<PhotoName>): List<PhotoEntity> {
     return Photos.select {
       withPhotoNameIn(photoNameList) and
         notDeleted()
@@ -78,7 +82,7 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findManyByIds(photoIdList: List<Long>, sortAscending: Boolean = true): List<PhotoEntity> {
+  open fun findManyByPhotoIdList(photoIdList: List<PhotoId>, sortAscending: Boolean = true): List<PhotoEntity> {
     return Photos.select {
       withPhotoIdIn(photoIdList) and
         notDeleted()
@@ -88,7 +92,17 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findPageOfUploadedPhotos(userId: String, lastUploadedOn: Long, count: Int): List<PhotoEntity> {
+  open fun findManyByExchangedIdList(exchangedIdList: List<ExchangedPhotoId>, sortAscending: Boolean = true): List<PhotoEntity> {
+    return Photos.select {
+      withExchangedPhotoIdIn(exchangedIdList) and
+        notDeleted()
+    }
+      .orderBy(Photos.uploadedOn, sortAscending)
+      .limit(exchangedIdList.size)
+      .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
+  }
+
+  open fun findPageOfUploadedPhotos(userId: UserId, lastUploadedOn: Long, count: Int): List<PhotoEntity> {
     return Photos.select {
       withUserId(userId) and
         uploadedEarlierThan(lastUploadedOn) and
@@ -99,7 +113,7 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findPageOfReceivedPhotos(userId: String, lastUploadedOn: Long, count: Int): List<PhotoEntity> {
+  open fun findPageOfReceivedPhotos(userId: UserId, lastUploadedOn: Long, count: Int): List<PhotoEntity> {
     return Photos.select {
       withUserId(userId) and
         exchanged() and
@@ -111,7 +125,7 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findById(uploaderPhotoId: Long): PhotoEntity {
+  open fun findById(uploaderPhotoId: PhotoId): PhotoEntity {
     return Photos.select {
       withPhotoId(uploaderPhotoId) and
         notDeleted()
@@ -121,7 +135,7 @@ open class PhotosDao {
       ?: PhotoEntity.empty()
   }
 
-  open fun findByPhotoName(photoName: String): PhotoEntity {
+  open fun findByPhotoName(photoName: PhotoName): PhotoEntity {
     return Photos.select {
       withPhotoName(photoName) and
         notDeleted()
@@ -152,31 +166,31 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun updateSetLocationMapId(photoId: Long, locationMapId: Long): Boolean {
+  open fun updateSetLocationMapId(photoId: PhotoId, locationMapId: Long): Boolean {
     return Photos.update({ withPhotoId(photoId) }) {
       it[Photos.locationMapId] = locationMapId
     } == 1
   }
 
-  open fun updateManyAsDeleted(currentTime: Long, photoIdList: List<Long>): Boolean {
+  open fun updateManyAsDeleted(currentTime: Long, photoIdList: List<PhotoId>): Boolean {
     return Photos.update({ withPhotoIdIn(photoIdList) }) {
       it[Photos.deletedOn] = currentTime
     } == photoIdList.size
   }
 
-  open fun deleteById(photoId: Long): Boolean {
+  open fun deleteById(photoId: PhotoId): Boolean {
     return Photos.deleteWhere {
       withPhotoId(photoId)
     } == 1
   }
 
-  open fun deleteAll(photoIdList: List<Long>): Boolean {
+  open fun deleteAll(photoIdList: List<PhotoId>): Boolean {
     return Photos.deleteWhere {
       withPhotoIdIn(photoIdList)
     } == photoIdList.size
   }
 
-  open fun photoNameExists(generatedName: String): Boolean {
+  open fun photoNameExists(generatedName: PhotoName): Boolean {
     return Photos.select {
       withPhotoName(generatedName)
     }
@@ -185,7 +199,7 @@ open class PhotosDao {
   }
 
   //TODO: tests for case when DB is empty should return 0 and not throw any exceptions
-  open fun countFreshUploadedPhotosSince(userId: String, time: Long): Int {
+  open fun countFreshUploadedPhotosSince(userId: UserId, time: Long): Int {
     return Photos.select {
       withUserId(userId) and
         uploadedLaterThan(time) and
@@ -195,7 +209,7 @@ open class PhotosDao {
       .count()
   }
 
-  open fun countFreshExchangedPhotos(userId: String, time: Long): Int {
+  open fun countFreshExchangedPhotos(userId: UserId, time: Long): Int {
     return Photos.select {
       withUserId(userId) and
         uploadedLaterThan(time) and
@@ -233,43 +247,47 @@ open class PhotosDao {
   /**
    * Photo must have this id
    * */
-  private fun SqlExpressionBuilder.withPhotoId(photoId: Long): Op<Boolean> {
-    return Photos.id.eq(photoId)
+  private fun SqlExpressionBuilder.withPhotoId(photoId: PhotoId): Op<Boolean> {
+    return Photos.id.eq(photoId.id)
   }
 
   /**
    * Photo must have one of the ids from the list
    * */
-  private fun SqlExpressionBuilder.withPhotoIdIn(photoIdList: List<Long>): Op<Boolean> {
-    return Photos.id.inList(photoIdList)
+  private fun SqlExpressionBuilder.withPhotoIdIn(photoIdList: List<PhotoId>): Op<Boolean> {
+    return Photos.id.inList(photoIdList.map { it.id })
+  }
+
+  private fun SqlExpressionBuilder.withExchangedPhotoIdIn(photoIdList: List<ExchangedPhotoId>): Op<Boolean> {
+    return Photos.id.inList(photoIdList.map { it.id })
   }
 
   /**
    * Photo must have this name
    * */
-  private fun SqlExpressionBuilder.withPhotoName(photoName: String): Op<Boolean> {
-    return Photos.photoName.eq(photoName)
+  private fun SqlExpressionBuilder.withPhotoName(photoName: PhotoName): Op<Boolean> {
+    return Photos.photoName.eq(photoName.name)
   }
 
   /**
    * Photo must have one of the names from the list
    * */
-  private fun SqlExpressionBuilder.withPhotoNameIn(photoNameList: List<String>): Op<Boolean> {
-    return Photos.photoName.inList(photoNameList)
+  private fun SqlExpressionBuilder.withPhotoNameIn(photoNameList: List<PhotoName>): Op<Boolean> {
+    return Photos.photoName.inList(photoNameList.map { it.name })
   }
 
   /**
    * Photo must belong to this user
    * */
-  private fun SqlExpressionBuilder.withUserId(userId: String): Op<Boolean> {
-    return Photos.userId.eq(userId)
+  private fun SqlExpressionBuilder.withUserId(userId: UserId): Op<Boolean> {
+    return Photos.userId.eq(userId.id)
   }
 
   /**
    * Photo must not belong to this user (so the user won't exchange with themselves)
    * */
-  private fun SqlExpressionBuilder.withUserIdNot(userId: String): Op<Boolean> {
-    return Photos.userId.neq(userId)
+  private fun SqlExpressionBuilder.withUserIdNot(userId: UserId): Op<Boolean> {
+    return Photos.userId.neq(userId.id)
   }
 
   /**
@@ -283,7 +301,7 @@ open class PhotosDao {
    * Photo must not be exchanged photo
    * */
   private fun SqlExpressionBuilder.notExchanged(): Op<Boolean> {
-    return Photos.exchangedPhotoId.eq(PhotoEntity.EMPTY_PHOTO_ID)
+    return Photos.exchangedPhotoId.eq(ExchangedPhotoId.empty().id)
   }
 
   /**

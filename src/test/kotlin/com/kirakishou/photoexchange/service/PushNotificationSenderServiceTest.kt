@@ -14,7 +14,7 @@ class PushNotificationSenderServiceTest : AbstractServiceTest() {
 
   private val pushNotificationSenderService = PushNotificationSenderService(
     webClientService,
-    userInfoRepository,
+    usersRepository,
     photosRepository,
     googleCredentialsService,
     jsonConverterService,
@@ -67,7 +67,7 @@ class PushNotificationSenderServiceTest : AbstractServiceTest() {
   fun `should not enqueue push request if firebase token is NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN`() {
     runBlocking {
       Mockito.doReturn(BAD_FIREBASE_TOKEN)
-        .`when`(userInfoRepository).getFirebaseToken(Mockito.anyString())
+        .`when`(usersRepository).getFirebaseToken(Mockito.anyString())
 
       pushNotificationSenderService.enqueue(photoInfo1)
 
@@ -80,7 +80,7 @@ class PushNotificationSenderServiceTest : AbstractServiceTest() {
   fun `should not send push if could not get google token`() {
     runBlocking {
       Mockito.doReturn(GOOD_FIREBASE_TOKEN)
-        .`when`(userInfoRepository).getFirebaseToken(Mockito.anyString())
+        .`when`(usersRepository).getFirebaseToken(Mockito.anyString())
       Mockito.doReturn(BAD_GOOGLE_TOKEN)
         .`when`(googleCredentialsService).getAccessToken()
 
@@ -95,7 +95,7 @@ class PushNotificationSenderServiceTest : AbstractServiceTest() {
   fun `should not send push if exchanged photo has already been deleted`() {
     runBlocking {
       Mockito.doReturn(GOOD_FIREBASE_TOKEN)
-        .`when`(userInfoRepository).getFirebaseToken(Mockito.anyString())
+        .`when`(usersRepository).getFirebaseToken(Mockito.anyString())
       Mockito.doReturn(GOOD_GOOGLE_TOKEN)
         .`when`(googleCredentialsService).getAccessToken()
       Mockito.doReturn(PhotoInfo.empty())
@@ -117,7 +117,7 @@ class PushNotificationSenderServiceTest : AbstractServiceTest() {
   fun `should send push`() {
     runBlocking {
       Mockito.doReturn(GOOD_FIREBASE_TOKEN)
-        .`when`(userInfoRepository).getFirebaseToken(Mockito.anyString())
+        .`when`(usersRepository).getFirebaseToken(Mockito.anyString())
       Mockito.doReturn(GOOD_GOOGLE_TOKEN)
         .`when`(googleCredentialsService).getAccessToken()
       Mockito.doReturn(photoInfo2)

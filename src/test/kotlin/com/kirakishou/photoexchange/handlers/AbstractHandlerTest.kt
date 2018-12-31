@@ -5,8 +5,8 @@ import com.kirakishou.photoexchange.database.mongo.dao.*
 import com.kirakishou.photoexchange.database.mongo.repository.AdminInfoRepository
 import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository
 import com.kirakishou.photoexchange.database.mongo.repository.LocationMapRepository
-import com.kirakishou.photoexchange.database.mongo.repository.UserInfoRepository
 import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.UsersRepository
 import com.kirakishou.photoexchange.service.*
 import kotlinx.coroutines.Dispatchers
 import net.request.UploadPhotoPacket
@@ -58,7 +58,7 @@ abstract class AbstractHandlerTest {
 
   lateinit var locationMapRepository: LocationMapRepository
   lateinit var photosRepository: PhotosRepository
-  lateinit var userInfoRepository: UserInfoRepository
+  lateinit var usersRepository: UsersRepository
   lateinit var banListRepository: BanListRepository
   lateinit var adminInfoRepository: AdminInfoRepository
 
@@ -134,8 +134,8 @@ abstract class AbstractHandlerTest {
       Dispatchers.Unconfined
     )
 
-    userInfoRepository = Mockito.spy(
-      UserInfoRepository(
+    usersRepository = Mockito.spy(
+      UsersRepository(
         mongoSequenceDao,
         userInfoDao,
         generator,

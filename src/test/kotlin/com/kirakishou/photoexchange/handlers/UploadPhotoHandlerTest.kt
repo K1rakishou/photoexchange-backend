@@ -27,7 +27,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     val handler = UploadPhotoHandler(
       jsonConverterService,
       photosRepository,
-      userInfoRepository,
+      usersRepository,
       banListRepository,
       staticMapDownloaderService,
       pushNotificationSenderService,
@@ -69,8 +69,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
-      Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(true)
-      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
+      Mockito.`when`(usersRepository.accountExists(userId)).thenReturn(true)
+      Mockito.`when`(usersRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(false)
     }
 
@@ -108,8 +108,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
-      Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(true)
-      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
+      Mockito.`when`(usersRepository.accountExists(userId)).thenReturn(true)
+      Mockito.`when`(usersRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
 
       Mockito.doThrow(IOException("BAM"))
@@ -150,8 +150,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
-      Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(true)
-      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
+      Mockito.`when`(usersRepository.accountExists(userId)).thenReturn(true)
+      Mockito.`when`(usersRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
 
       Mockito.doThrow(IOException("BAM"))
@@ -192,8 +192,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
-      Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(true)
-      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
+      Mockito.`when`(usersRepository.accountExists(userId)).thenReturn(true)
+      Mockito.`when`(usersRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
     }
 
@@ -223,7 +223,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 //    runBlocking {
 //      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
 //      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
-//      Mockito.`when`(userInfoRepository.accountExists(Mockito.anyString())).thenReturn(true)
+//      Mockito.`when`(usersRepository.accountExists(Mockito.anyString())).thenReturn(true)
 //    }
 //
 //    kotlin.run {
@@ -251,8 +251,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
-      Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(true)
-      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn(SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN)
+      Mockito.`when`(usersRepository.accountExists(userId)).thenReturn(true)
+      Mockito.`when`(usersRepository.getFirebaseToken(Mockito.anyString())).thenReturn(SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
     }
 
@@ -283,8 +283,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
-      Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(true)
-      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
+      Mockito.`when`(usersRepository.accountExists(userId)).thenReturn(true)
+      Mockito.`when`(usersRepository.getFirebaseToken(Mockito.anyString())).thenReturn(token)
     }
 
     kotlin.run {
@@ -313,7 +313,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
-      Mockito.`when`(userInfoRepository.accountExists(userId)).thenReturn(false)
+      Mockito.`when`(usersRepository.accountExists(userId)).thenReturn(false)
     }
 
     kotlin.run {
@@ -341,7 +341,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
     runBlocking {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(true)
-      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
+      Mockito.`when`(usersRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
     }
 
     kotlin.run {
@@ -370,8 +370,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
-      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
-      Mockito.`when`(userInfoRepository.accountExists(Mockito.anyString())).thenReturn(true)
+      Mockito.`when`(usersRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
+      Mockito.`when`(usersRepository.accountExists(Mockito.anyString())).thenReturn(true)
     }
 
     kotlin.run {
@@ -447,8 +447,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
-      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
-      Mockito.`when`(userInfoRepository.accountExists(Mockito.anyString())).thenReturn(true)
+      Mockito.`when`(usersRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
+      Mockito.`when`(usersRepository.accountExists(Mockito.anyString())).thenReturn(true)
     }
 
     kotlin.run {
@@ -532,8 +532,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
-      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
-      Mockito.`when`(userInfoRepository.accountExists(Mockito.anyString())).thenReturn(true)
+      Mockito.`when`(usersRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
+      Mockito.`when`(usersRepository.accountExists(Mockito.anyString())).thenReturn(true)
     }
 
     kotlin.run {
@@ -612,8 +612,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
-      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
-      Mockito.`when`(userInfoRepository.accountExists(Mockito.anyString())).thenReturn(true)
+      Mockito.`when`(usersRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
+      Mockito.`when`(usersRepository.accountExists(Mockito.anyString())).thenReturn(true)
     }
 
     kotlin.run {
@@ -779,8 +779,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
       Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
       Mockito.`when`(staticMapDownloaderService.enqueue(Mockito.anyLong())).thenReturn(true)
-      Mockito.`when`(userInfoRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
-      Mockito.`when`(userInfoRepository.accountExists(Mockito.anyString())).thenReturn(true)
+      Mockito.`when`(usersRepository.getFirebaseToken(Mockito.anyString())).thenReturn("test_token")
+      Mockito.`when`(usersRepository.accountExists(Mockito.anyString())).thenReturn(true)
     }
 
     fun uploadPhoto(packet: UploadPhotoPacket): Mono<Unit> {

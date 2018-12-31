@@ -4,8 +4,8 @@ import com.google.gson.Gson
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.database.mongo.dao.*
 import com.kirakishou.photoexchange.database.mongo.repository.LocationMapRepository
-import com.kirakishou.photoexchange.database.mongo.repository.UserInfoRepository
 import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.UsersRepository
 import kotlinx.coroutines.Dispatchers
 import org.mockito.Mockito
 
@@ -30,7 +30,7 @@ abstract class AbstractServiceTest {
   lateinit var webClientService: WebClientService
   lateinit var googleCredentialsService: GoogleCredentialsService
 
-  lateinit var userInfoRepository: UserInfoRepository
+  lateinit var usersRepository: UsersRepository
   lateinit var photosRepository: PhotosRepository
   lateinit var locationMapRepository: LocationMapRepository
 
@@ -72,8 +72,8 @@ abstract class AbstractServiceTest {
       JsonConverterService(Gson().newBuilder().create())
     )
 
-    userInfoRepository = Mockito.spy(
-      UserInfoRepository(
+    usersRepository = Mockito.spy(
+      UsersRepository(
         mongoSequenceDao,
         userInfoDao,
         generator,

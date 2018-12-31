@@ -2,8 +2,8 @@ package com.kirakishou.photoexchange.service
 
 import com.google.gson.annotations.Expose
 import com.google.gson.annotations.SerializedName
-import com.kirakishou.photoexchange.database.mongo.repository.UserInfoRepository
 import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.UsersRepository
 import core.SharedConstants
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -19,7 +19,7 @@ import kotlin.coroutines.CoroutineContext
 
 open class PushNotificationSenderService(
   private val webClientService: WebClientService,
-  private val userInfoRepository: UserInfoRepository,
+  private val usersRepository: UsersRepository,
   private val photosRepository: PhotosRepository,
   private val googleCredentialsService: GoogleCredentialsService,
   private val jsonConverterService: JsonConverterService,
@@ -51,7 +51,7 @@ open class PushNotificationSenderService(
 
   open fun enqueue(photoInfo: PhotoInfo) {
     launch {
-      val token = userInfoRepository.getFirebaseToken(photoInfo.userId)
+      val token = usersRepository.getFirebaseToken(photoInfo.userId)
       if (token.isNotEmpty() && token != SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
         mutex.withLock { requests.add(photoInfo) }
       } else {
@@ -102,7 +102,7 @@ open class PushNotificationSenderService(
       return
     }
 
-    val firebaseToken = userInfoRepository.getFirebaseToken(myPhoto.userId)
+    val firebaseToken = usersRepository.getFirebaseToken(myPhoto.userId)
     if (firebaseToken.isEmpty()) {
       logger.debug("Firebase token is empty")
       return

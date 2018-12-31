@@ -1,25 +1,23 @@
 package com.kirakishou.photoexchange.database.pgsql.entity
 
-import com.kirakishou.photoexchange.core.Photo
+import com.kirakishou.photoexchange.core.*
 import com.kirakishou.photoexchange.database.pgsql.table.Photos
 import org.jetbrains.exposed.sql.ResultRow
 
 data class PhotoEntity(
-  val photoId: Long,
-  val exchangedPhotoId: Long,
-  val locationMapId: Long,
-  val userId: String,
-  val photoName: String,
+  val photoId: PhotoId,
+  val userId: UserId,
+  val exchangedPhotoId: ExchangedPhotoId,
+  val locationMapId: LocationMapId,
+  val photoName: PhotoName,
   val isPublic: Boolean,
   val lon: Double,
   val lat: Double,
   val uploadedOn: Long,
   val deletedOn: Long,
-  val ipHash: String
+  val ipHash: IpHash
 ) {
-  fun isEmpty(): Boolean {
-    return photoId == EMPTY_PHOTO_ID
-  }
+  fun isEmpty() = photoId.isEmpty()
 
   fun isAnonymous(): Boolean {
     return lon == -1.0 && lat == -1.0
@@ -28,9 +26,9 @@ data class PhotoEntity(
   fun toPhoto(): Photo {
     return Photo(
       photoId,
+      userId,
       exchangedPhotoId,
       locationMapId,
-      userId,
       photoName,
       isPublic,
       lon,
@@ -42,31 +40,27 @@ data class PhotoEntity(
   }
 
   companion object {
-    /**
-    This is a default exchangedPhotoId when photo is uploading.
-    This is used so other uploading requests won't be able to find this photo to do the exchange
-    Upon successful exchange exchangedPhotoId is set to theirPhoto.photoId
-    Upon unsuccessful exchange (when there are no photos to exchange with) exchangedPhotoId is set to EMPTY_PHOTO_ID
-     */
+
     const val PHOTO_IS_EXCHANGING = -1L
 
     const val EMPTY_PHOTO_ID = -2L
     const val EMPTY_LOCATION_MAP_ID = -1L
+    const val EMPTY_USER_ID = -1L
 
     fun create(
-      userId: String,
-      photoName: String,
+      userId: UserId,
+      photoName: PhotoName,
       isPublic: Boolean,
       lon: Double,
       lat: Double,
       uploadedOn: Long,
-      ipHash: String
+      ipHash: IpHash
     ): PhotoEntity {
       return PhotoEntity(
-        EMPTY_PHOTO_ID,
-        PHOTO_IS_EXCHANGING,
-        EMPTY_LOCATION_MAP_ID,
+        PhotoId.empty(),
         userId,
+        ExchangedPhotoId.photoIsExchanging(),
+        LocationMapId.empty(),
         photoName,
         isPublic,
         lon,
@@ -79,33 +73,33 @@ data class PhotoEntity(
 
     fun empty(): PhotoEntity {
       return PhotoEntity(
-        EMPTY_PHOTO_ID,
-        EMPTY_PHOTO_ID,
-        EMPTY_LOCATION_MAP_ID,
-        "",
-        "",
+        PhotoId.empty(),
+        UserId.empty(),
+        ExchangedPhotoId.empty(),
+        LocationMapId.empty(),
+        PhotoName.empty(),
         false,
         0.0,
         0.0,
         0L,
         0L,
-        ""
+        IpHash.empty()
       )
     }
 
     fun fromResultRow(resultRow: ResultRow): PhotoEntity {
       return PhotoEntity(
-        resultRow[Photos.id],
-        resultRow[Photos.exchangedPhotoId],
-        resultRow[Photos.locationMapId],
-        resultRow[Photos.userId],
-        resultRow[Photos.photoName],
+        PhotoId(resultRow[Photos.id]),
+        UserId(resultRow[Photos.userId]),
+        ExchangedPhotoId(resultRow[Photos.exchangedPhotoId]),
+        LocationMapId(resultRow[Photos.locationMapId]),
+        PhotoName(resultRow[Photos.photoName]),
         resultRow[Photos.isPublic],
         resultRow[Photos.lon],
         resultRow[Photos.lat],
         resultRow[Photos.uploadedOn],
         resultRow[Photos.deletedOn],
-        resultRow[Photos.ipHash]
+        IpHash(resultRow[Photos.ipHash])
       )
     }
   }

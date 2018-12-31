@@ -3,8 +3,8 @@ package com.kirakishou.photoexchange.handlers
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.core.FileWrapper
 import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository
-import com.kirakishou.photoexchange.database.mongo.repository.UserInfoRepository
 import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.UsersRepository
 import com.kirakishou.photoexchange.exception.EmptyPacket
 import com.kirakishou.photoexchange.exception.RequestSizeExceeded
 import com.kirakishou.photoexchange.extensions.containsAllParts
@@ -33,7 +33,7 @@ import java.io.IOException
 class UploadPhotoHandler(
   jsonConverter: JsonConverterService,
   private val photosRepository: PhotosRepository,
-  private val userInfoRepository: UserInfoRepository,
+  private val usersRepository: UsersRepository,
   private val banListRepository: BanListRepository,
   private val staticMapDownloaderService: StaticMapDownloaderService,
   private val pushNotificationSenderService: PushNotificationSenderService,
@@ -83,13 +83,13 @@ class UploadPhotoHandler(
         return formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ErrorCode.BadRequest))
       }
 
-      if (!userInfoRepository.accountExists(packet.userId)) {
+      if (!usersRepository.accountExists(packet.userId)) {
         logger.error("Account with userId ${packet.userId} does not exist!")
         return formatResponse(HttpStatus.FORBIDDEN, UploadPhotoResponse.fail(ErrorCode.AccountNotFound))
       }
 
       //user should not be able to send photo without creating default account with firebase token first
-      val token = userInfoRepository.getFirebaseToken(packet.userId)
+      val token = usersRepository.getFirebaseToken(packet.userId)
       if (token.isEmpty()) {
         logger.error("User does not have firebase token yet!")
         return formatResponse(HttpStatus.FORBIDDEN, UploadPhotoResponse.fail(ErrorCode.UserDoesNotHaveFirebaseToken))
