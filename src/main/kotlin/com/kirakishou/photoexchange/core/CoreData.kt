@@ -76,3 +76,11 @@ inline class UserUuid(val uuid: String) {
     fun empty(): UserUuid = UserUuid("")
   }
 }
+
+inline class FavouritedPhotoId(val id: Long) {
+  fun isEmpty() = id == -1L
+
+  companion object {
+    fun empty(): FavouritedPhotoId = FavouritedPhotoId(-1L)
+  }
+}

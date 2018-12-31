@@ -2,11 +2,15 @@ package com.kirakishou.photoexchange.database.pgsql.table
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import core.SharedConstants
+import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.Table
 
 object Photos : Table() {
   val id = long(Field.ID).primaryKey().autoIncrement()
-  val userId = (long(Field.USER_ID) references Users.id).index(Index.USER_ID)
+  val userId = long(Field.USER_ID).references(
+    Users.id,
+    ReferenceOption.CASCADE
+  ).index(Index.USER_ID)
   val exchangedPhotoId = long(Field.EXCHANGED_PHOTO_ID).index(Index.EXCHANGED_PHOTO_ID)
   val locationMapId = long(Field.LOCATION_MAP_ID)
   val photoName = varchar(Field.PHOTO_NAME, SharedConstants.MAX_PHOTO_NAME_LEN).index(Index.PHOTO_NAME)

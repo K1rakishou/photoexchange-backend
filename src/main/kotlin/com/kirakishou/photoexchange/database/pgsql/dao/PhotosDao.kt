@@ -145,6 +145,14 @@ open class PhotosDao {
       ?: PhotoEntity.empty()
   }
 
+  open fun findManyByPhotoNameList(photoNameList: List<PhotoName>): List<PhotoEntity> {
+    return Photos.select {
+      withPhotoNameIn(photoNameList)
+    }
+      .limit(photoNameList.size)
+      .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
+  }
+
   open fun findOldPhotos(earlierThanTime: Long, count: Int): List<PhotoEntity> {
     return Photos.select {
       uploadedEarlierThan(earlierThanTime) and
@@ -178,18 +186,6 @@ open class PhotosDao {
     } == photoIdList.size
   }
 
-  open fun deleteById(photoId: PhotoId): Boolean {
-    return Photos.deleteWhere {
-      withPhotoId(photoId)
-    } == 1
-  }
-
-  open fun deleteAll(photoIdList: List<PhotoId>): Boolean {
-    return Photos.deleteWhere {
-      withPhotoIdIn(photoIdList)
-    } == photoIdList.size
-  }
-
   open fun photoNameExists(generatedName: PhotoName): Boolean {
     return Photos.select {
       withPhotoName(generatedName)
@@ -218,6 +214,18 @@ open class PhotosDao {
     }
       .orderBy(Photos.uploadedOn, false)
       .count()
+  }
+
+  open fun deleteById(photoId: PhotoId) {
+    Photos.deleteWhere {
+      withPhotoId(photoId)
+    }
+  }
+
+  open fun deleteAll(photoIdList: List<PhotoId>) {
+    Photos.deleteWhere {
+      withPhotoIdIn(photoIdList)
+    }
   }
 
   /**

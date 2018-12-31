@@ -1,9 +1,13 @@
 package com.kirakishou.photoexchange.database.pgsql.repository
 
 import com.kirakishou.photoexchange.core.*
-import com.kirakishou.photoexchange.database.mongo.dao.*
+import com.kirakishou.photoexchange.database.mongo.dao.GalleryPhotoDao
+import com.kirakishou.photoexchange.database.mongo.dao.LocationMapDao
+import com.kirakishou.photoexchange.database.mongo.dao.MongoSequenceDao
+import com.kirakishou.photoexchange.database.mongo.dao.ReportedPhotoDao
 import com.kirakishou.photoexchange.database.mongo.entity.GalleryPhoto
 import com.kirakishou.photoexchange.database.mongo.repository.AbstractRepository
+import com.kirakishou.photoexchange.database.pgsql.dao.FavouritedPhotosDao
 import com.kirakishou.photoexchange.database.pgsql.dao.PhotosDao
 import com.kirakishou.photoexchange.database.pgsql.dao.UsersDao
 import com.kirakishou.photoexchange.database.pgsql.entity.PhotoEntity
@@ -23,7 +27,7 @@ open class PhotosRepository(
   private val photosDao: PhotosDao,
   private val usersDao: UsersDao,
   private val galleryPhotoDao: GalleryPhotoDao,
-  private val favouritedPhotoDao: FavouritedPhotoDao,
+  private val favouritedPhotosDao: FavouritedPhotosDao,
   private val reportedPhotoDao: ReportedPhotoDao,
   private val locationMapDao: LocationMapDao,
   private val generator: GeneratorService,
@@ -464,7 +468,7 @@ open class PhotosRepository(
 
   suspend fun findPhotoAdditionalInfo(
     userUuid: UserUuid,
-    photoNames: List<String>
+    photoNames: List<PhotoName>
   ): List<PhotoAdditionalInfoResponseData> {
     return dbQuery(emptyList()) {
       val user = usersDao.getUser(userUuid)
@@ -472,42 +476,37 @@ open class PhotosRepository(
         return@dbQuery emptyList<PhotoAdditionalInfoResponseData>()
       }
 
+      val photoList = photosDao.findManyByPhotoNameList(photoNames)
+
+      val photoMap = photoList.associateBy { it.photoId }
+      val photoIdList = photoList.map { it.photoId }
+
       val resultMap = linkedMapOf<String, GalleryPhotoInfoDto>()
-      val countMap = hashMapOf<String, Long>()
+      val countMap = favouritedPhotosDao.countFavouritesByPhotoIdList(photoIdList)
 
-      photoNames
-        //FIXME: there may be up to 200 requests to the database.
-        //Should probably optimise this somehow to use just a single request (if it's even possible with mongodb)
-        .map { photoName -> favouritedPhotoDao.countFavouritesByPhotoName(photoName) to photoName }
-        .map { (future, photoName) -> future.awaitFirst() to photoName }
-        .forEach { (count, photoName) -> countMap.put(photoName, count) }
-
+      val userFavouritedPhotos = favouritedPhotosDao.findManyFavouritedPhotos(user.id, photoIdList)
       //TODO
-      val userFavouritedPhotosDeferred = favouritedPhotoDao.findManyFavouritesByPhotoNameList(user.id, photoNames)
-      val userReportedPhotosDeferred = reportedPhotoDao.findManyReportsByPhotoNameList(user.id, photoNames)
-
-      val userFavouritedPhotos = userFavouritedPhotosDeferred.awaitFirst()
-      val userReportedPhotos = userReportedPhotosDeferred.awaitFirst()
+      val userReportedPhotos = reportedPhotoDao.findManyReportsByPhotoNameList(user.id, photoIdList)
 
       for (favouritedPhoto in userFavouritedPhotos) {
-        resultMap.putIfAbsent(favouritedPhoto.photoName,
-          GalleryPhotoInfoDto(favouritedPhoto.photoName)
-        )
-        resultMap[favouritedPhoto.photoName]!!.isFavourited = true
+        val photoName = photoMap[favouritedPhoto.photoId]!!.photoName.name
+
+        resultMap.putIfAbsent(photoName, GalleryPhotoInfoDto(favouritedPhoto.photoId.id, photoName))
+        resultMap[photoName]!!.isFavourited = true
       }
 
+      //TODO
       for (reportedPhoto in userReportedPhotos) {
-        resultMap.putIfAbsent(reportedPhoto.photoName,
-          GalleryPhotoInfoDto(reportedPhoto.photoName)
-        )
+        //TODO
+        resultMap.putIfAbsent(reportedPhoto.photoName, GalleryPhotoInfoDto(reportedPhoto.photoName))
         resultMap[reportedPhoto.photoName]!!.isReported = true
       }
 
-      return@dbQuery resultMap.values.map { (galleryPhotoName, isFavourited, isReported) ->
+      return@dbQuery resultMap.values.map { (galleryPhotoId, galleryPhotoName, isFavourited, isReported) ->
         PhotoAdditionalInfoResponseData(
           galleryPhotoName,
           isFavourited,
-          countMap.getOrDefault(galleryPhotoName, 0L),
+          countMap.getOrDefault(galleryPhotoId, 0L),
           isReported
         )
       }
@@ -576,6 +575,7 @@ open class PhotosRepository(
   }
 
   data class GalleryPhotoInfoDto(
+    var galleryPhotoId: Long,
     var galleryPhotoName: String,
     var isFavourited: Boolean = false,
     var isReported: Boolean = false

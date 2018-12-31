@@ -1,7 +1,5 @@
 package com.kirakishou.photoexchange.database.mongo.entity
 
-import com.kirakishou.photoexchange.database.mongo.dao.FavouritedPhotoDao
-
 @Document(collection = FavouritedPhotoDao.COLLECTION_NAME)
 data class FavouritedPhoto(
 	@Id
