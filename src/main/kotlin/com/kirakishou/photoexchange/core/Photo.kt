@@ -16,6 +16,10 @@ data class Photo(
 
   fun isEmpty() = photoId.isEmpty()
 
+  fun isAnonymous(): Boolean {
+    return lon == -1.0 && lat == -1.0
+  }
+
   companion object {
     fun empty(): Photo {
       return Photo(

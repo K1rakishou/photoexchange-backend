@@ -2,8 +2,10 @@ package com.kirakishou.photoexchange.service
 
 import com.google.gson.Gson
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.mongo.dao.*
-import com.kirakishou.photoexchange.database.mongo.repository.LocationMapRepository
+import com.kirakishou.photoexchange.database.mongo.dao.GalleryPhotoDao
+import com.kirakishou.photoexchange.database.mongo.dao.MongoSequenceDao
+import com.kirakishou.photoexchange.database.mongo.dao.ReportedPhotoDao
+import com.kirakishou.photoexchange.database.pgsql.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.database.pgsql.repository.UsersRepository
 import kotlinx.coroutines.Dispatchers

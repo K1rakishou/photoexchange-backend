@@ -41,12 +41,6 @@ data class PhotoEntity(
 
   companion object {
 
-    const val PHOTO_IS_EXCHANGING = -1L
-
-    const val EMPTY_PHOTO_ID = -2L
-    const val EMPTY_LOCATION_MAP_ID = -1L
-    const val EMPTY_USER_ID = -1L
-
     fun create(
       userId: UserId,
       photoName: PhotoName,

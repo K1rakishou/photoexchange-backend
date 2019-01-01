@@ -1,9 +1,11 @@
 package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.mongo.entity.LocationMap
-import com.kirakishou.photoexchange.database.mongo.repository.LocationMapRepository
+import com.kirakishou.photoexchange.core.LocationMap
+import com.kirakishou.photoexchange.core.PhotoId
+import com.kirakishou.photoexchange.database.pgsql.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.exception.DatabaseTransactionException
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -50,8 +52,8 @@ open class StaticMapDownloaderService(
     requestActor.offer(Unit)
   }
 
-  open suspend fun enqueue(photoId: Long): Boolean {
-    val saveResult = locationMapRepository.save(LocationMap.create(photoId))
+  open suspend fun enqueue(photoId: PhotoId): Boolean {
+    val saveResult = locationMapRepository.save(photoId)
 
     launch(dispatcher) {
       logger.debug("Notifying the actor to process the next batch of maps")
@@ -62,14 +64,14 @@ open class StaticMapDownloaderService(
     }
 
     logger.debug("Notifying done!")
-    return !saveResult.isEmpty()
+    return saveResult
   }
 
   //this method is for tests only
-  open suspend fun testEnqueue(photoId: Long?): Boolean {
+  open suspend fun testEnqueue(photoId: PhotoId?): Boolean {
     if (photoId != null) {
-      val saveResult = locationMapRepository.save(LocationMap.create(photoId))
-      if (saveResult.isEmpty()) {
+      val saveResult = locationMapRepository.save(photoId)
+      if (!saveResult) {
         return false
       }
     }
@@ -109,21 +111,21 @@ open class StaticMapDownloaderService(
    * */
   private suspend fun getLocationMap(locationMap: LocationMap): Boolean {
     try {
-      val photoInfo = photosRepository.findOneById(locationMap.photoId)
-      if (photoInfo.isEmpty()) {
+      val photo = photosRepository.findOneById(locationMap.photoId)
+      if (photo.isEmpty()) {
         throw CouldNotFindPhotoInfo("Could not find photoInfo with photoId = ${locationMap.photoId}")
       }
 
-      if (photoInfo.isAnonymous()) {
+      if (photo.isAnonymous()) {
         //photo does not have location attached to it, so just update it's state as Anonymous
         locationMapRepository.setMapAnonymous(locationMap.photoId, locationMap.id)
         return true
       }
 
-      val photoMapName = "${photoInfo.photoName}${ServerSettings.PHOTO_MAP_SUFFIX}"
+      val photoMapName = "${photo.photoName}${ServerSettings.PHOTO_MAP_SUFFIX}"
 
       val outFile = webClientService.downloadLocationMap(
-        photoInfo,
+        photo,
         photoMapName,
         MAX_TIMEOUT_SECONDS
       )
@@ -159,16 +161,19 @@ open class StaticMapDownloaderService(
       //no more attempts left
       updateMapAsFailed(locationMap)
     } else {
-      if (!locationMapRepository.increaseAttemptsCountAndNextAttemptTime(locationMap.photoId, repeatTimeDelta)) {
-        logger.error("Could not increase attempts count for " +
-          "photo with id (${locationMap.photoId}) and repeatTimeDelta ($repeatTimeDelta)")
+      try {
+        locationMapRepository.increaseAttemptsCountAndNextAttemptTime(locationMap.photoId, repeatTimeDelta)
+      } catch (error: DatabaseTransactionException) {
+        logger.error("Error", error)
       }
     }
   }
 
   private suspend fun updateMapAsFailed(locationMap: LocationMap) {
-    if (!locationMapRepository.setMapFailed(locationMap.photoId)) {
-      logger.error("Could not set map status as Failed")
+    try {
+      locationMapRepository.setMapFailed(locationMap.photoId, locationMap.id)
+    } catch (error: DatabaseTransactionException) {
+      logger.error("Error", error)
       return
     }
 

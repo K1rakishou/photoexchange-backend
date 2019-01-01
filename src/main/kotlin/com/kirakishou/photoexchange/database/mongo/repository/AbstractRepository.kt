@@ -17,7 +17,11 @@ abstract class AbstractRepository(
   suspend fun <T> dbQuery(defaultOnError: T? = null, block: suspend () -> T): T {
     return withContext(dispatchers) {
       try {
-        transaction { runBlocking { block() } }
+        transaction {
+          runBlocking {
+            block()
+          }
+        }
       } catch (error: Throwable) {
         if (defaultOnError == null) {
           throw error

@@ -8,15 +8,15 @@ import com.kirakishou.photoexchange.database.pgsql.table.FavouritedPhotos
 import org.jetbrains.exposed.sql.ResultRow
 
 data class FavouritedPhotoEntity(
-  val id: FavouritedPhotoId,
+  val favouritedPhotoId: FavouritedPhotoId,
   val photoId: PhotoId,
   val userId: UserId
 ) {
 
-  fun isEmpty() = id.isEmpty()
+  fun isEmpty() = favouritedPhotoId.isEmpty()
 
   fun toFavouritedPhoto(): FavouritedPhoto {
-    return FavouritedPhoto(id, photoId, userId)
+    return FavouritedPhoto(favouritedPhotoId, photoId, userId)
   }
 
   companion object {

@@ -39,6 +39,9 @@ open class UsersDao {
     } == 1
   }
 
+  /**
+   * User must have this userUuid
+   * */
   private fun SqlExpressionBuilder.withUserUuid(userUuid: UserUuid): Op<Boolean> {
     return Users.userUuid.eq(userUuid.uuid)
   }

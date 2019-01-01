@@ -9,15 +9,15 @@ import core.SharedConstants
 import org.jetbrains.exposed.sql.ResultRow
 
 data class UserEntity(
-  val id: UserId,
+  val userId: UserId,
   val userUuid: UserUuid,
   val firebaseToken: FirebaseToken
 ) {
 
-  fun isEmpty() = id.isEmpty()
+  fun isEmpty() = userId.isEmpty()
 
   fun toUser(): User {
-    return User(id, userUuid, firebaseToken)
+    return User(userId, userUuid, firebaseToken)
   }
 
   companion object {

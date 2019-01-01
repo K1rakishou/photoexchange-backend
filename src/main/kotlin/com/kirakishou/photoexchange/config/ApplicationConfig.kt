@@ -4,10 +4,13 @@ import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.DB_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.HOST
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
-import com.kirakishou.photoexchange.database.mongo.dao.*
+import com.kirakishou.photoexchange.database.mongo.dao.BanListDao
+import com.kirakishou.photoexchange.database.mongo.dao.GalleryPhotoDao
+import com.kirakishou.photoexchange.database.mongo.dao.MongoSequenceDao
+import com.kirakishou.photoexchange.database.mongo.dao.ReportedPhotoDao
 import com.kirakishou.photoexchange.database.mongo.repository.AdminInfoRepository
 import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository
-import com.kirakishou.photoexchange.database.mongo.repository.LocationMapRepository
+import com.kirakishou.photoexchange.database.pgsql.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.database.pgsql.repository.UsersRepository
 import com.kirakishou.photoexchange.handlers.*
@@ -71,7 +74,13 @@ fun myBeans(adminToken: String) = beans {
     UsersRepository(ref(), ref(), ref(), Dispatchers.IO)
   }
   bean {
-    LocationMapRepository(ref(), ref(), ref(), ref(), Dispatchers.IO)
+    LocationMapRepository(
+      ref(),
+      ref(),
+      ref(),
+      ref(),
+      Dispatchers.IO
+    )
   }
   bean {
     BanListRepository(ref(), ref(), Dispatchers.IO)

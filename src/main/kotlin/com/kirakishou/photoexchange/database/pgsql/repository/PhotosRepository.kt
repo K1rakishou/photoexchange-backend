@@ -2,12 +2,12 @@ package com.kirakishou.photoexchange.database.pgsql.repository
 
 import com.kirakishou.photoexchange.core.*
 import com.kirakishou.photoexchange.database.mongo.dao.GalleryPhotoDao
-import com.kirakishou.photoexchange.database.mongo.dao.LocationMapDao
 import com.kirakishou.photoexchange.database.mongo.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.mongo.dao.ReportedPhotoDao
 import com.kirakishou.photoexchange.database.mongo.entity.GalleryPhoto
 import com.kirakishou.photoexchange.database.mongo.repository.AbstractRepository
 import com.kirakishou.photoexchange.database.pgsql.dao.FavouritedPhotosDao
+import com.kirakishou.photoexchange.database.pgsql.dao.LocationMapsDao
 import com.kirakishou.photoexchange.database.pgsql.dao.PhotosDao
 import com.kirakishou.photoexchange.database.pgsql.dao.UsersDao
 import com.kirakishou.photoexchange.database.pgsql.entity.PhotoEntity
@@ -29,7 +29,7 @@ open class PhotosRepository(
   private val galleryPhotoDao: GalleryPhotoDao,
   private val favouritedPhotosDao: FavouritedPhotosDao,
   private val reportedPhotoDao: ReportedPhotoDao,
-  private val locationMapDao: LocationMapDao,
+  private val locationMapsDao: LocationMapsDao,
   private val generator: GeneratorService,
   private val diskManipulationService: DiskManipulationService,
   dispatcher: CoroutineDispatcher
@@ -113,7 +113,7 @@ open class PhotosRepository(
         return@dbQuery emptyList<Photo>()
       }
 
-      return@dbQuery photosDao.findAllByUserId(user.id)
+      return@dbQuery photosDao.findAllByUserId(user.userId)
         .map { photoEntity -> photoEntity.toPhoto() }
     }
   }
@@ -129,7 +129,7 @@ open class PhotosRepository(
         return@dbQuery emptyList<UploadedPhotoResponseData>()
       }
 
-      val myPhotos = photosDao.findPageOfUploadedPhotos(user.id, lastUploadedOn, count)
+      val myPhotos = photosDao.findPageOfUploadedPhotos(user.userId, lastUploadedOn, count)
 
       val exchangeIds = myPhotos.map { it.exchangedPhotoId }
       val theirPhotos = photosDao.findManyByExchangedIdList(exchangeIds)
@@ -166,7 +166,7 @@ open class PhotosRepository(
         return@dbQuery emptyList<ReceivedPhotoResponseData>()
       }
 
-      val myPhotos = photosDao.findPageOfReceivedPhotos(user.id, lastUploadedOn, count)
+      val myPhotos = photosDao.findPageOfReceivedPhotos(user.userId, lastUploadedOn, count)
       val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
 
       val theirPhotos = photosDao.findManyByExchangedIdList(theirPhotoIds, false)
@@ -291,7 +291,7 @@ open class PhotosRepository(
       }
 
       logger.debug("Found ${photosToDelete.size} photos to delete")
-      val photoFilesToDelete = mutableListOf<String>()
+      val photoFilesToDelete = mutableListOf<PhotoName>()
 
       for (photoEntity in photosToDelete) {
         logger.debug("Deleting ${photoEntity.photoName}")
@@ -302,7 +302,7 @@ open class PhotosRepository(
           continue
         }
 
-        photoFilesToDelete += photoEntity.photoName.name
+        photoFilesToDelete += PhotoName(photoEntity.photoName.name)
       }
 
       if (photoFilesToDelete.isNotEmpty()) {
@@ -334,7 +334,7 @@ open class PhotosRepository(
         return@dbQuery Photo.empty()
       }
 
-      val oldestPhoto = photosDao.findOldestEmptyPhoto(user.id)
+      val oldestPhoto = photosDao.findOldestEmptyPhoto(user.userId)
       if (oldestPhoto.isEmpty()) {
         if (!photosDao.updatePhotoAsEmpty(newUploadingPhoto.photoId)) {
           throw ExchangeException("Could not set photoExchangeId as EMPTY_PHOTO_ID")
@@ -484,9 +484,9 @@ open class PhotosRepository(
       val resultMap = linkedMapOf<String, GalleryPhotoInfoDto>()
       val countMap = favouritedPhotosDao.countFavouritesByPhotoIdList(photoIdList)
 
-      val userFavouritedPhotos = favouritedPhotosDao.findManyFavouritedPhotos(user.id, photoIdList)
+      val userFavouritedPhotos = favouritedPhotosDao.findManyFavouritedPhotos(user.userId, photoIdList)
       //TODO
-      val userReportedPhotos = reportedPhotoDao.findManyReportsByPhotoNameList(user.id, photoIdList)
+      val userReportedPhotos = reportedPhotoDao.findManyReportsByPhotoNameList(user.userId, photoIdList)
 
       for (favouritedPhoto in userFavouritedPhotos) {
         val photoName = photoMap[favouritedPhoto.photoId]!!.photoName.name
@@ -523,7 +523,7 @@ open class PhotosRepository(
         return@dbQuery emptyList<ReceivedPhotoResponseData>()
       }
 
-      val myPhotos = photosDao.findPhotosByNames(user.id, photoNameList)
+      val myPhotos = photosDao.findPhotosByNames(user.userId, photoNameList)
       val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
 
       val theirPhotos = photosDao.findManyByExchangedIdList(theirPhotoIds)
@@ -559,7 +559,7 @@ open class PhotosRepository(
         return@dbQuery 0
       }
 
-      return@dbQuery photosDao.countFreshUploadedPhotosSince(user.id, time)
+      return@dbQuery photosDao.countFreshUploadedPhotosSince(user.userId, time)
     }
   }
 
@@ -570,7 +570,7 @@ open class PhotosRepository(
         return@dbQuery 0
       }
 
-      return@dbQuery photosDao.countFreshExchangedPhotos(user.id, time)
+      return@dbQuery photosDao.countFreshExchangedPhotos(user.userId, time)
     }
   }
 

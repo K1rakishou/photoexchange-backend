@@ -80,14 +80,23 @@ open class FavouritedPhotosDao {
       .map { resultRow -> FavouritedPhotoEntity.fromResultRow(resultRow) }
   }
 
+  /**
+   * FavouritedPhoto must have one of the ids from the list
+   * */
   private fun SqlExpressionBuilder.withPhotoIdIn(photoIdList: List<PhotoId>): Op<Boolean> {
     return FavouritedPhotos.photoId.inList(photoIdList.map { it.id })
   }
 
+  /**
+   * FavouritedPhoto must have this photoId
+   * */
   private fun SqlExpressionBuilder.withPhotoId(photoId: PhotoId): Op<Boolean> {
     return FavouritedPhotos.photoId.eq(photoId.id)
   }
 
+  /**
+   * FavouritedPhoto must have this userId
+   * */
   private fun SqlExpressionBuilder.withUserId(userId: UserId): Op<Boolean> {
     return FavouritedPhotos.userId.eq(userId.id)
   }

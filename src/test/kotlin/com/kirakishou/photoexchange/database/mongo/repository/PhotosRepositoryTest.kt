@@ -5,7 +5,6 @@ import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
 import com.kirakishou.photoexchange.database.mongo.entity.FavouritedPhoto
 import com.kirakishou.photoexchange.database.mongo.entity.GalleryPhoto
-import com.kirakishou.photoexchange.database.mongo.entity.LocationMap
 import com.kirakishou.photoexchange.database.mongo.entity.ReportedPhoto
 import com.kirakishou.photoexchange.exception.DatabaseTransactionException
 import com.nhaarman.mockito_kotlin.any

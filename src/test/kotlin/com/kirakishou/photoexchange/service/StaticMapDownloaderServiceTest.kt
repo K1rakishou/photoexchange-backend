@@ -1,10 +1,8 @@
 package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.core.FileWrapper
-import com.kirakishou.photoexchange.database.mongo.entity.LocationMap
 import com.nhaarman.mockito_kotlin.any
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before

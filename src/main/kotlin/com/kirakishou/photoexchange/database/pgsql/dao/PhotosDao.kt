@@ -1,9 +1,6 @@
 package com.kirakishou.photoexchange.database.pgsql.dao
 
-import com.kirakishou.photoexchange.core.ExchangedPhotoId
-import com.kirakishou.photoexchange.core.PhotoId
-import com.kirakishou.photoexchange.core.PhotoName
-import com.kirakishou.photoexchange.core.UserId
+import com.kirakishou.photoexchange.core.*
 import com.kirakishou.photoexchange.database.pgsql.entity.PhotoEntity
 import com.kirakishou.photoexchange.database.pgsql.table.Photos
 import org.jetbrains.exposed.sql.*
@@ -174,9 +171,9 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun updateSetLocationMapId(photoId: PhotoId, locationMapId: Long): Boolean {
+  open fun updateSetLocationMapId(photoId: PhotoId, locationMapId: LocationMapId): Boolean {
     return Photos.update({ withPhotoId(photoId) }) {
-      it[Photos.locationMapId] = locationMapId
+      it[Photos.locationMapId] = locationMapId.id
     } == 1
   }
 
