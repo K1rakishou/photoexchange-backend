@@ -44,6 +44,14 @@ open class FavouritedPhotosDao {
       ?.let { true } ?: false
   }
 
+  open fun countFavouritesByPhotoName(photoId: PhotoId): Long {
+    return FavouritedPhotos.select {
+      withPhotoId(photoId)
+    }
+      .count()
+      .toLong()
+  }
+
   //TODO: NOT TESTED AT ALL
   //TODO: test ordering of the returned list
   open fun countFavouritesByPhotoIdList(photoIdList: List<PhotoId>): Map<Long, Long> {

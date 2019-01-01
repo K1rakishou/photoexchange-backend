@@ -84,3 +84,11 @@ inline class FavouritedPhotoId(val id: Long) {
     fun empty(): FavouritedPhotoId = FavouritedPhotoId(-1L)
   }
 }
+
+inline class ReportedPhotoId(val id: Long) {
+  fun isEmpty() = id == -1L
+
+  companion object {
+    fun empty():  ReportedPhotoId = ReportedPhotoId(-1L)
+  }
+}

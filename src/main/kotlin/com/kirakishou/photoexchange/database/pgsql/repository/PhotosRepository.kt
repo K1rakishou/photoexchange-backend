@@ -2,14 +2,9 @@ package com.kirakishou.photoexchange.database.pgsql.repository
 
 import com.kirakishou.photoexchange.core.*
 import com.kirakishou.photoexchange.database.mongo.dao.GalleryPhotoDao
-import com.kirakishou.photoexchange.database.mongo.dao.MongoSequenceDao
-import com.kirakishou.photoexchange.database.mongo.dao.ReportedPhotoDao
 import com.kirakishou.photoexchange.database.mongo.entity.GalleryPhoto
 import com.kirakishou.photoexchange.database.mongo.repository.AbstractRepository
-import com.kirakishou.photoexchange.database.pgsql.dao.FavouritedPhotosDao
-import com.kirakishou.photoexchange.database.pgsql.dao.LocationMapsDao
-import com.kirakishou.photoexchange.database.pgsql.dao.PhotosDao
-import com.kirakishou.photoexchange.database.pgsql.dao.UsersDao
+import com.kirakishou.photoexchange.database.pgsql.dao.*
 import com.kirakishou.photoexchange.database.pgsql.entity.PhotoEntity
 import com.kirakishou.photoexchange.exception.DatabaseTransactionException
 import com.kirakishou.photoexchange.exception.ExchangeException
@@ -23,12 +18,11 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 
 open class PhotosRepository(
-  private val mongoSequenceDao: MongoSequenceDao,
   private val photosDao: PhotosDao,
   private val usersDao: UsersDao,
   private val galleryPhotoDao: GalleryPhotoDao,
   private val favouritedPhotosDao: FavouritedPhotosDao,
-  private val reportedPhotoDao: ReportedPhotoDao,
+  private val reportedPhotosDao: ReportedPhotosDao,
   private val locationMapsDao: LocationMapsDao,
   private val generator: GeneratorService,
   private val diskManipulationService: DiskManipulationService,
@@ -377,67 +371,70 @@ open class PhotosRepository(
   //FIXME: doesn't work in tests
   //should be called from within locked mutex
   open suspend fun delete(photoId: PhotoId, photoName: PhotoName): Boolean {
-    return dbQuery(false) {
-      return@dbQuery try {
-        transaction {
-          //TODO:
-//          photosDao.deleteById(photoId)
-//          favouritedPhotoDao.deleteFavouriteByPhotoName(photoName)
-//          reportedPhotoDao.deleteReportByPhotoName(photoName)
-//          locationMapDao.deleteById(photoId)
-//          galleryPhotoDao.deleteByPhotoName(photoName)
-        }
+    try {
+      return dbQuery(false) {
+        photosDao.deleteById(photoId)
+        favouritedPhotosDao.deleteAllFavouritesByPhotoId(photoId)
+        reportedPhotosDao.deleteAllFavouritesByPhotoId(photoId)
+        locationMapsDao.deleteById(photoId)
+        //TODO:
+//       galleryPhotoDao.deleteByPhotoName(photoName)
 
         true
-      } catch (error: Throwable) {
-        logger.error("Could not delete photo", error)
-        false
+      }
+    } catch (error: Throwable) {
+      logger.error("Could not delete photo", error)
+      return false
+    }
+  }
+
+  suspend fun favouritePhoto(userId: UserId, photoName: PhotoName): FavouritePhotoResult {
+    return dbQuery {
+      val photo = photosDao.findByPhotoName(photoName)
+      if (photo.isEmpty()) {
+        return@dbQuery FavouritePhotoResult.PhotoDoesNotExist
+      }
+
+      return@dbQuery if (favouritedPhotosDao.isPhotoFavourited(photo.photoId, photo.userId)) {
+        if (!favouritedPhotosDao.unfavouritePhoto(photo.photoId, photo.userId)) {
+          return@dbQuery FavouritePhotoResult.Error
+        }
+
+        val favouritesCount = favouritedPhotosDao.countFavouritesByPhotoName(photo.photoId)
+        FavouritePhotoResult.Unfavourited(favouritesCount)
+      } else {
+        if (!favouritedPhotosDao.favouritePhoto(photo.photoId, userId)) {
+          return@dbQuery FavouritePhotoResult.Error
+        }
+
+        val favouritesCount = favouritedPhotosDao.countFavouritesByPhotoName(photo.photoId)
+        FavouritePhotoResult.Favourited(favouritesCount)
       }
     }
   }
 
-  //TODO
-//  suspend fun favouritePhoto(userId: String, photoName: String): FavouritePhotoResult {
-//    return dbQuery {
-//      return@dbQuery if (favouritedPhotoDao.isPhotoFavourited(userId, photoName)) {
-//        if (!favouritedPhotoDao.unfavouritePhoto(userId, photoName)) {
-//          return@dbQuery FavouritePhotoResult.Error
-//        }
-//
-//        val favouritesCount = favouritedPhotoDao.countFavouritesByPhotoName(photoName)
-//        FavouritePhotoResult.Unfavourited(favouritesCount)
-//      } else {
-//        val id = mongoSequenceDao.getNextFavouritedPhotoId()
-//        if (!favouritedPhotoDao.favouritePhoto(FavouritedPhoto.create(id, photoName, userId))) {
-//          return@dbQuery FavouritePhotoResult.Error
-//        }
-//
-//        val favouritesCount = favouritedPhotoDao.countFavouritesByPhotoName(photoName)
-//        FavouritePhotoResult.Favourited(favouritesCount)
-//      }
-//    }
-//  }
+  suspend fun reportPhoto(userId: UserId, photoName: PhotoName): ReportPhotoResult {
+    return dbQuery {
+      val photo = photosDao.findByPhotoName(photoName)
+      if (photo.isEmpty()) {
+        return@dbQuery ReportPhotoResult.PhotoDoesNotExist
+      }
 
-  //TODO
-//  suspend fun reportPhoto(userId: String, photoName: String): ReportPhotoResult {
-//
-//    return dbQuery {
-//      return@dbQuery if (reportedPhotoDao.isPhotoReported(userId, photoName)) {
-//        if (!reportedPhotoDao.unreportPhoto(userId, photoName)) {
-//          return@dbQuery ReportPhotoResult.Error
-//        }
-//
-//        ReportPhotoResult.Unreported
-//      } else {
-//        val id = mongoSequenceDao.getNextReportedPhotoId()
-//        if (!reportedPhotoDao.reportPhoto(ReportedPhoto.create(id, photoName, userId))) {
-//          return@dbQuery ReportPhotoResult.Error
-//        }
-//
-//        ReportPhotoResult.Reported
-//      }
-//    }
-//  }
+      return@dbQuery if (reportedPhotosDao.isPhotoReported(photo.photoId, userId)) {
+        if (!reportedPhotosDao.unreportPhoto(photo.photoId, userId)) {
+          return@dbQuery ReportPhotoResult.Error
+        }
+
+        ReportPhotoResult.Unreported
+      } else {
+        if (!reportedPhotosDao.reportPhoto(photo.photoId, userId)) {
+          return@dbQuery ReportPhotoResult.Error
+        }
+
+        ReportPhotoResult.Reported
+      }
+    }
+  }
 
   suspend fun findGalleryPhotos(lastUploadedOn: Long, count: Int): List<GalleryPhotoResponseData> {
     return dbQuery(emptyList()) {
@@ -486,7 +483,7 @@ open class PhotosRepository(
 
       val userFavouritedPhotos = favouritedPhotosDao.findManyFavouritedPhotos(user.userId, photoIdList)
       //TODO
-      val userReportedPhotos = reportedPhotoDao.findManyReportsByPhotoNameList(user.userId, photoIdList)
+      val userReportedPhotos = reportedPhotosDao.findManyReportedPhotos(user.userId, photoIdList)
 
       for (favouritedPhoto in userFavouritedPhotos) {
         val photoName = photoMap[favouritedPhoto.photoId]!!.photoName.name
@@ -497,9 +494,10 @@ open class PhotosRepository(
 
       //TODO
       for (reportedPhoto in userReportedPhotos) {
-        //TODO
-        resultMap.putIfAbsent(reportedPhoto.photoName, GalleryPhotoInfoDto(reportedPhoto.photoName))
-        resultMap[reportedPhoto.photoName]!!.isReported = true
+        val photoName = photoMap[reportedPhoto.photoId]!!.photoName.name
+
+        resultMap.putIfAbsent(photoName, GalleryPhotoInfoDto(reportedPhoto.photoId.id, photoName))
+        resultMap[photoName]!!.isReported = true
       }
 
       return@dbQuery resultMap.values.map { (galleryPhotoId, galleryPhotoName, isFavourited, isReported) ->
