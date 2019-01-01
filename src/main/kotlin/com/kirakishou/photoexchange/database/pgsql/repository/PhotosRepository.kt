@@ -1,17 +1,12 @@
 package com.kirakishou.photoexchange.database.pgsql.repository
 
 import com.kirakishou.photoexchange.core.*
-import com.kirakishou.photoexchange.database.mongo.dao.GalleryPhotoDao
-import com.kirakishou.photoexchange.database.mongo.entity.GalleryPhoto
 import com.kirakishou.photoexchange.database.mongo.repository.AbstractRepository
 import com.kirakishou.photoexchange.database.pgsql.dao.*
 import com.kirakishou.photoexchange.database.pgsql.entity.PhotoEntity
-import com.kirakishou.photoexchange.exception.DatabaseTransactionException
-import com.kirakishou.photoexchange.exception.ExchangeException
 import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.GeneratorService
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.reactive.awaitFirst
 import net.response.data.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
@@ -20,7 +15,7 @@ import java.io.IOException
 open class PhotosRepository(
   private val photosDao: PhotosDao,
   private val usersDao: UsersDao,
-  private val galleryPhotoDao: GalleryPhotoDao,
+  private val galleryPhotosDao: GalleryPhotosDao,
   private val favouritedPhotosDao: FavouritedPhotosDao,
   private val reportedPhotosDao: ReportedPhotosDao,
   private val locationMapsDao: LocationMapsDao,
@@ -53,7 +48,7 @@ open class PhotosRepository(
     return dbQuery(Photo.empty()) {
       val photoName = generatePhotoInfoName()
 
-      val photoInfo = PhotoEntity.create(
+      val photo = PhotoEntity.create(
         userId,
         photoName,
         isPublic,
@@ -63,28 +58,25 @@ open class PhotosRepository(
         ipHash
       )
 
-      val savedPhotoInfo = photosDao.save(photoInfo)
-      if (savedPhotoInfo.isEmpty()) {
+      val savedPhoto = photosDao.save(photo)
+      if (savedPhoto.isEmpty()) {
         return@dbQuery Photo.empty()
       }
 
-      if (photoInfo.isPublic) {
-        //TODO
-        val galleryPhotoId = mongoSequenceDao.getNextGalleryPhotoId().awaitFirst()
-        val newGalleryPhoto = GalleryPhoto.create(
-          galleryPhotoId,
-          photoInfo.photoName.name,
-          savedPhotoInfo.uploadedOn
+      if (photo.isPublic) {
+        val result = galleryPhotosDao.save(
+          savedPhoto.photoId,
+          savedPhoto.uploadedOn
         )
 
-        val result = galleryPhotoDao.save(newGalleryPhoto).awaitFirst()
         if (!result) {
-          photosDao.deleteById(photoInfo.photoId)
-          return@dbQuery Photo.empty()
+          throw DatabaseTransactionException(
+            "Could not create gallery photo with photoId (${savedPhoto.photoId}) and uploadedOn (${savedPhoto.uploadedOn})"
+          )
         }
       }
 
-      return@dbQuery savedPhotoInfo.toPhoto()
+      return@dbQuery savedPhoto.toPhoto()
     }
   }
 
@@ -374,6 +366,10 @@ open class PhotosRepository(
     try {
       return dbQuery(false) {
         photosDao.deleteById(photoId)
+
+        // TODO:
+        // Probably don't need following 4 lines since they all have foreign keys to Photos
+        // table and should be deleted automatically. Needs testing.
         favouritedPhotosDao.deleteAllFavouritesByPhotoId(photoId)
         reportedPhotosDao.deleteAllFavouritesByPhotoId(photoId)
         locationMapsDao.deleteById(photoId)
@@ -438,17 +434,18 @@ open class PhotosRepository(
 
   suspend fun findGalleryPhotos(lastUploadedOn: Long, count: Int): List<GalleryPhotoResponseData> {
     return dbQuery(emptyList()) {
-      val pageOfGalleryPhotos = galleryPhotoDao.findPage(lastUploadedOn, count).awaitFirst()
+      val pageOfGalleryPhotos = galleryPhotosDao.findPage(lastUploadedOn, count)
 
       val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
-      val photoNameList = pageOfGalleryPhotos.map { PhotoName(it.photoName) }
+      val photoIdList = pageOfGalleryPhotos.map { it.photoId }
 
-      val photoInfos = photosDao.findPhotosByName(photoNameList)
+      val photoInfos = photosDao.findManyByPhotoIdList(photoIdList)
       for (photo in photoInfos) {
-        val galleryPhoto = pageOfGalleryPhotos.first { it.photoName == photo.photoName.name }
+        val galleryPhoto = pageOfGalleryPhotos.first { it.photoId.id == photo.photoId.id }
+
         resultMap[photo.photoId.id] = GalleryPhotoDto(
           photo.toPhoto(),
-          galleryPhoto
+          galleryPhoto.toGalleryPhoto()
         )
       }
 
@@ -546,7 +543,7 @@ open class PhotosRepository(
 
   suspend fun countFreshGalleryPhotosSince(time: Long): Int {
     return dbQuery(0) {
-      return@dbQuery galleryPhotoDao.countFreshGalleryPhotosSince(time).awaitFirst()
+      return@dbQuery galleryPhotosDao.countGalleryPhotosUploadedLaterThan(time)
     }
   }
 

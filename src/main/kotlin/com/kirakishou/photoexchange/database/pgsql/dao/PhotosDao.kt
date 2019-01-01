@@ -69,7 +69,7 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findPhotosByName(photoNameList: List<PhotoName>): List<PhotoEntity> {
+  open fun findPhotosByNames(photoNameList: List<PhotoName>): List<PhotoEntity> {
     return Photos.select {
       withPhotoNameIn(photoNameList) and
         notDeleted()

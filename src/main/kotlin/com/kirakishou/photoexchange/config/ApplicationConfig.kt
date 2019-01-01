@@ -5,7 +5,6 @@ import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.DB_NAME
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.HOST
 import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
 import com.kirakishou.photoexchange.database.mongo.dao.BanListDao
-import com.kirakishou.photoexchange.database.mongo.dao.GalleryPhotoDao
 import com.kirakishou.photoexchange.database.mongo.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.mongo.repository.AdminInfoRepository
 import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository

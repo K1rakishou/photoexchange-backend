@@ -1,11 +1,9 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.mongo.entity.GalleryPhoto
 import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
 import net.response.GalleryPhotosResponse
 import org.junit.After

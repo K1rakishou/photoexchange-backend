@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.database.pgsql.repository
 
+import com.kirakishou.photoexchange.core.DatabaseTransactionException
 import com.kirakishou.photoexchange.core.LocationMap
 import com.kirakishou.photoexchange.core.LocationMapId
 import com.kirakishou.photoexchange.core.PhotoId
@@ -7,7 +8,6 @@ import com.kirakishou.photoexchange.database.mongo.repository.AbstractRepository
 import com.kirakishou.photoexchange.database.pgsql.dao.LocationMapsDao
 import com.kirakishou.photoexchange.database.pgsql.dao.PhotosDao
 import com.kirakishou.photoexchange.database.pgsql.entity.LocationMapEntity
-import com.kirakishou.photoexchange.exception.DatabaseTransactionException
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.CoroutineDispatcher
 import org.slf4j.LoggerFactory

@@ -1,4 +1,4 @@
-package com.kirakishou.photoexchange.exception
+package com.kirakishou.photoexchange.core
 
 class DatabaseTransactionException(msg: String) : Exception(msg)
 class EmptyPacket : Exception()

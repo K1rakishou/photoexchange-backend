@@ -2,7 +2,6 @@ package com.kirakishou.photoexchange.handlers
 
 import com.google.gson.GsonBuilder
 import com.kirakishou.photoexchange.database.mongo.dao.BanListDao
-import com.kirakishou.photoexchange.database.mongo.dao.GalleryPhotoDao
 import com.kirakishou.photoexchange.database.mongo.dao.MongoSequenceDao
 import com.kirakishou.photoexchange.database.mongo.repository.AdminInfoRepository
 import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository

@@ -5,14 +5,8 @@ import org.jetbrains.exposed.sql.Table
 
 object FavouritedPhotos : Table() {
   val id = long(Field.ID).primaryKey().autoIncrement()
-  val photoId = long(Field.PHOTO_ID).references(
-    Photos.id,
-    ReferenceOption.CASCADE
-  ).index(Index.PHOTO_ID_INDEX)
-  val userId = long(Field.USER_ID).references(
-    Users.id,
-    ReferenceOption.CASCADE
-  ).index(Index.USER_ID_INDEX)
+  val photoId = long(Field.PHOTO_ID).references(Photos.id, ReferenceOption.CASCADE).index(Index.PHOTO_ID_INDEX)
+  val userId = long(Field.USER_ID).references(Users.id, ReferenceOption.CASCADE).index(Index.USER_ID_INDEX)
 
   object Field {
     const val ID = "id"

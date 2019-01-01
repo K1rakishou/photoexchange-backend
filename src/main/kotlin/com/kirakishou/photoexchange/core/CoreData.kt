@@ -92,3 +92,11 @@ inline class ReportedPhotoId(val id: Long) {
     fun empty():  ReportedPhotoId = ReportedPhotoId(-1L)
   }
 }
+
+inline class GalleryPhotoId(val id: Long) {
+  fun isEmpty() = id == -1L
+
+  companion object {
+    fun empty():  GalleryPhotoId = GalleryPhotoId(-1L)
+  }
+}

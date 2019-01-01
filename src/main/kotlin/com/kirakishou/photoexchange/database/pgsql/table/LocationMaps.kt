@@ -5,10 +5,7 @@ import org.jetbrains.exposed.sql.Table
 
 object LocationMaps : Table() {
   val id = long(Field.ID).primaryKey().autoIncrement()
-  val photoId = long(Field.PHOTO_ID).references(
-    Photos.id,
-    ReferenceOption.CASCADE
-  ).index(Index.PHOTO_ID)
+  val photoId = long(Field.PHOTO_ID).references(Photos.id, ReferenceOption.CASCADE).index(Index.PHOTO_ID)
   val attemptsCount = integer(Field.ATTEMPTS_COUNT).default(0)
   val mapStatus = integer(Field.MAP_STATUS)
   val nextAttemptTime = long(Field.NEXT_ATTEMPT_TIME)

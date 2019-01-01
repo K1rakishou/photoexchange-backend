@@ -3,10 +3,8 @@ package com.kirakishou.photoexchange.database.mongo.repository
 import com.kirakishou.photoexchange.Utils
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
-import com.kirakishou.photoexchange.database.mongo.entity.GalleryPhoto
-import com.kirakishou.photoexchange.exception.DatabaseTransactionException
+import com.kirakishou.photoexchange.core.DatabaseTransactionException
 import com.nhaarman.mockito_kotlin.any
-import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before

@@ -1,11 +1,11 @@
 package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.config.ServerSettings
+import com.kirakishou.photoexchange.core.DatabaseTransactionException
 import com.kirakishou.photoexchange.core.LocationMap
 import com.kirakishou.photoexchange.core.PhotoId
 import com.kirakishou.photoexchange.database.pgsql.repository.LocationMapRepository
 import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
-import com.kirakishou.photoexchange.exception.DatabaseTransactionException
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
