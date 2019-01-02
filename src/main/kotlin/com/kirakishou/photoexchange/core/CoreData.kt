@@ -37,7 +37,7 @@ inline class ExchangedPhotoId(val id: Long) {
     Upon unsuccessful exchange (when there are no photos to exchange with) exchangedPhotoId is set to EMPTY_PHOTO_ID
    */
   fun isExchanging() = id == -1L
-  fun empty() = id == -2L
+  fun isEmpty() = id == -2L
 
   fun toPhotoId(): PhotoId = PhotoId(id)
 
