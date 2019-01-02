@@ -1,13 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.google.gson.GsonBuilder
-import com.kirakishou.photoexchange.database.mongo.dao.BanListDao
-import com.kirakishou.photoexchange.database.mongo.dao.MongoSequenceDao
-import com.kirakishou.photoexchange.database.mongo.repository.AdminInfoRepository
-import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository
-import com.kirakishou.photoexchange.database.pgsql.repository.LocationMapRepository
-import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
-import com.kirakishou.photoexchange.database.pgsql.repository.UsersRepository
 import com.kirakishou.photoexchange.service.*
 import kotlinx.coroutines.Dispatchers
 import net.request.UploadPhotoPacket
@@ -143,7 +136,13 @@ abstract class AbstractHandlerTest {
         Dispatchers.Unconfined
       )
     )
-    banListRepository = Mockito.spy(BanListRepository(mongoSequenceDao, banListDao, Dispatchers.Unconfined))
+    banListRepository = Mockito.spy(
+      BanListRepository(
+        mongoSequenceDao,
+        banListDao,
+        Dispatchers.Unconfined
+      )
+    )
     adminInfoRepository = Mockito.spy(AdminInfoRepository::class.java)
 
     photosRepository = PhotosRepository(

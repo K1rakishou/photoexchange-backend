@@ -1,7 +1,6 @@
 package com.kirakishou.photoexchange.handlers.admin
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.mongo.repository.AdminInfoRepository
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.CleanupService
 import com.kirakishou.photoexchange.service.JsonConverterService

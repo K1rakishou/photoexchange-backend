@@ -100,3 +100,11 @@ inline class GalleryPhotoId(val id: Long) {
     fun empty():  GalleryPhotoId = GalleryPhotoId(-1L)
   }
 }
+
+inline class BanId(val id: Long) {
+  fun isEmpty() = id == -1L
+
+  companion object {
+    fun empty():  BanId = BanId(-1L)
+  }
+}

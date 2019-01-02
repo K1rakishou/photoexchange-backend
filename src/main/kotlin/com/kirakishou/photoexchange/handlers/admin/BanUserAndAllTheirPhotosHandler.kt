@@ -1,9 +1,6 @@
 package com.kirakishou.photoexchange.handlers.admin
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.mongo.repository.AdminInfoRepository
-import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository
-import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.DiskManipulationService

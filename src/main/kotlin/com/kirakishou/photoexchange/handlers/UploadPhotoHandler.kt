@@ -4,9 +4,6 @@ import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.core.EmptyPacket
 import com.kirakishou.photoexchange.core.FileWrapper
 import com.kirakishou.photoexchange.core.RequestSizeExceeded
-import com.kirakishou.photoexchange.database.mongo.repository.BanListRepository
-import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
-import com.kirakishou.photoexchange.database.pgsql.repository.UsersRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.*

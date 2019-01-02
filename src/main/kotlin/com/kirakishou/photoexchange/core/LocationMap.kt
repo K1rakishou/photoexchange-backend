@@ -1,6 +1,6 @@
 package com.kirakishou.photoexchange.core
 
-import com.kirakishou.photoexchange.database.pgsql.entity.LocationMapEntity
+import com.kirakishou.photoexchange.database.entity.LocationMapEntity
 
 data class LocationMap(
   val id: LocationMapId,
