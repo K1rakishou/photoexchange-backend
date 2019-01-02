@@ -1,81 +1,82 @@
 package com.kirakishou.photoexchange.database.mongo.repository
 
-import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.mongo.dao.*
-import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.TestDatabaseFactory
+import com.kirakishou.photoexchange.core.*
+import com.kirakishou.photoexchange.database.dao.*
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.GeneratorService
 import kotlinx.coroutines.Dispatchers
 import org.mockito.Mockito
 
 abstract class AbstractRepositoryTest {
+  private val database = TestDatabaseFactory().db
 
-	val template = ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(
-		ConnectionString("mongodb://${ServerSettings.TestDatabaseInfo.HOST}:" +
-			"${ServerSettings.TestDatabaseInfo.PORT}/${ServerSettings.TestDatabaseInfo.DB_NAME}"))
-	)
+  lateinit var photosDao: PhotosDao
+  lateinit var usersDao: UsersDao
+  lateinit var galleryPhotosDao: GalleryPhotosDao
+  lateinit var favouritedPhotosDao: FavouritedPhotosDao
+  lateinit var reportedPhotosDao: ReportedPhotosDao
+  lateinit var locationMapsDao: LocationMapsDao
+  lateinit var generator: GeneratorService
+  lateinit var diskManipulationService: DiskManipulationService
 
-	lateinit var photoInfoDao: PhotoInfoDao
-	lateinit var mongoSequenceDao: MongoSequenceDao
-	lateinit var galleryPhotoDao: GalleryPhotoDao
-	lateinit var favouritedPhotoDao: FavouritedPhotoDao
-	lateinit var reportedPhotoDao: ReportedPhotoDao
-	lateinit var locationMapDao: LocationMapDao
-	lateinit var generator: GeneratorService
-	lateinit var diskManipulationService: DiskManipulationService
+  lateinit var photosRepository: PhotosRepository
 
-	lateinit var photosRepository: PhotosRepository
+  open fun setUp() {
+    photosDao = Mockito.spy(PhotosDao())
+    usersDao = Mockito.spy(UsersDao())
+    galleryPhotosDao = Mockito.spy(GalleryPhotosDao())
+    favouritedPhotosDao = Mockito.spy(FavouritedPhotosDao())
+    reportedPhotosDao = Mockito.spy(ReportedPhotosDao())
+    locationMapsDao = Mockito.spy(LocationMapsDao())
 
-	open fun setUp() {
-		photoInfoDao = Mockito.spy(PhotoInfoDao(template).apply {
-			clear()
-			create()
-		})
-		mongoSequenceDao = Mockito.spy(MongoSequenceDao(template).apply {
-			clear()
-			create()
-		})
-		galleryPhotoDao = Mockito.spy(GalleryPhotoDao(template).apply {
-			clear()
-			create()
-		})
-		favouritedPhotoDao = Mockito.spy(FavouritedPhotoDao(template).apply {
-			clear()
-			create()
-		})
-		reportedPhotoDao = Mockito.spy(ReportedPhotoDao(template).apply {
-			clear()
-			create()
-		})
-		locationMapDao = Mockito.spy(LocationMapDao(template).apply {
-			clear()
-			create()
-		})
+    generator = Mockito.spy(GeneratorService())
+    diskManipulationService = Mockito.spy(DiskManipulationService())
 
-		generator = Mockito.spy(GeneratorService())
-		diskManipulationService = Mockito.spy(DiskManipulationService())
-
-		photosRepository = PhotosRepository(
-      template,
-      mongoSequenceDao,
-      photoInfoDao,
-      galleryPhotoDao,
-      favouritedPhotoDao,
-      reportedPhotoDao,
-      locationMapDao,
+    photosRepository = PhotosRepository(
+      photosDao,
+      usersDao,
+      galleryPhotosDao,
+      favouritedPhotosDao,
+      reportedPhotosDao,
+      locationMapsDao,
       generator,
       diskManipulationService,
+      database,
       Dispatchers.Unconfined
     )
-	}
+  }
 
-	open fun tearDown() {
-		photoInfoDao.clear()
-		mongoSequenceDao.clear()
-		galleryPhotoDao.clear()
-		favouritedPhotoDao.clear()
-		reportedPhotoDao.clear()
-		locationMapDao.clear()
-	}
+  open fun tearDown() {
+  }
+
+  fun createPhoto(
+    photoId: Long,
+    userId: Long,
+    exchangedPhotoId: Long,
+    locationMapId: Long,
+    photoName: String,
+    isPublic: Boolean,
+    lon: Double,
+    lat: Double,
+    uploadedOn: Long,
+    deletedOn: Long,
+    ipHash: String
+  ): Photo {
+    return Photo(
+      PhotoId(photoId),
+      UserId(userId),
+      ExchangedPhotoId(exchangedPhotoId),
+      LocationMapId(locationMapId),
+      PhotoName(photoName),
+      isPublic,
+      lon,
+      lat,
+      uploadedOn,
+      deletedOn,
+      IpHash(ipHash)
+    )
+  }
 
 }

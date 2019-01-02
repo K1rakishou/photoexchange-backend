@@ -4,6 +4,9 @@ import com.kirakishou.photoexchange.Utils
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
 import com.kirakishou.photoexchange.core.DatabaseTransactionException
+import com.kirakishou.photoexchange.core.UserId
+import com.kirakishou.photoexchange.core.UserUuid
+import com.kirakishou.photoexchange.database.entity.PhotoEntity
 import com.nhaarman.mockito_kotlin.any
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -31,57 +34,61 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
 
   @Test
   fun `deletePhotoInternalInTransaction should cancel deletion when exception occurs inside transaction`() {
-    val photoInfo = PhotoInfo(1L, -2L, 0L, "123", "test", true, 11.1, 22.2, 999L, 0L, "12121313")
+    val photo = createPhoto(1L, 1L, -2L, 0L, "test", true, 11.1, 22.2, 999L, 0L, "12121313")
 
     runBlocking {
       Mockito
         .doReturn(Mono.error<Boolean>(DatabaseTransactionException("BAM")))
-        .`when`(reportedPhotoDao).deleteReportByPhotoName(Mockito.anyString(), any())
+        .`when`(reportedPhotosDao).deleteAllFavouritesByPhotoId(any())
 
-      val saved = photoInfoDao.save(photoInfo).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto.create(saved.photoId, saved.photoName, 777L)).awaitFirst()
-      reportedPhotoDao.reportPhoto(ReportedPhoto(saved.photoId, saved.photoName, saved.userId)).awaitFirst()
-      favouritedPhotoDao.favouritePhoto(FavouritedPhoto(saved.photoId, saved.photoName, saved.userId)).awaitFirst()
-      locationMapDao.save(LocationMap.create(photoInfo.photoId)).awaitFirst()
+      val saved = photosDao.save(PhotoEntity.fromPhoto(photo))
+      galleryPhotosDao.save(saved.photoId, 777L)
+      reportedPhotosDao.reportPhoto(saved.photoId, saved.userId)
+      favouritedPhotosDao.favouritePhoto(saved.photoId, saved.userId)
+      locationMapsDao.save(photo.photoId)
 
-      assertFalse(photosRepository.delete(photoInfo))
+      assertFalse(photosRepository.delete(photo.photoId, photo.photoName))
 
-      assertEquals(1, photoInfoDao.testFindAll().awaitFirst().size)
-      assertEquals(photoInfo.photoName, photoInfoDao.testFindAll().awaitFirst().first().photoName)
-      assertEquals(photoInfo.photoName, favouritedPhotoDao.testFindAll().awaitFirst().first().photoName)
-      assertEquals(photoInfo.photoName, reportedPhotoDao.testFindAll().awaitFirst().first().photoName)
-      assertEquals(photoInfo.photoName, galleryPhotoDao.testFindAll().awaitFirst().first().photoName)
-      assertEquals(photoInfo.photoId, locationMapDao.testFindAll().awaitFirst().first().photoId)
+      assertEquals(1, photosDao.testFindAll().size)
+      assertEquals(photo.photoName, photosDao.testFindAll().first().photoName)
+      assertEquals(photo.photoId, favouritedPhotosDao.testFindAll().first().photoId)
+      assertEquals(photo.photoId, reportedPhotosDao.testFindAll().first().photoId)
+      assertEquals(photo.photoId, galleryPhotosDao.testFindAll().first().photoId)
+      assertEquals(photo.photoId, locationMapsDao.testFindAll().first().photoId)
     }
   }
 
   @Test
   fun `save method should create gallery photo if uploaded photo is public`() {
-    runBlocking {
-      val saved = photosRepository.save("4234", 11.1, 22.2, true, 5345L, "23123")
+    val photo = createPhoto(1L, 1L, -2L, 0L, "test", true, 11.1, 22.2, 999L, 0L, "12121313")
 
-      assertEquals(saved.photoName, photoInfoDao.testFindAll().awaitFirst().first().photoName)
-      assertEquals(saved.photoName, galleryPhotoDao.testFindAll().awaitFirst().first().photoName)
+    runBlocking {
+      val saved = photosRepository.save(photo.userId, 11.1, 22.2, true, 5345L, photo.ipHash)
+
+      assertEquals(saved.photoName, photosDao.testFindAll().first().photoName)
+      assertEquals(saved.photoId, galleryPhotosDao.testFindAll().first().photoId)
     }
   }
 
   @Test
   fun `save method should NOT create gallery photo if uploaded photo is private`() {
-    runBlocking {
-      val saved = photosRepository.save("4234", 11.1, 22.2, false, 5345L, "23123")
+    val photo = createPhoto(1L, 1L, -2L, 0L, "test", true, 11.1, 22.2, 999L, 0L, "12121313")
 
-      assertEquals(saved.photoName, photoInfoDao.testFindAll().awaitFirst().first().photoName)
-      assertTrue(galleryPhotoDao.testFindAll().awaitFirst().isEmpty())
+    runBlocking {
+      val saved = photosRepository.save(photo.userId, 11.1, 22.2, true, 5345L, photo.ipHash)
+
+      assertEquals(saved.photoName, photosDao.testFindAll().first().photoName)
+      assertTrue(galleryPhotosDao.testFindAll().isEmpty())
     }
   }
 
   @Test
   fun `tryDoExchange should return empty PhotoInfo when there is nothing to exchange with`() {
     runBlocking {
-      val userId = "4234"
+      val photo = createPhoto(1L, 1L, -2L, 0L, "test", true, 11.1, 22.2, 999L, 0L, "12121313")
+      val userUuid = UserUuid("1213")
 
-      val photo = PhotoInfo(1L, -2L, 1L, userId, "ttt", true, 11.1, 22.2, 5345L, 0L, "23123")
-      val resultPhoto = photosRepository.tryDoExchange(userId, photo)
+      val resultPhoto = photosRepository.tryDoExchange(userUuid, photo)
 
       assertTrue(resultPhoto.isEmpty())
     }
@@ -90,29 +97,29 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
   @Test
   fun `tryDoExchange should return old photo when exchange was successful`() {
     runBlocking {
-      val userId1 = "111"
-      val userId2 = "222"
+      val userId1 = UserUuid("111")
+      val userId2 = UserUuid("222")
 
-      val photo1 = PhotoInfo(1L, -2L, 1L, userId1, "ert", true, 11.1, 22.2, 5345L, 0L, "23123")
-      val photo2 = PhotoInfo(2L, -2L, 2L, userId2, "ttt", true, 11.1, 22.2, 5345L, 0L, "23123")
+      val photo1 = createPhoto(1L, 1L, -2L, 1L, "ert", true, 11.1, 22.2, 5345L, 0L, "23123")
+      val photo2 = createPhoto(2L, 2L, -2L, 2L, "ttt", true, 11.1, 22.2, 5345L, 0L, "23123")
 
-      photoInfoDao.save(photo1).awaitFirst()
-      photoInfoDao.save(photo2).awaitFirst()
+      photosDao.save(PhotoEntity.fromPhoto(photo1))
+      photosDao.save(PhotoEntity.fromPhoto(photo2))
 
       val resultPhoto = photosRepository.tryDoExchange(userId2, photo2)
 
-      assertEquals(1L, resultPhoto.photoId)
-      assertEquals(2L, resultPhoto.exchangedPhotoId)
+      assertEquals(1L, resultPhoto.photoId.id)
+      assertEquals(2L, resultPhoto.exchangedPhotoId.id)
     }
   }
 
   @Test
   fun `should mark as deleted 4 photos`() {
     runBlocking {
-      val generatedPhotos = Utils.createExchangedPhotoPairs(10, listOf("111", "222"))
+      val generatedPhotos = Utils.createExchangedPhotoPairs(10, listOf(1L, 2L))
 
       for (generatedPhoto in generatedPhotos) {
-        photoInfoDao.save(generatedPhoto).awaitFirst()
+        photosDao.save(PhotoEntity.fromPhoto(generatedPhoto))
       }
 
       val count = photosRepository.markAsDeletedPhotosUploadedEarlierThan(
@@ -123,7 +130,7 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
 
       assertEquals(4, count)
 
-      val found = photoInfoDao.testFindAll().awaitFirst()
+      val found = photosDao.testFindAll()
       assertEquals(4, found.count { it.deletedOn == 999L })
     }
   }
@@ -131,11 +138,11 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
   @Test
   fun `should delete all photos with deletedOn field greater than zero`() {
     runBlocking {
-      val generatedPhotos = Utils.createExchangedPhotoPairs(10, listOf("111", "222"))
+      val generatedPhotos = Utils.createExchangedPhotoPairs(10, listOf(1L, 2L))
         .map { it.copy(deletedOn = 111L) }
 
       for (generatedPhoto in generatedPhotos) {
-        photoInfoDao.save(generatedPhoto).awaitFirst()
+        photosDao.save(PhotoEntity.fromPhoto(generatedPhoto))
 
         val path = "files\\no_map_available\\no_map_available.png"
         val file = ClassPathResource(path).file
@@ -152,85 +159,85 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
       assertTrue(File(FILE_DIR_PATH).list().isEmpty())
 
       //FIXME: this assert does not work now because transactions do not work (but should work once transactions are fixed)
-      assertTrue(photoInfoDao.testFindAll().awaitFirst().isEmpty())
+      assertTrue(photosDao.testFindAll().isEmpty())
     }
   }
 
   @Test
   fun `should favourite and then unfavourite photos`() {
     runBlocking {
-      val generatedPhotos = Utils.createExchangedPhotoPairs(2, listOf("111", "222"))
+      val generatedPhotos = Utils.createExchangedPhotoPairs(2, listOf(1L, 2L))
 
       for (generatedPhoto in generatedPhotos) {
-        photoInfoDao.save(generatedPhoto).awaitFirst()
+        photosDao.save(PhotoEntity.fromPhoto(generatedPhoto))
       }
 
       for (generatedPhoto in generatedPhotos) {
-        photosRepository.favouritePhoto("333", generatedPhoto.photoName)
-        photosRepository.favouritePhoto("444", generatedPhoto.photoName)
-        photosRepository.favouritePhoto("555", generatedPhoto.photoName)
+        photosRepository.favouritePhoto(UserId(3L), generatedPhoto.photoName)
+        photosRepository.favouritePhoto(UserId(4L), generatedPhoto.photoName)
+        photosRepository.favouritePhoto(UserId(5L), generatedPhoto.photoName)
       }
 
-      val favouritedPhotos = favouritedPhotoDao.testFindAll().awaitFirst()
+      val favouritedPhotos = favouritedPhotosDao.testFindAll()
       assertEquals(6, favouritedPhotos.size)
 
-      val groupedByNamePhotos = favouritedPhotos.groupBy { it.photoName }
+      val groupedByPhotoIdPhotos = favouritedPhotos.groupBy { it.photoId }
       val groupedByUserIdPhotos = favouritedPhotos.groupBy { it.userId }
 
       for (generatedPhoto in generatedPhotos) {
-        assertEquals(3, groupedByNamePhotos[generatedPhoto.photoName]!!.size)
+        assertEquals(3, groupedByPhotoIdPhotos[generatedPhoto.photoId]!!.size)
       }
 
-      assertEquals(2, groupedByUserIdPhotos["333"]!!.size)
-      assertEquals(2, groupedByUserIdPhotos["444"]!!.size)
-      assertEquals(2, groupedByUserIdPhotos["555"]!!.size)
+      assertEquals(2, groupedByUserIdPhotos[UserId(3L)]!!.size)
+      assertEquals(2, groupedByUserIdPhotos[UserId(4L)]!!.size)
+      assertEquals(2, groupedByUserIdPhotos[UserId(5L)]!!.size)
 
       for (generatedPhoto in generatedPhotos) {
-        photosRepository.favouritePhoto("333", generatedPhoto.photoName)
-        photosRepository.favouritePhoto("444", generatedPhoto.photoName)
-        photosRepository.favouritePhoto("555", generatedPhoto.photoName)
+        photosRepository.favouritePhoto(UserId(3L), generatedPhoto.photoName)
+        photosRepository.favouritePhoto(UserId(4L), generatedPhoto.photoName)
+        photosRepository.favouritePhoto(UserId(5L), generatedPhoto.photoName)
       }
 
-      assertTrue(favouritedPhotoDao.testFindAll().awaitFirst().isEmpty())
+      assertTrue(favouritedPhotosDao.testFindAll().isEmpty())
     }
   }
 
   @Test
   fun `should report and then unreport photos`() {
     runBlocking {
-      val generatedPhotos = Utils.createExchangedPhotoPairs(2, listOf("111", "222"))
+      val generatedPhotos = Utils.createExchangedPhotoPairs(2, listOf(1L, 2L))
 
       for (generatedPhoto in generatedPhotos) {
-        photoInfoDao.save(generatedPhoto).awaitFirst()
+        photosDao.save(PhotoEntity.fromPhoto(generatedPhoto))
       }
 
       for (generatedPhoto in generatedPhotos) {
-        photosRepository.reportPhoto("333", generatedPhoto.photoName)
-        photosRepository.reportPhoto("444", generatedPhoto.photoName)
-        photosRepository.reportPhoto("555", generatedPhoto.photoName)
+        photosRepository.reportPhoto(UserId(3L), generatedPhoto.photoName)
+        photosRepository.reportPhoto(UserId(4L), generatedPhoto.photoName)
+        photosRepository.reportPhoto(UserId(5L), generatedPhoto.photoName)
       }
 
-      val reportedPhotos = reportedPhotoDao.testFindAll().awaitFirst()
+      val reportedPhotos = reportedPhotosDao.testFindAll()
       assertEquals(6, reportedPhotos.size)
 
-      val groupedByNamePhotos = reportedPhotos.groupBy { it.photoName }
+      val groupedByPhotoIdPhotos = reportedPhotos.groupBy { it.photoId }
       val groupedByUserIdPhotos = reportedPhotos.groupBy { it.userId }
 
       for (generatedPhoto in generatedPhotos) {
-        assertEquals(3, groupedByNamePhotos[generatedPhoto.photoName]!!.size)
+        assertEquals(3, groupedByPhotoIdPhotos[generatedPhoto.photoId]!!.size)
       }
 
-      assertEquals(2, groupedByUserIdPhotos["333"]!!.size)
-      assertEquals(2, groupedByUserIdPhotos["444"]!!.size)
-      assertEquals(2, groupedByUserIdPhotos["555"]!!.size)
+      assertEquals(2, groupedByUserIdPhotos[UserId(3L)]!!.size)
+      assertEquals(2, groupedByUserIdPhotos[UserId(4L)]!!.size)
+      assertEquals(2, groupedByUserIdPhotos[UserId(5L)]!!.size)
 
       for (generatedPhoto in generatedPhotos) {
-        photosRepository.reportPhoto("333", generatedPhoto.photoName)
-        photosRepository.reportPhoto("444", generatedPhoto.photoName)
-        photosRepository.reportPhoto("555", generatedPhoto.photoName)
+        photosRepository.reportPhoto(UserId(3L), generatedPhoto.photoName)
+        photosRepository.reportPhoto(UserId(4L), generatedPhoto.photoName)
+        photosRepository.reportPhoto(UserId(5L), generatedPhoto.photoName)
       }
 
-      assertTrue(reportedPhotoDao.testFindAll().awaitFirst().isEmpty())
+      assertTrue(reportedPhotosDao.testFindAll().isEmpty())
     }
   }
 }

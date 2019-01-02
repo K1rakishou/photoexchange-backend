@@ -1,20 +1,20 @@
-package com.kirakishou.photoexchange.config
+package com.kirakishou.photoexchange
 
 import com.kirakishou.photoexchange.database.table.*
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils.create
+import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 
-class DatabaseFactory {
+class TestDatabaseFactory {
   lateinit var db: Database
 
   init {
-    db = Database.connect(hikari())
+    db = Database.connect(hikariH2())
 
     transaction {
-      create(
+      SchemaUtils.create(
         Users,
         Photos,
         Bans,
@@ -26,12 +26,10 @@ class DatabaseFactory {
     }
   }
 
-  private fun hikari(): HikariDataSource {
+  private fun hikariH2(): HikariDataSource {
     val config = HikariConfig()
-    config.driverClassName = "jdbc:postgresql://192.168.99.100:5432/photoexchange"
-    config.username = ServerSettings.DATABASE_LOGIN
-    config.password = ServerSettings.DATABASE_PASSWORD
-    config.jdbcUrl = "org.postgresql.Driver"
+    config.driverClassName = "org.h2.Driver"
+    config.jdbcUrl = "jdbc:h2:mem:test"
     config.maximumPoolSize = 20
     config.isAutoCommit = false
     config.transactionIsolation = "TRANSACTION_REPEATABLE_READ"

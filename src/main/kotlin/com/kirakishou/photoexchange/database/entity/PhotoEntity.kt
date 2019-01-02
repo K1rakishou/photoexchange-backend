@@ -96,6 +96,22 @@ data class PhotoEntity(
         IpHash(resultRow[Photos.ipHash])
       )
     }
+
+    fun fromPhoto(photo: Photo): PhotoEntity {
+      return PhotoEntity(
+        photo.photoId,
+        photo.userId,
+        photo.exchangedPhotoId,
+        photo.locationMapId,
+        photo.photoName,
+        photo.isPublic,
+        photo.lon,
+        photo.lat,
+        photo.uploadedOn,
+        photo.deletedOn,
+        photo.ipHash
+      )
+    }
   }
 
   override fun equals(other: Any?): Boolean {

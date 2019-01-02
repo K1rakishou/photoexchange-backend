@@ -3,7 +3,6 @@ package com.kirakishou.photoexchange.handlers
 import com.nhaarman.mockito_kotlin.any
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
 import net.request.UploadPhotoPacket
 import net.response.UploadPhotoResponse
@@ -391,7 +390,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
       val photoInfo = runBlocking {
-        photoInfoDao.findById(1).awaitFirst()
+        photosDao.findById(1).awaitFirst()
       }
 
       assertEquals(1, photoInfo.photoId)
@@ -423,7 +422,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
       val photoInfo = runBlocking {
-        photoInfoDao.findById(2).awaitFirst()
+        photosDao.findById(2).awaitFirst()
       }
 
       assertEquals(2, photoInfo.photoId)
@@ -468,8 +467,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
       val photoInfo = runBlocking {
-        photoInfoDao.updateSetLocationMapId(1, 1).awaitFirst()
-        photoInfoDao.findById(1).awaitFirst()
+        photosDao.updateSetLocationMapId(1, 1).awaitFirst()
+        photosDao.findById(1).awaitFirst()
       }
 
       assertEquals(1, photoInfo.photoId)
@@ -498,12 +497,12 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
       val photoInfo1 = runBlocking {
-        photoInfoDao.findById(1).awaitFirst()
+        photosDao.findById(1).awaitFirst()
       }
 
       val photoInfo2 = runBlocking {
-        photoInfoDao.updateSetLocationMapId(2, 2).awaitFirst()
-        photoInfoDao.findById(2).awaitFirst()
+        photosDao.updateSetLocationMapId(2, 2).awaitFirst()
+        photosDao.findById(2).awaitFirst()
       }
 
       assertEquals(1, photoInfo1.photoId)
@@ -553,7 +552,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
       val photoInfo = runBlocking {
-        photoInfoDao.findById(1).awaitFirst()
+        photosDao.findById(1).awaitFirst()
       }
 
       assertEquals(1, photoInfo.photoId)
@@ -581,11 +580,11 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
       val photoInfo1 = runBlocking {
-        photoInfoDao.findById(1).awaitFirst()
+        photosDao.findById(1).awaitFirst()
       }
 
       val photoInfo2 = runBlocking {
-        photoInfoDao.findById(2).awaitFirst()
+        photosDao.findById(2).awaitFirst()
       }
 
       assertEquals(1, photoInfo1.photoId)
@@ -633,8 +632,8 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
       val photoInfo = runBlocking {
-        photoInfoDao.updateSetLocationMapId(1, 1).awaitFirst()
-        photoInfoDao.findById(1).awaitFirst()
+        photosDao.updateSetLocationMapId(1, 1).awaitFirst()
+        photosDao.findById(1).awaitFirst()
       }
 
       assertEquals(1, photoInfo.photoId)
@@ -662,12 +661,12 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Assert.assertEquals(ErrorCode.Ok.value, response.errorCode)
 
       val photoInfo1 = runBlocking {
-        photoInfoDao.findById(1).awaitFirst()
+        photosDao.findById(1).awaitFirst()
       }
 
       val photoInfo2 = runBlocking {
-        photoInfoDao.updateSetLocationMapId(2, 2).awaitFirst()
-        photoInfoDao.findById(2).awaitFirst()
+        photosDao.updateSetLocationMapId(2, 2).awaitFirst()
+        photosDao.findById(2).awaitFirst()
       }
 
       assertEquals(1, photoInfo1.photoId)
@@ -705,7 +704,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Assert.assertEquals(ErrorCode.Ok.value, response1.errorCode)
 
       runBlocking {
-        photoInfoDao.updateSetLocationMapId(3, 3).awaitFirst()
+        photosDao.updateSetLocationMapId(3, 3).awaitFirst()
       }
 
       val content2 = webClient
@@ -721,23 +720,23 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       Assert.assertEquals(ErrorCode.Ok.value, response2.errorCode)
 
       runBlocking {
-        photoInfoDao.updateSetLocationMapId(4, 4).awaitFirst()
+        photosDao.updateSetLocationMapId(4, 4).awaitFirst()
       }
 
       val photoInfo1 = runBlocking {
-        photoInfoDao.findById(1).awaitFirst()
+        photosDao.findById(1).awaitFirst()
       }
 
       val photoInfo2 = runBlocking {
-        photoInfoDao.findById(2).awaitFirst()
+        photosDao.findById(2).awaitFirst()
       }
 
       val photoInfo3 = runBlocking {
-        photoInfoDao.findById(3).awaitFirst()
+        photosDao.findById(3).awaitFirst()
       }
 
       val photoInfo4 = runBlocking {
-        photoInfoDao.findById(4).awaitFirst()
+        photosDao.findById(4).awaitFirst()
       }
 
       assertEquals(1, photoInfo1.photoId)
@@ -801,7 +800,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
 
         runBlocking {
           //set locationMapId for every photo to 10 so they can exchange between themselves
-          photoInfoDao.updateSetLocationMapId(response.photoId, 10).awaitFirst()
+          photosDao.updateSetLocationMapId(response.photoId, 10).awaitFirst()
         }
 
         Unit
@@ -828,7 +827,7 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
       .block()
 
     runBlocking {
-      val allPhotoInfo = photoInfoDao.testFindAll().awaitFirst()
+      val allPhotoInfo = photosDao.testFindAll().awaitFirst()
       assertEquals(concurrency, allPhotoInfo.size)
 
       for (photoInfo in allPhotoInfo) {
