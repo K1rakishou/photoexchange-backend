@@ -1,7 +1,7 @@
 package com.kirakishou.photoexchange.handlers.admin
 
+import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.handlers.AbstractHandlerTest
 import com.kirakishou.photoexchange.routers.Router
 import core.ErrorCode
 import net.response.BanUserAndAllTheirPhotosResponse
@@ -13,7 +13,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.reactive.function.server.router
 
-class BanUserAndAllTheirPhotosHandlerTest : AbstractHandlerTest() {
+class BanUserAndAllTheirPhotosHandlerTest : AbstractTest() {
 
   private fun getWebTestClient(): WebTestClient {
     val handler = BanUserAndAllTheirPhotosHandler(
@@ -37,13 +37,13 @@ class BanUserAndAllTheirPhotosHandlerTest : AbstractHandlerTest() {
   }
 
   @Before
-  fun setUp() {
-    super.init()
+  override fun setUp() {
+    super.setUp()
   }
 
   @After
-  fun tearDown() {
-    super.clear()
+  override fun tearDown() {
+    super.tearDown()
   }
 
   @Test

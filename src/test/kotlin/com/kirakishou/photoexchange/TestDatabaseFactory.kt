@@ -10,7 +10,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 class TestDatabaseFactory {
   lateinit var db: Database
 
-  init {
+  fun create() {
     db = Database.connect(hikariH2())
 
     transaction {
@@ -26,14 +26,27 @@ class TestDatabaseFactory {
     }
   }
 
+  fun destroy() {
+    transaction {
+      SchemaUtils.drop(
+        Users,
+        Photos,
+        Bans,
+        FavouritedPhotos,
+        ReportedPhotos,
+        GalleryPhotos,
+        LocationMaps
+      )
+    }
+  }
+
   private fun hikariH2(): HikariDataSource {
     val config = HikariConfig()
     config.driverClassName = "org.h2.Driver"
     config.jdbcUrl = "jdbc:h2:mem:test"
-    config.maximumPoolSize = 20
+    config.maximumPoolSize = 4
     config.isAutoCommit = false
     config.transactionIsolation = "TRANSACTION_REPEATABLE_READ"
-    config.validate()
     return HikariDataSource(config)
   }
 

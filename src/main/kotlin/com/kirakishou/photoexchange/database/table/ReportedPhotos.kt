@@ -15,7 +15,7 @@ object ReportedPhotos : Table() {
   }
 
   object Index {
-    const val PHOTO_ID_INDEX = "photo_id_index"
-    const val USER_ID_INDEX = "user_id_index"
+    const val PHOTO_ID_INDEX = "reported_photos_photo_id_index"
+    const val USER_ID_INDEX = "reported_photos_user_id_index"
   }
 }

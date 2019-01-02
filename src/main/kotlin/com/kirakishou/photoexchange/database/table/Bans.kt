@@ -17,7 +17,7 @@ object Bans : Table() {
   }
 
   object Index {
-    const val USER_ID = "user_id_index"
-    const val IP_HASH = "ip_hash_index"
+    const val USER_ID = "bans_user_id_index"
+    const val IP_HASH = "bans_ip_hash_index"
   }
 }

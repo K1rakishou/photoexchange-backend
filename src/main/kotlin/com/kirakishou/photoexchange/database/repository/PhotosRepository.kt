@@ -284,7 +284,7 @@ open class PhotosRepository(
         logger.debug("Deleting ${photoEntity.photoName}")
 
         //TODO: probably should rewrite this to delete all photos in one transaction
-        if (!delete(photoEntity.photoId, photoEntity.photoName)) {
+        if (!delete(photoEntity.photoId)) {
           logger.error("Could not deletePhotoWithFile photo ${photoEntity.photoName}")
           continue
         }
@@ -362,8 +362,7 @@ open class PhotosRepository(
   }
 
   //FIXME: doesn't work in tests
-  //should be called from within locked mutex
-  open suspend fun delete(photoId: PhotoId, photoName: PhotoName): Boolean {
+  open suspend fun delete(photoId: PhotoId): Boolean {
     try {
       return dbQuery(false) {
         photosDao.deleteById(photoId)
@@ -374,8 +373,7 @@ open class PhotosRepository(
         favouritedPhotosDao.deleteAllFavouritesByPhotoId(photoId)
         reportedPhotosDao.deleteAllFavouritesByPhotoId(photoId)
         locationMapsDao.deleteById(photoId)
-        //TODO:
-//       galleryPhotoDao.deleteByPhotoName(photoName)
+        galleryPhotosDao.deleteByPhotoId(photoId)
 
         true
       }

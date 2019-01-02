@@ -7,6 +7,8 @@ inline class FirebaseToken(val token: String) {
   fun isEmpty() = token.isEmpty()
   fun isNotEmpty() = !isEmpty()
 
+  override fun toString() = token
+
   companion object {
     fun default(): FirebaseToken = FirebaseToken(SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN)
     fun empty(): FirebaseToken = FirebaseToken("")
@@ -58,6 +60,8 @@ inline class LocationMapId(val id: Long) {
 inline class PhotoName(val name: String) {
   fun isEmpty() = name.isEmpty()
 
+  override fun toString() = name
+
   companion object {
     fun empty(): PhotoName = PhotoName("")
   }
@@ -66,6 +70,8 @@ inline class PhotoName(val name: String) {
 inline class IpHash(val hash: String) {
   fun isEmpty() = hash.isEmpty()
 
+  override fun toString() = hash
+
   companion object {
     fun empty(): IpHash = IpHash("")
   }
@@ -73,6 +79,8 @@ inline class IpHash(val hash: String) {
 
 inline class UserUuid(val uuid: String) {
   fun isEmpty() = uuid.isEmpty()
+
+  override fun toString() = uuid
 
   companion object {
     fun empty(): UserUuid = UserUuid("")

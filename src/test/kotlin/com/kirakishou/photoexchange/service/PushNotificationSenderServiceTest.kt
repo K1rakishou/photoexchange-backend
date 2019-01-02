@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.service
 
+import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.TestUtils.createPhoto
 import com.kirakishou.photoexchange.core.Photo
 import com.nhaarman.mockito_kotlin.any
@@ -13,7 +14,7 @@ import org.mockito.Mockito
 import reactor.core.publisher.Mono
 import kotlin.test.assertTrue
 
-class PushNotificationSenderServiceTest : AbstractServiceTest() {
+class PushNotificationSenderServiceTest : AbstractTest() {
 
   private val pushNotificationSenderService = PushNotificationSenderService(
     webClientService,

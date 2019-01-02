@@ -33,11 +33,11 @@ object Photos : Table() {
   }
 
   object Index {
-    const val USER_ID = "user_id_index"
-    const val EXCHANGED_PHOTO_ID = "exchanged_photo_id_index"
-    const val PHOTO_NAME = "photo_name_index"
-    const val UPLOADED_ON = "uploaded_on_index"
-    const val DELETED_ON = "deleted_on_index"
-    const val IP_HASH = "ip_hash_index"
+    const val USER_ID = "photos_user_id_index"
+    const val EXCHANGED_PHOTO_ID = "photos_exchanged_photo_id_index"
+    const val PHOTO_NAME = "photos_photo_name_index"
+    const val UPLOADED_ON = "photos_uploaded_on_index"
+    const val DELETED_ON = "photos_deleted_on_index"
+    const val IP_HASH = "photos_ip_hash_index"
   }
 }

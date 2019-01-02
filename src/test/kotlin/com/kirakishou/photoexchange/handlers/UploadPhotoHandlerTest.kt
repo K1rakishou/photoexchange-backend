@@ -1,9 +1,12 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.core.FirebaseToken
 import com.kirakishou.photoexchange.core.LocationMapId
 import com.kirakishou.photoexchange.core.PhotoId
 import com.kirakishou.photoexchange.core.UserUuid
+import com.kirakishou.photoexchange.service.PushNotificationSenderService
+import com.kirakishou.photoexchange.service.StaticMapDownloaderService
 import com.nhaarman.mockito_kotlin.any
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
@@ -29,7 +32,9 @@ import java.util.concurrent.Executors
 import kotlin.test.assertTrue
 
 @RunWith(SpringJUnit4ClassRunner::class)
-class UploadPhotoHandlerTest : AbstractHandlerTest() {
+class UploadPhotoHandlerTest : AbstractTest() {
+  private val staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)
+  private val pushNotificationSenderService = Mockito.mock(PushNotificationSenderService::class.java)
 
   private fun getWebTestClient(): WebTestClient {
     val handler = UploadPhotoHandler(
@@ -59,13 +64,13 @@ class UploadPhotoHandlerTest : AbstractHandlerTest() {
   }
 
   @Before
-  fun setUp() {
-    super.init()
+  override fun setUp() {
+    super.setUp()
   }
 
   @After
-  fun tearDown() {
-    super.clear()
+  override fun tearDown() {
+    super.tearDown()
   }
 
   @Test

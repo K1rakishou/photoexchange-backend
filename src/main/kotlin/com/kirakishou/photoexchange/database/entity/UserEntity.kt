@@ -41,7 +41,7 @@ data class UserEntity(
       return UserEntity(
         UserId(resultRow[Users.id]),
         UserUuid(resultRow[Users.userUuid]),
-        FirebaseToken(resultRow[Users.firebaseToken])
+        FirebaseToken(resultRow[Users.firebaseToken] ?: FirebaseToken.default().token)
       )
     }
   }
