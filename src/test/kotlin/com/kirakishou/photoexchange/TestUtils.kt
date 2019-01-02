@@ -4,7 +4,47 @@ import com.kirakishou.photoexchange.core.*
 import com.kirakishou.photoexchange.util.SecurityUtils
 import java.util.*
 
-object Utils {
+object TestUtils {
+
+  fun createPhoto(
+    photoId: Long,
+    userId: Long,
+    exchangedPhotoId: Long,
+    locationMapId: Long,
+    photoName: String,
+    isPublic: Boolean,
+    lon: Double,
+    lat: Double,
+    uploadedOn: Long,
+    deletedOn: Long,
+    ipHash: String
+  ): Photo {
+    return Photo(
+      PhotoId(photoId),
+      UserId(userId),
+      ExchangedPhotoId(exchangedPhotoId),
+      LocationMapId(locationMapId),
+      PhotoName(photoName),
+      isPublic,
+      lon,
+      lat,
+      uploadedOn,
+      deletedOn,
+      IpHash(ipHash)
+    )
+  }
+
+  fun createGalleryPhoto(
+    galleryPhotoId: Long,
+    photoId: Long,
+    uploadedOn: Long
+  ): GalleryPhoto {
+    return GalleryPhoto(
+      GalleryPhotoId(galleryPhotoId),
+      PhotoId(photoId),
+      uploadedOn
+    )
+  }
 
   fun createExchangedPhotoPairs(
     count: Int,

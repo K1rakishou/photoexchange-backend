@@ -1,7 +1,6 @@
 package com.kirakishou.photoexchange.database.mongo.repository
 
 import com.kirakishou.photoexchange.TestDatabaseFactory
-import com.kirakishou.photoexchange.core.*
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.service.DiskManipulationService
@@ -49,34 +48,6 @@ abstract class AbstractRepositoryTest {
   }
 
   open fun tearDown() {
-  }
-
-  fun createPhoto(
-    photoId: Long,
-    userId: Long,
-    exchangedPhotoId: Long,
-    locationMapId: Long,
-    photoName: String,
-    isPublic: Boolean,
-    lon: Double,
-    lat: Double,
-    uploadedOn: Long,
-    deletedOn: Long,
-    ipHash: String
-  ): Photo {
-    return Photo(
-      PhotoId(photoId),
-      UserId(userId),
-      ExchangedPhotoId(exchangedPhotoId),
-      LocationMapId(locationMapId),
-      PhotoName(photoName),
-      isPublic,
-      lon,
-      lat,
-      uploadedOn,
-      deletedOn,
-      IpHash(ipHash)
-    )
   }
 
 }

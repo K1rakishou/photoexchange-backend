@@ -1,6 +1,6 @@
 package com.kirakishou.photoexchange.database.mongo.repository
 
-import com.kirakishou.photoexchange.Utils
+import com.kirakishou.photoexchange.TestUtils
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
 import com.kirakishou.photoexchange.core.DatabaseTransactionException
@@ -116,7 +116,7 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
   @Test
   fun `should mark as deleted 4 photos`() {
     runBlocking {
-      val generatedPhotos = Utils.createExchangedPhotoPairs(10, listOf(1L, 2L))
+      val generatedPhotos = TestUtils.createExchangedPhotoPairs(10, listOf(1L, 2L))
 
       for (generatedPhoto in generatedPhotos) {
         photosDao.save(PhotoEntity.fromPhoto(generatedPhoto))
@@ -138,7 +138,7 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
   @Test
   fun `should delete all photos with deletedOn field greater than zero`() {
     runBlocking {
-      val generatedPhotos = Utils.createExchangedPhotoPairs(10, listOf(1L, 2L))
+      val generatedPhotos = TestUtils.createExchangedPhotoPairs(10, listOf(1L, 2L))
         .map { it.copy(deletedOn = 111L) }
 
       for (generatedPhoto in generatedPhotos) {
@@ -166,7 +166,7 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
   @Test
   fun `should favourite and then unfavourite photos`() {
     runBlocking {
-      val generatedPhotos = Utils.createExchangedPhotoPairs(2, listOf(1L, 2L))
+      val generatedPhotos = TestUtils.createExchangedPhotoPairs(2, listOf(1L, 2L))
 
       for (generatedPhoto in generatedPhotos) {
         photosDao.save(PhotoEntity.fromPhoto(generatedPhoto))
@@ -205,7 +205,7 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
   @Test
   fun `should report and then unreport photos`() {
     runBlocking {
-      val generatedPhotos = Utils.createExchangedPhotoPairs(2, listOf(1L, 2L))
+      val generatedPhotos = TestUtils.createExchangedPhotoPairs(2, listOf(1L, 2L))
 
       for (generatedPhoto in generatedPhotos) {
         photosDao.save(PhotoEntity.fromPhoto(generatedPhoto))

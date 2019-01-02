@@ -46,5 +46,13 @@ class GalleryPhotoEntity(
         resultRow[GalleryPhotos.uploadedOn]
       )
     }
+
+    fun fromGalleryPhoto(galleryPhoto: GalleryPhoto): GalleryPhotoEntity {
+      return GalleryPhotoEntity(
+        galleryPhoto.galleryPhotoId,
+        galleryPhoto.photoId,
+        galleryPhoto.uploadedOn
+      )
+    }
   }
 }
