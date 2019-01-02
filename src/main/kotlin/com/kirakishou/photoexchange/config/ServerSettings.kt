@@ -8,6 +8,10 @@ object ServerSettings {
 	val MAPBOX_ACCESS_TOKEN by lazy { getPropertyByName("MAPBOX_ACCESS_TOKEN") }
 	//use your firebase project id here (https://support.google.com/googleapi/answer/7014113?hl=en)
 	val PROJECT_ID by lazy { getPropertyByName("FIREBASE_PROJECT_ID") }
+	//use your database login
+	val DATABASE_LOGIN by lazy { getPropertyByName("DATABASE_LOGIN") }
+	//use your database password
+	val DATABASE_PASSWORD by lazy { getPropertyByName("DATABASE_PASSWORD") }
 
 	//used for verification that you are really is an admin when you want to do some admin stuff
 	//see: handlers/admin
@@ -43,6 +47,8 @@ object ServerSettings {
 	const val SMALL_PHOTO_SUFFIX = "_s"
 	const val PHOTO_MAP_SUFFIX = "_map"
 
+	const val IP_HASH_LENGTH = 128
+
 	val PHOTO_SIZES = arrayOf("vb", "b", "m", "s")
 
 	object DatabaseInfo {
@@ -53,12 +59,12 @@ object ServerSettings {
 
 	object TestDatabaseInfo {
 		const val HOST = "192.168.99.100"
-		const val PORT = 27017
+		const val PORT = 30001
 		const val DB_NAME = "photoexchange_test"
 	}
 
 	private fun getPropertyByName(propertyName: String): String {
-		val fileResource = ClassPathResource("keys.properties")
+		val fileResource = ClassPathResource("local.properties")
 
 		val keysMap = fileResource.file
 			.readLines()

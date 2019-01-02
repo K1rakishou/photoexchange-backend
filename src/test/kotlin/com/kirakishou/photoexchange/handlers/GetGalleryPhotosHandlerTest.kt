@@ -1,14 +1,13 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.handler.AbstractHandlerTest
-import com.kirakishou.photoexchange.database.entity.GalleryPhoto
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
-import com.kirakishou.photoexchange.handlers.GetGalleryPhotosHandler
+import com.kirakishou.photoexchange.TestUtils.createPhoto
+import com.kirakishou.photoexchange.core.PhotoId
+import com.kirakishou.photoexchange.database.entity.PhotoEntity
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
+import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.runBlocking
 import net.response.GalleryPhotosResponse
 import org.junit.After
@@ -22,14 +21,14 @@ import java.time.Duration
 class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 
   private fun getWebTestClient(jsonConverterService: JsonConverterService,
-                               photoInfoRepository: PhotoInfoRepository): WebTestClient {
-    val handler = GetGalleryPhotosHandler(jsonConverterService, photoInfoRepository)
+                               photosRepository: PhotosRepository): WebTestClient {
+    val handler = GetGalleryPhotosHandler(jsonConverterService, photosRepository)
 
     return WebTestClient.bindToRouterFunction(router {
       "/v1".nest {
         "/api".nest {
           accept(MediaType.APPLICATION_JSON).nest {
-            GET("/get_page_of_gallery_photos/{last_uploaded_on}/{count}", handler::handle)
+            GET("/get_page_of_gallery_photos/{${Router.LAST_UPLOADED_ON_VARIABLE}}/{${Router.COUNT_VARIABLE}}", handler::handle)
           }
         }
       }
@@ -50,26 +49,26 @@ class GetGalleryPhotosHandlerTest : AbstractHandlerTest() {
 
   @Test
   fun `should return one page of photos sorted by id in descending order`() {
-    val webClient = getWebTestClient(jsonConverterService, photoInfoRepository)
+    val webClient = getWebTestClient(jsonConverterService, photosRepository)
 
     runBlocking {
-      photoInfoDao.save(PhotoInfo(1, 1, 3L, "111", "221", true, 11.1, 11.1, 111L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(2, 2, 4L, "111", "222", true, 11.1, 11.1, 222L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(3, 3, 2L, "111", "223", true, 11.1, 11.1, 333L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(4, 4, 1L, "111", "224", true, 11.1, 11.1, 444L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(5, 5, 9L, "111", "225", true, 11.1, 11.1, 555L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(6, 6, 8L, "111", "226", true, 11.1, 11.1, 666L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(7, 7, 7L, "111", "227", true, 11.1, 11.1, 777L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(8, 8, 6L, "111", "228", true, 11.1, 11.1, 888L, 0L, "123")).awaitFirst()
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(1, 1, 1, 3L, "221", true, 11.1, 11.1, 111L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(2, 2, 2, 4L, "222", true, 11.1, 11.1, 222L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(3, 3, 3, 2L, "223", true, 11.1, 11.1, 333L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(4, 4, 4, 1L, "224", true, 11.1, 11.1, 444L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(5, 5, 5, 9L, "225", true, 11.1, 11.1, 555L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(6, 6, 6, 8L, "226", true, 11.1, 11.1, 666L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(7, 7, 7, 7L, "227", true, 11.1, 11.1, 777L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(8, 8, 8, 6L, "228", true, 11.1, 11.1, 888L, 0L, "123")))
 
-      galleryPhotoDao.save(GalleryPhoto(1L, "221", 111L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(2L, "222", 222L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(3L, "223", 333L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(4L, "224", 444L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(5L, "225", 555L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(6L, "226", 666L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(7L, "227", 777L)).awaitFirst()
-      galleryPhotoDao.save(GalleryPhoto(8L, "228", 888L)).awaitFirst()
+      galleryPhotosDao.save(PhotoId(1L), 111L)
+      galleryPhotosDao.save(PhotoId(2L), 222L)
+      galleryPhotosDao.save(PhotoId(3L), 333L)
+      galleryPhotosDao.save(PhotoId(4L), 444L)
+      galleryPhotosDao.save(PhotoId(5L), 555L)
+      galleryPhotosDao.save(PhotoId(6L), 666L)
+      galleryPhotosDao.save(PhotoId(7L), 777L)
+      galleryPhotosDao.save(PhotoId(8L), 888L)
     }
 
     kotlin.run {

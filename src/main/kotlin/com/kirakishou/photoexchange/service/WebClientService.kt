@@ -2,17 +2,14 @@ package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.core.FileWrapper
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
+import com.kirakishou.photoexchange.core.Photo
 import com.kirakishou.photoexchange.extensions.deleteIfExists
 import kotlinx.coroutines.reactive.awaitFirst
 import org.slf4j.LoggerFactory
-import org.springframework.core.io.buffer.DataBuffer
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.BodyExtractors
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.io.File
 import java.time.Duration
@@ -24,13 +21,13 @@ open class WebClientService(
   private val logger = LoggerFactory.getLogger(WebClientService::class.java)
 
   open suspend fun downloadLocationMap(
-    photoInfo: PhotoInfo,
+    photo: Photo,
     photoMapName: String,
     maxTimeoutSeconds: Long
   ): FileWrapper {
     try {
-      val lon = photoInfo.lon
-      val lat = photoInfo.lat
+      val lon = photo.lon
+      val lat = photo.lat
       val requestString = String.format(requestStringFormat, lon, lat, lon, lat)
 
       logger.debug("[$photoMapName], Trying to get map from google services")

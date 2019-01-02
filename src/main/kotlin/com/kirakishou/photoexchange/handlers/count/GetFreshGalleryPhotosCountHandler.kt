@@ -1,8 +1,9 @@
 package com.kirakishou.photoexchange.handlers.count
 
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getLongVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
+import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import kotlinx.coroutines.reactor.mono
@@ -15,24 +16,23 @@ import reactor.core.publisher.Mono
 
 class GetFreshGalleryPhotosCountHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepo: PhotoInfoRepository
+  private val photosRepository: PhotosRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(GetFreshGalleryPhotosCountHandler::class.java)
-  private val TIME_PATH_VARIABLE = "time"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
     return mono {
       logger.debug("New GetFreshGalleryPhotosCount request")
 
       try {
-        val time = request.getLongVariable(TIME_PATH_VARIABLE, 0L, Long.MAX_VALUE)
+        val time = request.getLongVariable(Router.TIME_VARIABLE, 0L, Long.MAX_VALUE)
         if (time == null) {
           logger.debug("Bad param time ($time)")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
             GetFreshPhotosCountResponse.fail(ErrorCode.BadRequest))
         }
 
-        val freshPhotosCount = photoInfoRepo.countFreshGalleryPhotosSince(time)
+        val freshPhotosCount = photosRepository.countFreshGalleryPhotosSince(time)
 
         logger.debug("Found ${freshPhotosCount} fresh gallery photos")
         return@mono formatResponse(HttpStatus.OK,

@@ -1,6 +1,9 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.core.PhotoName
+import com.kirakishou.photoexchange.core.UserUuid
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
+import com.kirakishou.photoexchange.database.repository.UsersRepository
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
@@ -18,7 +21,8 @@ import reactor.core.publisher.Mono
 
 class ReportPhotoHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepository: PhotoInfoRepository
+  private val photosRepository: PhotosRepository,
+  private val usersRepository: UsersRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(ReportPhotoHandler::class.java)
 
@@ -39,22 +43,34 @@ class ReportPhotoHandler(
           )
         }
 
-        val result = photoInfoRepository.reportPhoto(packet.userId, packet.photoName)
+        val userId = usersRepository.getUserIdByUserUuid(UserUuid(packet.userUuid))
+        if (userId.isEmpty()) {
+          logger.debug("Could not favoutite photo (${packet.photoName})")
+          return@mono formatResponse(
+            HttpStatus.NOT_FOUND,
+            ReportPhotoResponse.fail(ErrorCode.AccountNotFound)
+          )
+        }
+
+        val result = photosRepository.reportPhoto(
+          userId,
+          PhotoName(packet.photoName)
+        )
 
         return@mono when (result) {
-          is PhotoInfoRepository.ReportPhotoResult.Error -> {
+          is PhotosRepository.ReportPhotoResult.Error -> {
             logger.debug("Could not report photo (${packet.photoName})")
             formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ReportPhotoResponse.fail(ErrorCode.UnknownError))
           }
-          is PhotoInfoRepository.ReportPhotoResult.Unreported -> {
+          is PhotosRepository.ReportPhotoResult.Unreported -> {
             logger.debug("A photo (${packet.photoName}) has been unreported")
             formatResponse(HttpStatus.OK, ReportPhotoResponse.success(false))
           }
-          is PhotoInfoRepository.ReportPhotoResult.Reported -> {
+          is PhotosRepository.ReportPhotoResult.Reported -> {
             logger.debug("A photo (${packet.photoName}) has been reported")
             formatResponse(HttpStatus.OK, ReportPhotoResponse.success(true))
           }
-          is PhotoInfoRepository.ReportPhotoResult.PhotoDoesNotExist -> {
+          is PhotosRepository.ReportPhotoResult.PhotoDoesNotExist -> {
             logger.debug("A photo (${packet.photoName}) does not exist")
             formatResponse(HttpStatus.NOT_FOUND, ReportPhotoResponse.fail(ErrorCode.PhotoDoesNotExist))
           }
@@ -70,8 +86,8 @@ class ReportPhotoHandler(
   }
 
   private fun isPacketOk(packet: ReportPhotoPacket): Boolean {
-    if (packet.userId.isNullOrEmpty()) {
-      logger.debug("Bad param userId (${packet.userId})")
+    if (packet.userUuid.isNullOrEmpty()) {
+      logger.debug("Bad param userUuid (${packet.userUuid})")
       return false
     }
 
@@ -80,8 +96,8 @@ class ReportPhotoHandler(
       return false
     }
 
-    if (packet.userId.length > SharedConstants.MAX_USER_ID_LEN) {
-      logger.debug("Bad param userId (${packet.userId})")
+    if (packet.userUuid.length > SharedConstants.MAX_USER_UUID_LEN) {
+      logger.debug("Bad param userId (${packet.userUuid})")
       return false
     }
 

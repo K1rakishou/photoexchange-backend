@@ -1,7 +1,8 @@
 package com.kirakishou.photoexchange.handlers.admin
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.handler.AbstractHandlerTest
+import com.kirakishou.photoexchange.handlers.AbstractHandlerTest
+import com.kirakishou.photoexchange.routers.Router
 import core.ErrorCode
 import net.response.BanUserAndAllTheirPhotosResponse
 import org.junit.After
@@ -11,14 +12,13 @@ import org.mockito.Mockito
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.reactive.function.server.router
-import java.time.Duration
 
 class BanUserAndAllTheirPhotosHandlerTest : AbstractHandlerTest() {
 
   private fun getWebTestClient(): WebTestClient {
     val handler = BanUserAndAllTheirPhotosHandler(
       jsonConverterService,
-      photoInfoRepository,
+      photosRepository,
       adminInfoRepository,
       banListRepository,
       diskManipulationService
@@ -28,12 +28,11 @@ class BanUserAndAllTheirPhotosHandlerTest : AbstractHandlerTest() {
       "/v1".nest {
         "/api".nest {
           accept(MediaType.APPLICATION_JSON).nest {
-            GET("/ban_user_with_photos/{user_id}", handler::handle)
+            GET("/ban_user_with_photos/{${Router.USER_UUID_VARIABLE}}", handler::handle)
           }
         }
       }
     })
-      .configureClient().responseTimeout(Duration.ofMillis(1_000_000))
       .build()
   }
 

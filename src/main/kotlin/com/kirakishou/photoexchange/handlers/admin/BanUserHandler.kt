@@ -1,11 +1,14 @@
 package com.kirakishou.photoexchange.handlers.admin
 
 import com.kirakishou.photoexchange.config.ServerSettings
+import com.kirakishou.photoexchange.core.Photo
+import com.kirakishou.photoexchange.core.UserUuid
 import com.kirakishou.photoexchange.database.repository.AdminInfoRepository
 import com.kirakishou.photoexchange.database.repository.BanListRepository
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
+import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import core.SharedConstants
@@ -19,12 +22,11 @@ import reactor.core.publisher.Mono
 
 class BanUserHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepository: PhotoInfoRepository,
+  private val photosRepository: PhotosRepository,
   private val adminInfoRepository: AdminInfoRepository,
   private val banListRepository: BanListRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(BanUserHandler::class.java)
-  private val USER_ID_VARIABLE_PATH = "user_id"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
     return mono {
@@ -50,30 +52,29 @@ class BanUserHandler(
           )
         }
 
-        val userId = request.getStringVariable(USER_ID_VARIABLE_PATH, SharedConstants.MAX_USER_ID_LEN)
-        if (userId == null) {
-          logger.debug("Bad param userId ($userId)")
+        val userUuid = request.getStringVariable(
+          Router.USER_UUID_VARIABLE,
+          SharedConstants.MAX_USER_UUID_LEN
+        )
+
+        if (userUuid == null) {
+          logger.debug("Bad param userUuid ($userUuid)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             BanUserResponse.fail(ErrorCode.BadRequest)
           )
         }
 
-        val ipHashList = photoInfoRepository.findAllPhotosByUserId(userId)
-          .distinctBy { it.ipHash }
-          .map { it.ipHash }
-
-        if (ipHashList.isNotEmpty()) {
-          if (!banListRepository.banMany(ipHashList)) {
-            logger.debug("Could not ban one of the ip hashes for user ${userId}")
-            return@mono formatResponse(
-              HttpStatus.INTERNAL_SERVER_ERROR,
-              BanUserResponse.fail(ErrorCode.DatabaseError)
-            )
-          }
+        val allUserPhotos = photosRepository.findAllPhotosByUserUuid(UserUuid(userUuid))
+        if (!banAllUserIpHashes(allUserPhotos)) {
+          logger.debug("Could not ban one of the ip hashes for userUuid ${userUuid}")
+          return@mono formatResponse(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            BanUserResponse.fail(ErrorCode.DatabaseError)
+          )
         }
 
-        logger.debug("User (${userId}) has been banned")
+        logger.debug("User with userUuid (${userUuid}) has been banned")
         return@mono formatResponse(HttpStatus.OK, BanUserResponse.success())
       } catch (error: Throwable) {
         logger.error("Unknown error", error)
@@ -84,5 +85,22 @@ class BanUserHandler(
       }
 
     }.flatMap { it }
+  }
+
+  private suspend fun banAllUserIpHashes(allUserPhotos: List<Photo>): Boolean {
+    val banInfoList = allUserPhotos
+      .distinctBy { it.ipHash }
+      .map { Pair(it.userId, it.ipHash) }
+
+    if (banInfoList.isNotEmpty()) {
+      val userIdList = banInfoList.map { it.first }
+      val ipHashList = banInfoList.map { it.second }
+
+      if (!banListRepository.banMany(userIdList, ipHashList)) {
+        return false
+      }
+    }
+
+    return true
   }
 }

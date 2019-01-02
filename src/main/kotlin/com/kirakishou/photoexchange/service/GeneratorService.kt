@@ -1,5 +1,7 @@
 package com.kirakishou.photoexchange.service
 
+import com.kirakishou.photoexchange.core.PhotoName
+import com.kirakishou.photoexchange.core.UserUuid
 import java.security.SecureRandom
 import java.util.*
 
@@ -22,11 +24,11 @@ open class GeneratorService(
 		return sb.toString()
 	}
 
-	fun generateNewPhotoName(): String {
-		return generateRandomString(32, numericAlphabetic)
+	fun generateNewPhotoName(): PhotoName {
+		return PhotoName(generateRandomString(32, numericAlphabetic))
 	}
 
-	fun generateUserId(): String {
-		return generateRandomString(20, numericAlphabetic) + "@photoexchange.io"
+	fun generateUserUuid(): UserUuid {
+		return UserUuid(generateRandomString(20, numericAlphabetic) + "@photoexchange.io")
 	}
 }

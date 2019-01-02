@@ -1,51 +1,46 @@
 package com.kirakishou.photoexchange.database.repository
 
-import com.kirakishou.photoexchange.database.dao.BanListDao
-import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
-import com.kirakishou.photoexchange.database.entity.BanEntry
+import com.kirakishou.photoexchange.core.IpHash
+import com.kirakishou.photoexchange.core.UserId
+import com.kirakishou.photoexchange.database.dao.BansDao
+import com.kirakishou.photoexchange.database.entity.BanEntity
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.reactive.awaitFirst
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
+import org.jetbrains.exposed.sql.Database
 import org.slf4j.LoggerFactory
 
 open class BanListRepository(
-  private val mongoSequenceDao: MongoSequenceDao,
-  private val banListDao: BanListDao,
+  private val bansDao: BansDao,
+  database: Database,
   dispatcher: CoroutineDispatcher
-) : AbstractRepository(dispatcher) {
-  private val mutex = Mutex()
+) : AbstractRepository(database, dispatcher) {
   private val logger = LoggerFactory.getLogger(BanListRepository::class.java)
 
-  open suspend fun ban(ipHash: String): Boolean {
-    return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        val id = mongoSequenceDao.getNextBanEntryId().awaitFirst()
-        val banEntry = BanEntry.create(id, ipHash, TimeUtils.getTimeFast())
-
-        return@withLock banListDao.save(banEntry).awaitFirst()
-      }
+  open suspend fun ban(userId: UserId, ipHash: IpHash): Boolean {
+    return dbQuery(false) {
+      val banEntry = BanEntity.create(userId, ipHash, TimeUtils.getTimeFast())
+      return@dbQuery bansDao.save(banEntry)
     }
   }
 
-  open suspend fun isBanned(ipHash: String): Boolean {
-    return withContext(coroutineContext) {
-      return@withContext !banListDao.find(ipHash).awaitFirst().isEmpty()
+  open suspend fun isBanned(ipHash: IpHash): Boolean {
+    return dbQuery(false) {
+      return@dbQuery !bansDao.find(ipHash).isEmpty()
     }
   }
 
-  open suspend fun banMany(ipHashList: List<String>): Boolean {
-    return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        val banEntryList = ipHashList.map { ipHash ->
-          val id = mongoSequenceDao.getNextBanEntryId().awaitFirst()
-          return@map BanEntry.create(id, ipHash, TimeUtils.getTimeFast())
-        }
+  open suspend fun banMany(userIdList: List<UserId>, ipHashList: List<IpHash>): Boolean {
+    return dbQuery(false) {
+      val time = TimeUtils.getTimeFast()
 
-        return@withLock banListDao.saveMany(banEntryList).awaitFirst()
+      if (userIdList.size != ipHashList.size) {
+        throw IllegalArgumentException("userIdList.size (${userIdList.size}) != ipHashList.size (${ipHashList.size})")
       }
+
+      val banEntityList = (0 until userIdList.size)
+        .map { index -> BanEntity.create(userIdList[index], ipHashList[index], time) }
+
+      return@dbQuery bansDao.saveMany(banEntityList)
     }
   }
 }

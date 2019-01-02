@@ -2,9 +2,9 @@ package com.kirakishou.photoexchange.service
 
 import com.google.gson.annotations.Expose
 import com.google.gson.annotations.SerializedName
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
-import com.kirakishou.photoexchange.database.repository.UserInfoRepository
+import com.kirakishou.photoexchange.core.Photo
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
+import com.kirakishou.photoexchange.database.repository.UsersRepository
 import core.SharedConstants
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -20,8 +20,8 @@ import kotlin.coroutines.CoroutineContext
 
 open class PushNotificationSenderService(
   private val webClientService: WebClientService,
-  private val userInfoRepository: UserInfoRepository,
-  private val photoInfoRepository: PhotoInfoRepository,
+  private val usersRepository: UsersRepository,
+  private val photosRepository: PhotosRepository,
   private val googleCredentialsService: GoogleCredentialsService,
   private val jsonConverterService: JsonConverterService,
   private val dispatcher: CoroutineDispatcher
@@ -33,7 +33,7 @@ open class PushNotificationSenderService(
   private val maxTimeoutSeconds = 10L
 
   //these are just notifications not some important data so it's not a problem if we loose them due to a server crash
-  private val requests = LinkedHashSet<PhotoInfo>(1024)
+  private val requests = LinkedHashSet<Photo>(1024)
 
   override val coroutineContext: CoroutineContext
     get() = job + dispatcher
@@ -50,11 +50,17 @@ open class PushNotificationSenderService(
     }
   }
 
-  open fun enqueue(photoInfo: PhotoInfo) {
+  open fun enqueue(photo: Photo) {
     launch {
-      val token = userInfoRepository.getFirebaseToken(photoInfo.userId)
-      if (token.isNotEmpty() && token != SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
-        mutex.withLock { requests.add(photoInfo) }
+      val userUuid = usersRepository.getUserUuidByUserId(photo.userId)
+      if (userUuid.isEmpty()) {
+        logger.debug("Could not find user with userId (${photo.userId.id})")
+        return@launch
+      }
+
+      val token = usersRepository.getFirebaseToken(userUuid)
+      if (token.isNotEmpty() && !token.isDefault()) {
+        mutex.withLock { requests.add(photo) }
       } else {
         logger.debug("FirebaseToken is ${SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN}, skipping it")
       }
@@ -64,7 +70,7 @@ open class PushNotificationSenderService(
   }
 
   private suspend fun startSendingPushNotifications() {
-    val requestsCopy = mutex.withLock { requests.clone() as LinkedHashSet<PhotoInfo> }
+    val requestsCopy = mutex.withLock { requests.clone() as LinkedHashSet<Photo> }
 
     if (requestsCopy.isEmpty()) {
       logger.debug("No requests")
@@ -94,34 +100,40 @@ open class PushNotificationSenderService(
     }
   }
 
-  private suspend fun processRequest(myPhoto: PhotoInfo, accessToken: String) {
+  private suspend fun processRequest(myPhoto: Photo, accessToken: String) {
     logger.debug("Processing request for photo ${myPhoto.photoName}")
 
-    val theirPhoto = photoInfoRepository.findOneById(myPhoto.exchangedPhotoId)
+    val theirPhoto = photosRepository.findOneById(myPhoto.exchangedPhotoId.toPhotoId())
     if (theirPhoto.isEmpty()) {
       logger.debug("No photo with id ${myPhoto.exchangedPhotoId}, photoName = ${myPhoto.photoName}")
       return
     }
 
-    val firebaseToken = userInfoRepository.getFirebaseToken(myPhoto.userId)
+    val userUuid = usersRepository.getUserUuidByUserId(myPhoto.userId)
+    if (userUuid.isEmpty()) {
+      logger.debug("Could not find user with userId (${myPhoto.userId.id})")
+      return
+    }
+
+    val firebaseToken = usersRepository.getFirebaseToken(userUuid)
     if (firebaseToken.isEmpty()) {
       logger.debug("Firebase token is empty")
       return
     }
 
-    if (firebaseToken == SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN) {
+    if (firebaseToken.isDefault()) {
       throw RuntimeException("firebase token is ${SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN}. This should not happen!")
     }
 
     val data = NewReceivedPhoto(
-      myPhoto.photoName,
-      theirPhoto.photoName,
+      myPhoto.photoName.name,
+      theirPhoto.photoName.name,
       theirPhoto.lon.toString(),
       theirPhoto.lat.toString(),
       theirPhoto.uploadedOn.toString()
     )
 
-    val packet = Packet(Message(firebaseToken, data))
+    val packet = Packet(Message(firebaseToken.token, data))
     val body = jsonConverterService.toJson(packet)
 
     //TODO: find out whether there is a way to send notifications in batches and not one at a time
@@ -135,7 +147,7 @@ open class PushNotificationSenderService(
   }
 
   /** Test methods **/
-  fun testGetRequests(): LinkedHashSet<PhotoInfo> {
+  fun testGetRequests(): LinkedHashSet<Photo> {
     return requests
   }
 

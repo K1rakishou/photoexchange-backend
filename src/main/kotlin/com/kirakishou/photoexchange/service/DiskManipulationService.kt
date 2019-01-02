@@ -2,7 +2,8 @@ package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.core.FileWrapper
-import com.kirakishou.photoexchange.database.entity.PhotoInfo
+import com.kirakishou.photoexchange.core.Photo
+import com.kirakishou.photoexchange.core.PhotoName
 import net.coobird.thumbnailator.Thumbnails
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
@@ -10,7 +11,6 @@ import org.springframework.core.io.buffer.DataBuffer
 import java.awt.Dimension
 import java.io.File
 import java.io.IOException
-import java.lang.RuntimeException
 import java.nio.file.Files
 import javax.imageio.ImageIO
 
@@ -36,13 +36,13 @@ open class DiskManipulationService {
   }
 
   @Throws(IOException::class)
-  open suspend fun resizeAndSavePhotos(tempFile: FileWrapper, newUploadingPhoto: PhotoInfo) {
+  open suspend fun resizeAndSavePhotos(tempFile: FileWrapper, newUploadingPhoto: Photo) {
     fun resizeAndSaveImageOnDisk(
       fileWrapper: FileWrapper,
       newMaxSize: Dimension,
       sizeType: String,
       currentFolderDirPath: String,
-      imageNewName: String
+      imageNewName: PhotoName
     ) {
       if (fileWrapper.isEmpty()) {
         throw RuntimeException("No file in the FileWrapper")
@@ -50,7 +50,7 @@ open class DiskManipulationService {
 
       val file = fileWrapper.getFile()!!
       val imageToResize = ImageIO.read(file)
-      val outputResizedFile = File("$currentFolderDirPath\\$imageNewName$sizeType")
+      val outputResizedFile = File("$currentFolderDirPath\\${imageNewName.name}$sizeType")
 
       checkNotNull(imageToResize)
 
@@ -106,8 +106,8 @@ open class DiskManipulationService {
   }
 
   @Throws(IOException::class)
-  open suspend fun replaceImagesOnDiskWithRemovedImagePlaceholder(photoName: String) {
-    fun replacePhotoFile(photoName: String, photoSuffix: String) {
+  open suspend fun replaceImagesOnDiskWithRemovedImagePlaceholder(photoName: PhotoName) {
+    fun replacePhotoFile(photoName: PhotoName, photoSuffix: String) {
       val path = "files\\photo_removed_image\\$photoRemovedPlaceholderName${photoSuffix}.png"
 
       val resource = ClassPathResource(path)
@@ -122,7 +122,7 @@ open class DiskManipulationService {
         return
       }
 
-      val targetFile = File("${ServerSettings.FILE_DIR_PATH}\\$photoName${photoSuffix}")
+      val targetFile = File("${ServerSettings.FILE_DIR_PATH}\\${photoName.name}${photoSuffix}")
       copyFileTo(placeholderFile, targetFile, true)
     }
 
@@ -140,7 +140,7 @@ open class DiskManipulationService {
   }
 
   @Throws(IOException::class)
-  open suspend fun replaceMapOnDiskWithNoMapAvailablePlaceholder(photoName: String) {
+  open suspend fun replaceMapOnDiskWithNoMapAvailablePlaceholder(photoName: PhotoName) {
     val path = "files\\photo_removed_image\\$noMapAvailablePlaceholderName.png"
 
     val resource = ClassPathResource(path)
@@ -155,13 +155,13 @@ open class DiskManipulationService {
       return
     }
 
-    val targetFile = File("${ServerSettings.FILE_DIR_PATH}\\${photoName}_map")
+    val targetFile = File("${ServerSettings.FILE_DIR_PATH}\\${photoName.name}_map")
     copyFileTo(placeholderFile, targetFile, true)
   }
 
   @Throws(IOException::class)
-  open suspend fun deleteAllPhotoFiles(photoName: String) {
-    val photoPath = "${ServerSettings.FILE_DIR_PATH}\\${photoName}"
+  open suspend fun deleteAllPhotoFiles(photoName: PhotoName) {
+    val photoPath = "${ServerSettings.FILE_DIR_PATH}\\${photoName.name}"
 
     deleteFile(File("$photoPath${ServerSettings.SMALL_PHOTO_SUFFIX}"))
     deleteFile(File("$photoPath${ServerSettings.MEDIUM_PHOTO_SUFFIX}"))

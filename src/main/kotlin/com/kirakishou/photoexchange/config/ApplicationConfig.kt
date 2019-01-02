@@ -1,15 +1,9 @@
 package com.kirakishou.photoexchange.config
 
 import com.google.gson.GsonBuilder
-import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.DB_NAME
-import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.HOST
-import com.kirakishou.photoexchange.config.ServerSettings.DatabaseInfo.PORT
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.*
 import com.kirakishou.photoexchange.handlers.*
-import com.kirakishou.photoexchange.handlers.GetGalleryPhotosHandler
-import com.kirakishou.photoexchange.handlers.GetReceivedPhotosHandler
-import com.kirakishou.photoexchange.handlers.GetUploadedPhotosHandler
 import com.kirakishou.photoexchange.handlers.admin.BanPhotoHandler
 import com.kirakishou.photoexchange.handlers.admin.BanUserAndAllTheirPhotosHandler
 import com.kirakishou.photoexchange.handlers.admin.BanUserHandler
@@ -19,7 +13,6 @@ import com.kirakishou.photoexchange.handlers.count.GetFreshReceivedPhotosCountHa
 import com.kirakishou.photoexchange.handlers.count.GetFreshUploadedPhotosCountHandler
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.*
-import com.mongodb.ConnectionString
 import com.samskivert.mustache.Mustache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -28,9 +21,6 @@ import kotlinx.coroutines.newFixedThreadPoolContext
 import org.springframework.boot.autoconfigure.mustache.MustacheResourceTemplateLoader
 import org.springframework.boot.web.reactive.result.view.MustacheViewResolver
 import org.springframework.context.support.beans
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate
-import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory
-import org.springframework.data.mongodb.repository.support.ReactiveMongoRepositoryFactory
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.server.HandlerStrategies
 import org.springframework.web.reactive.function.server.RouterFunctions
@@ -41,44 +31,55 @@ fun myBeans(adminToken: String) = beans {
 
   bean { WebClient.builder().build() }
   bean { GsonBuilder().excludeFieldsWithoutExposeAnnotation().create() }
-  bean { ReactiveMongoRepositoryFactory(ref()) }
-  bean { ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(ConnectionString("mongodb://$HOST:$PORT/$DB_NAME"))) }
+  bean<DatabaseFactory>()
 
   //dao
   bean { AdminInfoRepository(adminToken) }
-  bean { MongoSequenceDao(ref()).also { it.create() } }
-  bean { PhotoInfoDao(ref()).also { it.create() } }
-  bean { GalleryPhotoDao(ref()).also { it.create() } }
-  bean { FavouritedPhotoDao(ref()).also { it.create() } }
-  bean { ReportedPhotoDao(ref()).also { it.create() } }
-  bean { UserInfoDao(ref()).also { it.create() } }
-  bean { LocationMapDao(ref()).also { it.create() } }
-  bean { BanListDao(ref()).also { it.create() } }
+  bean<PhotosDao>()
+  bean<GalleryPhotosDao>()
+  bean<FavouritedPhotosDao>()
+  bean<ReportedPhotosDao>()
+  bean<UsersDao>()
+  bean<LocationMapsDao>()
+  bean<BansDao>()
+
+  //dispatchers
+  bean("IO") {
+    Dispatchers.IO
+  }
+  bean("map-downloader") {
+    newFixedThreadPoolContext(4, "map-downloader")
+  }
+  bean("push-sender") {
+    newFixedThreadPoolContext(4, "push-sender")
+  }
+  bean("google-token-refresher") {
+    newFixedThreadPoolContext(1, "google-token-refresher")
+  }
 
   //repository
   bean {
-    PhotoInfoRepository(ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref(), Dispatchers.IO)
+    PhotosRepository(ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref<DatabaseFactory>().db, ref("IO"))
   }
   bean {
-    UserInfoRepository(ref(), ref(), ref(), Dispatchers.IO)
+    UsersRepository(ref(), ref(), ref<DatabaseFactory>().db, ref("IO"))
   }
   bean {
-    LocationMapRepository(ref(), ref(), ref(), ref(), Dispatchers.IO)
+    LocationMapRepository(ref(), ref(), ref<DatabaseFactory>().db, ref("IO"))
   }
   bean {
-    BanListRepository(ref(), ref(), Dispatchers.IO)
+    BanListRepository(ref(), ref<DatabaseFactory>().db, ref("IO"))
   }
 
   //service
   bean {
-    StaticMapDownloaderService(ref(), ref(), ref(), ref(), newFixedThreadPoolContext(4, "map-downloader"))
-      .also { it.init() }
+    StaticMapDownloaderService(ref(), ref(), ref(), ref(), ref("map-downloader")).also { it.init() }
   }
   bean {
-    PushNotificationSenderService(ref(), ref(), ref(), ref(), ref(), newFixedThreadPoolContext(4, "push-sender"))
+    PushNotificationSenderService(ref(), ref(), ref(), ref(), ref(), ref("push-sender"))
   }
   bean {
-    GoogleCredentialsService(newFixedThreadPoolContext(1, "google-token-refresher"))
+    GoogleCredentialsService(ref("google-token-refresher"))
   }
 
   bean { JsonConverterService(ref()) }
@@ -102,7 +103,7 @@ fun myBeans(adminToken: String) = beans {
   bean<GetGalleryPhotosHandler>()
   bean<FavouritePhotoHandler>()
   bean<ReportPhotoHandler>()
-  bean<GetUserIdHandler>()
+  bean<GetUserUuidHandler>()
   bean<GetUploadedPhotosHandler>()
   bean<GetReceivedPhotosHandler>()
   bean<GetStaticMapHandler>()
@@ -118,7 +119,12 @@ fun myBeans(adminToken: String) = beans {
   bean<BanUserAndAllTheirPhotosHandler>()
 
   //etc
-  bean("webHandler") { RouterFunctions.toWebHandler(ref<Router>().setUpRouter(), HandlerStrategies.builder().viewResolver(ref()).build()) }
+  bean("webHandler") {
+    RouterFunctions.toWebHandler(
+      ref<Router>().setUpRouter(),
+      HandlerStrategies.builder().viewResolver(ref()).build()
+    )
+  }
   bean {
     val prefix = "classpath:/templates/"
     val suffix = ".mustache"

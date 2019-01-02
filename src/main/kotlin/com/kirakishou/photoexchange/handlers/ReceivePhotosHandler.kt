@@ -1,10 +1,13 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.core.UserUuid
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
+import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
+import com.kirakishou.photoexchange.util.Utils
 import core.ErrorCode
 import core.SharedConstants
 import kotlinx.coroutines.reactor.mono
@@ -17,20 +20,22 @@ import reactor.core.publisher.Mono
 
 class ReceivePhotosHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepository: PhotoInfoRepository
+  private val photosRepository: PhotosRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(ReceivePhotosHandler::class.java)
-  private val USER_ID_PATH_VARIABLE = "user_id"
-  private val PHOTO_NAME_PATH_VARIABLE = "photo_names"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
     return mono {
       logger.debug("New ReceivePhotos request")
 
       try {
-        val userId = request.getStringVariable(USER_ID_PATH_VARIABLE, SharedConstants.MAX_USER_ID_LEN)
-        if (userId == null) {
-          logger.debug("Bad param userId ($userId)")
+        val userUuid = request.getStringVariable(
+          Router.USER_UUID_VARIABLE,
+          SharedConstants.MAX_USER_UUID_LEN
+        )
+
+        if (userUuid == null) {
+          logger.debug("Bad param userUuid ($userUuid)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             ReceivedPhotosResponse.fail(ErrorCode.BadRequest)
@@ -38,7 +43,7 @@ class ReceivePhotosHandler(
         }
 
         val photoNames = request.getStringVariable(
-          PHOTO_NAME_PATH_VARIABLE,
+          Router.PHOTO_NAME_LIST_VARIABLE,
           ServerSettings.MAX_RECEIVED_PHOTOS_PER_REQUEST_COUNT * SharedConstants.MAX_PHOTO_NAME_LEN
         )
 
@@ -50,7 +55,12 @@ class ReceivePhotosHandler(
           )
         }
 
-        val photoNameList = photoNames.split(ServerSettings.PHOTOS_DELIMITER)
+        val photoNameList = Utils.parsePhotoNames(
+          photoNames,
+          ServerSettings.MAX_RECEIVED_PHOTOS_PER_REQUEST_COUNT,
+          ServerSettings.PHOTOS_DELIMITER
+        )
+
         if (photoNameList.isEmpty()) {
           logger.debug("photoNameList is empty")
           return@mono formatResponse(
@@ -59,8 +69,8 @@ class ReceivePhotosHandler(
           )
         }
 
-        val receivedPhotosResponseData = photoInfoRepository.findPhotosWithReceiverByPhotoNamesList(
-          userId,
+        val receivedPhotosResponseData = photosRepository.findPhotosWithReceiverByPhotoNamesList(
+          UserUuid(userUuid),
           photoNameList
         )
 

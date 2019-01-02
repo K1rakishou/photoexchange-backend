@@ -1,7 +1,7 @@
 package com.kirakishou.photoexchange.handlers.admin
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.handler.AbstractHandlerTest
+import com.kirakishou.photoexchange.handlers.AbstractHandlerTest
 import core.ErrorCode
 import net.response.StartCleanupResponse
 import org.junit.After
@@ -11,7 +11,6 @@ import org.mockito.Mockito
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.reactive.function.server.router
-import java.time.Duration
 
 class StartCleanupHandlerTest : AbstractHandlerTest() {
 
@@ -31,7 +30,6 @@ class StartCleanupHandlerTest : AbstractHandlerTest() {
         }
       }
     })
-      .configureClient().responseTimeout(Duration.ofMillis(1_000_000))
       .build()
   }
 

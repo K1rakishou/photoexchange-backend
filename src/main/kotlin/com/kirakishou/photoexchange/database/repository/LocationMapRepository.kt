@@ -1,88 +1,94 @@
 package com.kirakishou.photoexchange.database.repository
 
-import com.kirakishou.photoexchange.database.dao.LocationMapDao
-import com.kirakishou.photoexchange.database.dao.MongoSequenceDao
-import com.kirakishou.photoexchange.database.dao.PhotoInfoDao
-import com.kirakishou.photoexchange.database.entity.LocationMap
-import com.kirakishou.photoexchange.extensions.transactional
+import com.kirakishou.photoexchange.core.DatabaseTransactionException
+import com.kirakishou.photoexchange.core.LocationMap
+import com.kirakishou.photoexchange.core.LocationMapId
+import com.kirakishou.photoexchange.core.PhotoId
+import com.kirakishou.photoexchange.database.dao.LocationMapsDao
+import com.kirakishou.photoexchange.database.dao.PhotosDao
+import com.kirakishou.photoexchange.database.entity.LocationMapEntity
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.reactive.awaitFirst
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
+import org.jetbrains.exposed.sql.Database
 import org.slf4j.LoggerFactory
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate
-import reactor.core.publisher.toFlux
 
 open class LocationMapRepository(
-  private val template: ReactiveMongoTemplate,
-  private val mongoSequenceDao: MongoSequenceDao,
-  private val locationMapDao: LocationMapDao,
-  private val photoInfoDao: PhotoInfoDao,
+  private val locationMapsDao: LocationMapsDao,
+  private val photosDao: PhotosDao,
+  database: Database,
   dispatcher: CoroutineDispatcher
-) : AbstractRepository(dispatcher) {
-  private val mutex = Mutex()
+) : AbstractRepository(database, dispatcher) {
   private val logger = LoggerFactory.getLogger(LocationMapRepository::class.java)
 
-  open suspend fun save(locationMap: LocationMap): LocationMap {
-    return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        locationMap.id = mongoSequenceDao.getNextLocationMapId().awaitFirst()
-        return@withLock locationMapDao.save(locationMap).awaitFirst()
-      }
+  open suspend fun save(photoId: PhotoId): Boolean {
+    return dbQuery(false) {
+      return@dbQuery locationMapsDao.save(photoId)
     }
   }
 
   open suspend fun getOldest(count: Int, currentTime: Long): List<LocationMap> {
-    return withContext(coroutineContext) {
-      return@withContext locationMapDao.findOldest(count, currentTime).awaitFirst()
+    return dbQuery(emptyList()) {
+      return@dbQuery locationMapsDao.findOldest(count, currentTime)
+        .map { it.toLocationMap() }
     }
   }
 
-  open suspend fun setMapReady(photoId: Long, locationMapId: Long) {
-    withContext(coroutineContext) {
-      mutex.withLock {
-        val result = template.transactional { txTemplate ->
-          return@transactional locationMapDao.updateSetMapReady(photoId, txTemplate).toFlux()
-            .flatMap { photoInfoDao.updateSetLocationMapId(photoId, locationMapId, txTemplate) }
-        }.awaitFirst()
+  open suspend fun setMapReady(photoId: PhotoId, locationMapId: LocationMapId) {
+    dbQuery(null) {
+      if (!locationMapsDao.updateSetMapStatus(photoId, LocationMapEntity.MapStatus.Ready)) {
+        throw DatabaseTransactionException(
+          "Could not update map with id (${locationMapId.id}) of photo (${photoId.id}) with status Ready"
+        )
+      }
 
-        if (!result) {
-          logger.debug("Could not set map ready")
-        }
+      if (!photosDao.updateSetLocationMapId(photoId, locationMapId)) {
+        throw DatabaseTransactionException(
+          "Could not update photo with id (${photoId.id}) with locationMapId (${locationMapId.id})"
+        )
       }
     }
   }
 
-  open suspend fun setMapAnonymous(photoId: Long, locationMapId: Long) {
-    withContext(coroutineContext) {
-      mutex.withLock {
-        val result = template.transactional { txTemplate ->
-          return@transactional locationMapDao.updateSetMapAnonymous(photoId, txTemplate).toFlux()
-            .flatMap { photoInfoDao.updateSetLocationMapId(photoId, locationMapId, txTemplate) }
-        }.awaitFirst()
+  open suspend fun setMapAnonymous(photoId: PhotoId, locationMapId: LocationMapId) {
+    dbQuery {
+      if (!locationMapsDao.updateSetMapStatus(photoId, LocationMapEntity.MapStatus.Anonymous)) {
+        throw DatabaseTransactionException(
+          "Could not update map with id (${locationMapId.id}) of photo (${photoId.id}) with status Anonymous"
+        )
+      }
 
-        if (!result) {
-          logger.debug("Could not set map ready")
-        }
+      if (!photosDao.updateSetLocationMapId(photoId, locationMapId)) {
+        throw DatabaseTransactionException(
+          "Could not update photo with id (${photoId.id}) with locationMapId (${locationMapId.id})"
+        )
       }
     }
   }
 
-  open suspend fun setMapFailed(photoId: Long): Boolean {
-    return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        return@withLock locationMapDao.updateSetMapFailed(photoId).awaitFirst()
+  open suspend fun setMapFailed(photoId: PhotoId, locationMapId: LocationMapId) {
+    dbQuery {
+      if (!locationMapsDao.updateSetMapStatus(photoId, LocationMapEntity.MapStatus.Failed)) {
+        throw DatabaseTransactionException(
+          "Could not update map with id (${locationMapId.id}) of photo (${photoId.id}) with status Failed"
+        )
       }
     }
   }
 
-  open suspend fun increaseAttemptsCountAndNextAttemptTime(photoId: Long, repeatTimeDelta: Long): Boolean {
-    return withContext(coroutineContext) {
-      return@withContext mutex.withLock {
-        val nextAttemptTime = TimeUtils.getTimeFast() + repeatTimeDelta
-        return@withLock locationMapDao.increaseAttemptsCountAndNextAttemptTime(photoId, nextAttemptTime).awaitFirst()
+  open suspend fun increaseAttemptsCountAndNextAttemptTime(photoId: PhotoId, repeatTimeDelta: Long) {
+    dbQuery {
+      val nextAttemptTime = TimeUtils.getTimeFast() + repeatTimeDelta
+
+      if (!locationMapsDao.incrementAttemptsCount(photoId)) {
+        throw DatabaseTransactionException(
+          "Could not increase attempts count for photo with id (${photoId.id})"
+        )
+      }
+
+      if (!locationMapsDao.updateNextAttemptTime(photoId, nextAttemptTime)) {
+        throw DatabaseTransactionException(
+          "Could not update next attempt time for photo with id (${photoId.id}) and time (${nextAttemptTime})"
+        )
       }
     }
   }

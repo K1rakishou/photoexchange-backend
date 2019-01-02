@@ -1,12 +1,16 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.repository.PhotoInfoRepository
+import com.kirakishou.photoexchange.core.UserUuid
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getIntVariable
 import com.kirakishou.photoexchange.extensions.getLongVariable
+import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
+import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
+import core.SharedConstants
 import kotlinx.coroutines.reactor.mono
 import net.response.ReceivedPhotosResponse
 import org.slf4j.LoggerFactory
@@ -17,13 +21,10 @@ import reactor.core.publisher.Mono
 
 class GetReceivedPhotosHandler(
   jsonConverter: JsonConverterService,
-  private val photoInfoRepository: PhotoInfoRepository
+  private val photosRepository: PhotosRepository
 ) : AbstractWebHandler(jsonConverter) {
 
   private val logger = LoggerFactory.getLogger(GetReceivedPhotosHandler::class.java)
-  private val USER_ID = "user_id"
-  private val LAST_UPLOADED_ON = "last_uploaded_on"
-  private val COUNT = "count"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
     return mono {
@@ -31,7 +32,7 @@ class GetReceivedPhotosHandler(
 
       try {
         val lastUploadedOn = request.getLongVariable(
-          LAST_UPLOADED_ON,
+          Router.LAST_UPLOADED_ON_VARIABLE,
           0L,
           Long.MAX_VALUE
         )
@@ -45,7 +46,7 @@ class GetReceivedPhotosHandler(
         }
 
         val count = request.getIntVariable(
-          COUNT,
+          Router.COUNT_VARIABLE,
           ServerSettings.MIN_RECEIVED_PHOTOS_PER_REQUEST_COUNT,
           ServerSettings.MAX_RECEIVED_PHOTOS_PER_REQUEST_COUNT
         )
@@ -58,16 +59,25 @@ class GetReceivedPhotosHandler(
           )
         }
 
-        val userId = request.pathVariable(USER_ID)
-        if (userId.isNullOrEmpty()) {
-          logger.debug("Bad param userId (${request.pathVariable(USER_ID)})")
+        val userUuid = request.getStringVariable(
+          Router.USER_UUID_VARIABLE,
+          SharedConstants.MAX_USER_UUID_LEN
+        )
+
+        if (userUuid.isNullOrEmpty()) {
+          logger.debug("Bad param userUuid ($userUuid)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             ReceivedPhotosResponse.fail(ErrorCode.BadRequest)
           )
         }
 
-        val receivedPhotosResponseData = photoInfoRepository.findPageOfReceivedPhotos(userId, lastUploadedOn, count)
+        val receivedPhotosResponseData = photosRepository.findPageOfReceivedPhotos(
+          UserUuid(userUuid),
+          lastUploadedOn,
+          count
+        )
+
         logger.debug("Found ${receivedPhotosResponseData.size} received photos")
 
         val response = ReceivedPhotosResponse.success(

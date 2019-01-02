@@ -1,6 +1,8 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.repository.UserInfoRepository
+import com.kirakishou.photoexchange.core.FirebaseToken
+import com.kirakishou.photoexchange.core.UserUuid
+import com.kirakishou.photoexchange.database.repository.UsersRepository
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
@@ -17,7 +19,7 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
 
 class UpdateFirebaseTokenHandler(
-  private val userInfoRepository: UserInfoRepository,
+  private val usersRepository: UsersRepository,
   jsonConverterService: JsonConverterService
 ) : AbstractWebHandler(jsonConverterService) {
 
@@ -41,13 +43,13 @@ class UpdateFirebaseTokenHandler(
             UpdateFirebaseTokenResponse.fail(ErrorCode.BadRequest))
         }
 
-        if (!userInfoRepository.accountExists(packet.userId)) {
+        if (!usersRepository.accountExists(UserUuid(packet.userUuid))) {
           logger.error("One or more of the packet's fields are incorrect")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
             UpdateFirebaseTokenResponse.fail(ErrorCode.AccountNotFound))
         }
 
-        if (!userInfoRepository.updateFirebaseToken(packet.userId, packet.token)) {
+        if (!usersRepository.updateFirebaseToken(UserUuid(packet.userUuid), FirebaseToken(packet.token))) {
           logger.error("One or more of the packet's fields are incorrect")
           return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR,
             UpdateFirebaseTokenResponse.fail(ErrorCode.AccountNotFound))
@@ -63,8 +65,8 @@ class UpdateFirebaseTokenHandler(
   }
 
   private fun isPacketOk(packet: UpdateFirebaseTokenPacket): Boolean {
-    if (packet.userId.isNullOrEmpty()) {
-      logger.debug("Bad param userId (${packet.userId})")
+    if (packet.userUuid.isNullOrEmpty()) {
+      logger.debug("Bad param userUuid (${packet.userUuid})")
       return false
     }
 
@@ -73,8 +75,8 @@ class UpdateFirebaseTokenHandler(
       return false
     }
 
-    if (packet.userId.length > SharedConstants.MAX_USER_ID_LEN) {
-      logger.debug("Bad param userId (${packet.userId})")
+    if (packet.userUuid.length > SharedConstants.MAX_USER_UUID_LEN) {
+      logger.debug("Bad param userId (${packet.userUuid})")
       return false
     }
 
