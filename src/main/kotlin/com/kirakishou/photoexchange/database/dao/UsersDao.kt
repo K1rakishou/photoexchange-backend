@@ -30,7 +30,15 @@ open class UsersDao {
       withUserUuid(userUuid)
     }
       .firstOrNull()
-      ?.let { UserEntity.fromResultRow(it) } ?: UserEntity.empty(userUuid)
+      ?.let { UserEntity.fromResultRow(it) } ?: UserEntity.empty()
+  }
+
+  open fun getUser(userId: UserId): UserEntity {
+    return Users.select {
+      withUserId(userId)
+    }
+      .firstOrNull()
+      ?.let { UserEntity.fromResultRow(it) } ?: UserEntity.empty()
   }
 
   open fun updateFirebaseToken(userUuid: UserUuid, newToken: FirebaseToken): Boolean {
@@ -46,4 +54,10 @@ open class UsersDao {
     return Users.userUuid.eq(userUuid.uuid)
   }
 
+  /**
+   * User must have this userId
+   * */
+  private fun SqlExpressionBuilder.withUserId(userId: UserId): Op<Boolean> {
+    return Users.id.eq(userId.id)
+  }
 }

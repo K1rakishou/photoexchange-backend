@@ -1,9 +1,10 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.core.EmptyPacket
-import com.kirakishou.photoexchange.core.FileWrapper
-import com.kirakishou.photoexchange.core.RequestSizeExceeded
+import com.kirakishou.photoexchange.core.*
+import com.kirakishou.photoexchange.database.repository.BanListRepository
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
+import com.kirakishou.photoexchange.database.repository.UsersRepository
 import com.kirakishou.photoexchange.extensions.containsAllParts
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.*
@@ -53,7 +54,7 @@ class UploadPhotoHandler(
 
     try {
       val ipHash = getIpAddressHash(remoteAddressExtractorService.extractRemoteAddress(request))
-      if (banListRepository.isBanned(ipHash)) {
+      if (banListRepository.isBanned(IpHash(ipHash))) {
         logger.error("User is banned. ipHash = $ipHash")
         return formatResponse(HttpStatus.FORBIDDEN, UploadPhotoResponse.fail(ErrorCode.YouAreBanned))
       }
@@ -80,13 +81,14 @@ class UploadPhotoHandler(
         return formatResponse(HttpStatus.BAD_REQUEST, UploadPhotoResponse.fail(ErrorCode.BadRequest))
       }
 
-      if (!usersRepository.accountExists(packet.userId)) {
-        logger.error("Account with userId ${packet.userId} does not exist!")
+      val userId = usersRepository.getUserIdByUserUuid(UserUuid(packet.userUuid))
+      if (userId.isEmpty()) {
+        logger.error("Account with userUuid ${packet.userUuid} does not exist!")
         return formatResponse(HttpStatus.FORBIDDEN, UploadPhotoResponse.fail(ErrorCode.AccountNotFound))
       }
 
       //user should not be able to send photo without creating default account with firebase token first
-      val token = usersRepository.getFirebaseToken(packet.userId)
+      val token = usersRepository.getFirebaseToken(UserUuid(packet.userUuid))
       if (token.isEmpty()) {
         logger.error("User does not have firebase token yet!")
         return formatResponse(HttpStatus.FORBIDDEN, UploadPhotoResponse.fail(ErrorCode.UserDoesNotHaveFirebaseToken))
@@ -103,12 +105,12 @@ class UploadPhotoHandler(
       }
 
       val newUploadingPhoto = photosRepository.save(
-        packet.userId,
+        userId,
         packet.lon,
         packet.lat,
         packet.isPublic,
         TimeUtils.getTimeFast(),
-        ipHash
+        IpHash(ipHash)
       )
 
       if (newUploadingPhoto.isEmpty()) {
@@ -150,7 +152,7 @@ class UploadPhotoHandler(
         }
 
         val exchangedPhoto = try {
-          photosRepository.tryDoExchange(packet.userId, newUploadingPhoto)
+          photosRepository.tryDoExchange(UserUuid(packet.userUuid), newUploadingPhoto)
         } catch (error: Throwable) {
           logger.error("Unknown error while trying to do photo exchange", error)
 
@@ -165,8 +167,8 @@ class UploadPhotoHandler(
         }
 
         val response = UploadPhotoResponse.success(
-          newUploadingPhoto.photoId,
-          newUploadingPhoto.photoName,
+          newUploadingPhoto.photoId.id,
+          newUploadingPhoto.photoName.name,
           newUploadingPhoto.uploadedOn
         )
 
@@ -193,8 +195,8 @@ class UploadPhotoHandler(
       return false
     }
 
-    if (packet.userId == null || packet.userId.isEmpty() || packet.userId.length > SharedConstants.MAX_USER_ID_LEN) {
-      logger.debug("Bad param userId (${packet.userId})")
+    if (packet.userUuid == null || packet.userUuid.isEmpty() || packet.userUuid.length > SharedConstants.MAX_USER_UUID_LEN) {
+      logger.debug("Bad param userUuid (${packet.userUuid})")
       return false
     }
 
@@ -243,8 +245,8 @@ class UploadPhotoHandler(
       .single()
   }
 
-  private fun saveTempFile(photoChunks: MutableList<DataBuffer>, photoInfo: PhotoInfo): FileWrapper {
-    val filePath = "${ServerSettings.FILE_DIR_PATH}\\${photoInfo.photoName}"
+  private fun saveTempFile(photoChunks: MutableList<DataBuffer>, photo: Photo): FileWrapper {
+    val filePath = "${ServerSettings.FILE_DIR_PATH}\\${photo.photoName}"
     val outFile = File(filePath)
 
     try {
@@ -258,13 +260,13 @@ class UploadPhotoHandler(
     return FileWrapper(outFile)
   }
 
-  private suspend fun deletePhotoWithFile(photoInfo: PhotoInfo) {
-    if (!photosRepository.delete(photoInfo)) {
-      logger.error("Could not deletePhotoWithFile photo ${photoInfo.photoName}")
+  private suspend fun deletePhotoWithFile(photo: Photo) {
+    if (!photosRepository.delete(photo.photoId, photo.photoName)) {
+      logger.error("Could not deletePhotoWithFile photo ${photo.photoName}")
       return
     }
 
-    diskManipulationService.deleteAllPhotoFiles(photoInfo.photoName)
+    diskManipulationService.deleteAllPhotoFiles(photo.photoName)
   }
 }
 

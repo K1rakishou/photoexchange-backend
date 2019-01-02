@@ -8,6 +8,10 @@ object ServerSettings {
 	val MAPBOX_ACCESS_TOKEN by lazy { getPropertyByName("MAPBOX_ACCESS_TOKEN") }
 	//use your firebase project id here (https://support.google.com/googleapi/answer/7014113?hl=en)
 	val PROJECT_ID by lazy { getPropertyByName("FIREBASE_PROJECT_ID") }
+	//use your database login
+	val DATABASE_LOGIN by lazy { getPropertyByName("DATABASE_LOGIN") }
+	//use your database password
+	val DATABASE_PASSWORD by lazy { getPropertyByName("DATABASE_PASSWORD") }
 
 	//used for verification that you are really is an admin when you want to do some admin stuff
 	//see: handlers/admin
@@ -60,7 +64,7 @@ object ServerSettings {
 	}
 
 	private fun getPropertyByName(propertyName: String): String {
-		val fileResource = ClassPathResource("keys.properties")
+		val fileResource = ClassPathResource("local.properties")
 
 		val keysMap = fileResource.file
 			.readLines()

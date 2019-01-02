@@ -1,8 +1,12 @@
 package com.kirakishou.photoexchange.handlers.admin
 
 import com.kirakishou.photoexchange.config.ServerSettings
+import com.kirakishou.photoexchange.core.PhotoName
+import com.kirakishou.photoexchange.database.repository.AdminInfoRepository
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
+import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
@@ -22,7 +26,6 @@ class BanPhotoHandler(
   private val diskManipulationService: DiskManipulationService
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(BanPhotoHandler::class.java)
-  private val PHOTO_NAME_VARIABLE_PATH = "photo_name"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
     return mono {
@@ -48,7 +51,11 @@ class BanPhotoHandler(
           )
         }
 
-        val photoName = request.getStringVariable(PHOTO_NAME_VARIABLE_PATH, SharedConstants.MAX_PHOTO_NAME_LEN)
+        val photoName = request.getStringVariable(
+          Router.PHOTO_NAME_VARIABLE,
+          SharedConstants.MAX_PHOTO_NAME_LEN
+        )
+
         if (photoName == null) {
           logger.debug("Bad param photoName ($photoName)")
           return@mono formatResponse(
@@ -57,7 +64,7 @@ class BanPhotoHandler(
           )
         }
 
-        val photoInfo = photosRepository.findOneByPhotoName(photoName)
+        val photoInfo = photosRepository.findOneByPhotoName(PhotoName(photoName))
         if (photoInfo.isEmpty()) {
           logger.debug("Photo does not exist")
           return@mono formatResponse(
@@ -67,7 +74,7 @@ class BanPhotoHandler(
         }
 
         try {
-          diskManipulationService.replaceImagesOnDiskWithRemovedImagePlaceholder(photoName)
+          diskManipulationService.replaceImagesOnDiskWithRemovedImagePlaceholder(PhotoName(photoName))
         } catch (error: Throwable) {
           logger.error(
             "Error while trying to replace photo with removed photo placeholder, photoName = ${photoName}",

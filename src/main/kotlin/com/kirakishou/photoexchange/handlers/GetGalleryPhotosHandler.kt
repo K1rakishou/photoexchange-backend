@@ -1,10 +1,11 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getIntVariable
 import com.kirakishou.photoexchange.extensions.getLongVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
+import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import kotlinx.coroutines.reactor.mono
@@ -19,17 +20,14 @@ class GetGalleryPhotosHandler(
   jsonConverter: JsonConverterService,
   private val photosRepository: PhotosRepository
 ) : AbstractWebHandler(jsonConverter) {
-
   private val logger = LoggerFactory.getLogger(GetGalleryPhotosHandler::class.java)
-  private val LAST_UPLOADED_ON = "last_uploaded_on"
-  private val COUNT = "count"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
     return mono {
       logger.debug("New GetGalleryPhotos request")
 
       try {
-        val lastUploadedOn = request.getLongVariable(LAST_UPLOADED_ON, 0L, Long.MAX_VALUE)
+        val lastUploadedOn = request.getLongVariable(Router.LAST_UPLOADED_ON_VARIABLE, 0L, Long.MAX_VALUE)
         if (lastUploadedOn == null) {
           logger.debug("Bad param lastUploadedOn ($lastUploadedOn)")
           return@mono formatResponse(
@@ -39,7 +37,7 @@ class GetGalleryPhotosHandler(
         }
 
         val count = request.getIntVariable(
-          COUNT,
+          Router.COUNT_VARIABLE,
           ServerSettings.MIN_GALLERY_PHOTOS_PER_REQUEST_COUNT,
           ServerSettings.MAX_GALLERY_PHOTOS_PER_REQUEST_COUNT
         )

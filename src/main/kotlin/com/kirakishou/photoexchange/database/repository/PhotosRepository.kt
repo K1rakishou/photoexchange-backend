@@ -7,6 +7,7 @@ import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.GeneratorService
 import kotlinx.coroutines.CoroutineDispatcher
 import net.response.data.*
+import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -20,8 +21,9 @@ open class PhotosRepository(
   private val locationMapsDao: LocationMapsDao,
   private val generator: GeneratorService,
   private val diskManipulationService: DiskManipulationService,
+  database: Database,
   dispatcher: CoroutineDispatcher
-) : AbstractRepository(dispatcher) {
+) : AbstractRepository(database, dispatcher) {
   private val logger = LoggerFactory.getLogger(PhotosRepository::class.java)
 
   private fun generatePhotoInfoName(): PhotoName {
@@ -91,7 +93,7 @@ open class PhotosRepository(
     }
   }
 
-  suspend fun findAllPhotosByUserId(userUuid: UserUuid): List<Photo> {
+  suspend fun findAllPhotosByUserUuid(userUuid: UserUuid): List<Photo> {
     return dbQuery(emptyList()) {
       val user = usersDao.getUser(userUuid)
       if (user.isEmpty()) {

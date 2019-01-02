@@ -1,6 +1,6 @@
 package com.kirakishou.photoexchange.service
 
-import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.util.TimeUtils
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean

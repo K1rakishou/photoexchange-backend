@@ -1,9 +1,11 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.core.UserUuid
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
+import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import com.kirakishou.photoexchange.util.Utils
 import core.ErrorCode
@@ -21,28 +23,26 @@ class GetPhotosAdditionalInfoHandler(
   private val photosRepository: PhotosRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(GetPhotosAdditionalInfoHandler::class.java)
-  private val USER_ID_VARIABLE = "user_id"
-  private val PHOTO_NAMES_VARIABLE = "photo_names"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
     return mono {
       logger.debug("New GetGalleryPhotoInfo request")
 
       try {
-        val photoNamesString = request.getStringVariable(
-          PHOTO_NAMES_VARIABLE,
+        val photoNameListString = request.getStringVariable(
+          Router.PHOTO_NAME_LIST_VARIABLE,
           ServerSettings.MAX_PHOTO_ADDITIONAL_INFO_PER_REQUEST * SharedConstants.MAX_PHOTO_NAME_LEN
         )
 
-        if (photoNamesString == null) {
-          logger.debug("Bad param photoNamesString ($photoNamesString)")
+        if (photoNameListString == null) {
+          logger.debug("Bad param photoNameListString ($photoNameListString)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             GetPhotosAdditionalInfoResponse.fail(ErrorCode.BadRequest)
           )
         }
 
-        if (photoNamesString.isEmpty()) {
+        if (photoNameListString.isEmpty()) {
           logger.debug("photoNamesString is empty")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
@@ -50,33 +50,37 @@ class GetPhotosAdditionalInfoHandler(
           )
         }
 
-        val userId = request.getStringVariable(
-          USER_ID_VARIABLE,
-          SharedConstants.MAX_USER_ID_LEN
+        val userUuid = request.getStringVariable(
+          Router.USER_UUID_VARIABLE,
+          SharedConstants.MAX_USER_UUID_LEN
         )
 
-        if (userId == null) {
-          logger.debug("Bad param userId ($userId)")
+        if (userUuid == null) {
+          logger.debug("Bad param userUuid ($userUuid)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             GetPhotosAdditionalInfoResponse.fail(ErrorCode.BadRequest)
           )
         }
 
-        val photoNames = Utils.parsePhotoNames(
-          photoNamesString,
+        val photoNameList = Utils.parsePhotoNames(
+          photoNameListString,
           ServerSettings.MAX_PHOTO_ADDITIONAL_INFO_PER_REQUEST,
           ServerSettings.PHOTOS_DELIMITER
         )
 
-        if (photoNames.isEmpty()) {
+        if (photoNameList.isEmpty()) {
           return@mono formatResponse(
             HttpStatus.OK,
             GetPhotosAdditionalInfoResponse.success(emptyList())
           )
         }
 
-        val additionalInfoResponseData = photosRepository.findPhotoAdditionalInfo(userId, photoNames)
+        val additionalInfoResponseData = photosRepository.findPhotoAdditionalInfo(
+          UserUuid(userUuid),
+          photoNameList
+        )
+
         logger.debug("Found ${additionalInfoResponseData.size} photo additional info")
 
         return@mono formatResponse(

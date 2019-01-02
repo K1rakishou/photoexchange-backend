@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange
 
+import com.kirakishou.photoexchange.core.Photo
 import com.kirakishou.photoexchange.util.SecurityUtils
 import java.util.*
 
@@ -9,12 +10,12 @@ object Utils {
     count: Int,
     userIdList: List<String>,
     privatePhotosAmount: Int = 0
-  ): List<PhotoInfo> {
+  ): List<Photo> {
     require(count >= privatePhotosAmount)
     require(userIdList.size % 2 == 0)
 
     val random = Random()
-    val resultList = mutableListOf<PhotoInfo>()
+    val resultList = mutableListOf<Photo>()
     val photosVisibilityList = generatePhotoVisibilityList(count, privatePhotosAmount)
 
     for (i in 0 until count step 2) {
@@ -23,7 +24,7 @@ object Utils {
       val locationMapId = i.toLong()
       val uploadedOn = i.toLong() + 100
 
-      resultList += PhotoInfo(
+      resultList += Photo(
         currentPhotoId,
         exchangedPhotoId,
         locationMapId + 1,
@@ -37,7 +38,7 @@ object Utils {
         "ipHash_${SecurityUtils.Generation.generateRandomString(10)}"
       )
 
-      resultList += PhotoInfo(
+      resultList += Photo(
         exchangedPhotoId,
         currentPhotoId,
         locationMapId + 2,

@@ -1,9 +1,11 @@
 package com.kirakishou.photoexchange.handlers.count
 
-import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.core.UserUuid
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getLongVariable
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
+import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import core.SharedConstants
@@ -20,24 +22,22 @@ class GetFreshReceivedPhotosCountHandler(
   private val photosRepository: PhotosRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(GetFreshReceivedPhotosCountHandler::class.java)
-  private val TIME_PATH_VARIABLE = "time"
-  private val USER_ID_PATH_VARIABLE = "user_id"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
     return mono {
       logger.debug("New GetFreshReceivedPhotosCount request")
 
       try {
-        val userId = request.getStringVariable(USER_ID_PATH_VARIABLE, SharedConstants.MAX_USER_ID_LEN)
-        if (userId == null) {
-          logger.debug("Bad param userId ($userId)")
+        val userUuid = request.getStringVariable(Router.USER_UUID_VARIABLE, SharedConstants.MAX_USER_UUID_LEN)
+        if (userUuid == null) {
+          logger.debug("Bad param userUuid ($userUuid)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             GetFreshPhotosCountResponse.fail(ErrorCode.BadRequest)
           )
         }
 
-        val time = request.getLongVariable(TIME_PATH_VARIABLE, 0L, Long.MAX_VALUE)
+        val time = request.getLongVariable(Router.TIME_VARIABLE, 0L, Long.MAX_VALUE)
         if (time == null) {
           logger.debug("Bad param time ($time)")
           return@mono formatResponse(
@@ -46,7 +46,7 @@ class GetFreshReceivedPhotosCountHandler(
           )
         }
 
-        val freshPhotosCount = photosRepository.countFreshReceivedPhotosSince(userId, time)
+        val freshPhotosCount = photosRepository.countFreshReceivedPhotosSince(UserUuid(userUuid), time)
         logger.debug("Found ${freshPhotosCount} fresh received photos")
 
         return@mono formatResponse(

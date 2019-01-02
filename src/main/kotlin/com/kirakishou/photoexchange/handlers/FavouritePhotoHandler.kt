@@ -1,6 +1,9 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.core.PhotoName
+import com.kirakishou.photoexchange.core.UserUuid
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
+import com.kirakishou.photoexchange.database.repository.UsersRepository
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
@@ -18,7 +21,8 @@ import reactor.core.publisher.Mono
 
 class FavouritePhotoHandler(
   jsonConverter: JsonConverterService,
-  private val photosRepository: PhotosRepository
+  private val photosRepository: PhotosRepository,
+  private val usersRepository: UsersRepository
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(FavouritePhotoHandler::class.java)
 
@@ -39,11 +43,16 @@ class FavouritePhotoHandler(
           )
         }
 
-        val result = photosRepository.favouritePhoto(
-          packet.userId,
-          packet.photoName
-        )
+        val userId = usersRepository.getUserIdByUserUuid(UserUuid(packet.userUuid))
+        if (userId.isEmpty()) {
+          logger.debug("Could not favoutite photo (${packet.photoName})")
+          return@mono formatResponse(
+            HttpStatus.NOT_FOUND,
+            FavouritePhotoResponse.fail(ErrorCode.AccountNotFound)
+          )
+        }
 
+        val result = photosRepository.favouritePhoto(userId, PhotoName(packet.photoName))
         return@mono when (result) {
           is PhotosRepository.FavouritePhotoResult.Error -> {
             logger.debug("Could not favoutite photo (${packet.photoName})")
@@ -85,8 +94,8 @@ class FavouritePhotoHandler(
   }
 
   private fun isPacketOk(packet: FavouritePhotoPacket): Boolean {
-    if (packet.userId.isNullOrEmpty()) {
-      logger.debug("Bad param userId (${packet.userId})")
+    if (packet.userUuid.isNullOrEmpty()) {
+      logger.debug("Bad param userUuid (${packet.userUuid})")
       return false
     }
 
@@ -95,8 +104,8 @@ class FavouritePhotoHandler(
       return false
     }
 
-    if (packet.userId.length > SharedConstants.MAX_USER_ID_LEN) {
-      logger.debug("Bad param userId (${packet.userId})")
+    if (packet.userUuid.length > SharedConstants.MAX_USER_UUID_LEN) {
+      logger.debug("Bad param userUuid (${packet.userUuid})")
       return false
     }
 

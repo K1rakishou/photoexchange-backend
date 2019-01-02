@@ -6,12 +6,14 @@ import com.kirakishou.photoexchange.database.dao.BansDao
 import com.kirakishou.photoexchange.database.entity.BanEntity
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.CoroutineDispatcher
+import org.jetbrains.exposed.sql.Database
 import org.slf4j.LoggerFactory
 
 open class BanListRepository(
   private val bansDao: BansDao,
+  database: Database,
   dispatcher: CoroutineDispatcher
-) : AbstractRepository(dispatcher) {
+) : AbstractRepository(database, dispatcher) {
   private val logger = LoggerFactory.getLogger(BanListRepository::class.java)
 
   open suspend fun ban(userId: UserId, ipHash: IpHash): Boolean {

@@ -1,11 +1,13 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.core.UserUuid
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.extensions.getIntVariable
 import com.kirakishou.photoexchange.extensions.getLongVariable
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
+import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import core.SharedConstants
@@ -23,9 +25,6 @@ class GetUploadedPhotosHandler(
 ) : AbstractWebHandler(jsonConverter) {
 
   private val logger = LoggerFactory.getLogger(GetUploadedPhotosHandler::class.java)
-  private val USER_ID = "user_id"
-  private val LAST_UPLOADED_ON = "last_uploaded_on"
-  private val COUNT = "count"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
     return mono {
@@ -34,7 +33,7 @@ class GetUploadedPhotosHandler(
       try {
 
         val lastUploadedOn = request.getLongVariable(
-          LAST_UPLOADED_ON,
+          Router.LAST_UPLOADED_ON_VARIABLE,
           0L,
           Long.MAX_VALUE
         )
@@ -48,7 +47,7 @@ class GetUploadedPhotosHandler(
         }
 
         val count = request.getIntVariable(
-          COUNT,
+          Router.COUNT_VARIABLE,
           ServerSettings.MIN_UPLOADED_PHOTOS_PER_REQUEST_COUNT,
           ServerSettings.MAX_UPLOADED_PHOTOS_PER_REQUEST_COUNT
         )
@@ -61,20 +60,25 @@ class GetUploadedPhotosHandler(
           )
         }
 
-        val userId = request.getStringVariable(
-          USER_ID,
-          SharedConstants.MAX_USER_ID_LEN
+        val userUuid = request.getStringVariable(
+          Router.USER_UUID_VARIABLE,
+          SharedConstants.MAX_USER_UUID_LEN
         )
 
-        if (userId == null) {
-          logger.debug("Bad param userId ($userId)")
+        if (userUuid == null) {
+          logger.debug("Bad param userUuid ($userUuid)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             GetUploadedPhotosResponse.fail(ErrorCode.BadRequest)
           )
         }
 
-        val uploadedPhotos = photosRepository.findPageOfUploadedPhotos(userId, lastUploadedOn, count)
+        val uploadedPhotos = photosRepository.findPageOfUploadedPhotos(
+          UserUuid(userUuid),
+          lastUploadedOn,
+          count
+        )
+
         logger.debug("Found ${uploadedPhotos.size} uploaded photos")
 
         return@mono formatResponse(

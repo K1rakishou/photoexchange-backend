@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.handlers
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
+import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.SharedConstants
 import kotlinx.coroutines.reactor.mono
@@ -23,7 +24,6 @@ class GetStaticMapHandler(
 ) : AbstractWebHandler(jsonConverter) {
   private val logger = LoggerFactory.getLogger(GetStaticMapHandler::class.java)
   private val readChuckSize = 16384
-  private val PHOTO_NAME_PATH_VARIABLE = "photo_name"
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {
     return mono {
@@ -31,7 +31,7 @@ class GetStaticMapHandler(
 
       try {
         val photoName = request.getStringVariable(
-          PHOTO_NAME_PATH_VARIABLE,
+          Router.PHOTO_NAME_VARIABLE,
           SharedConstants.MAX_PHOTO_NAME_LEN
         )
 

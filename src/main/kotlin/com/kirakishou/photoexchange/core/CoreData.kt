@@ -5,6 +5,7 @@ import core.SharedConstants
 inline class FirebaseToken(val token: String) {
   fun isDefault() = token == SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN
   fun isEmpty() = token.isEmpty()
+  fun isNotEmpty() = !isEmpty()
 
   companion object {
     fun default(): FirebaseToken = FirebaseToken(SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN)
@@ -36,8 +37,9 @@ inline class ExchangedPhotoId(val id: Long) {
     Upon unsuccessful exchange (when there are no photos to exchange with) exchangedPhotoId is set to EMPTY_PHOTO_ID
    */
   fun isExchanging() = id == -1L
-
   fun empty() = id == -2L
+
+  fun toPhotoId(): PhotoId = PhotoId(id)
 
   companion object {
     fun photoIsExchanging(): ExchangedPhotoId = ExchangedPhotoId(-1L)

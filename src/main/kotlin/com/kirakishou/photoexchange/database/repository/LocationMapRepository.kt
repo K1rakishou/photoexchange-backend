@@ -9,13 +9,15 @@ import com.kirakishou.photoexchange.database.dao.PhotosDao
 import com.kirakishou.photoexchange.database.entity.LocationMapEntity
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.CoroutineDispatcher
+import org.jetbrains.exposed.sql.Database
 import org.slf4j.LoggerFactory
 
 open class LocationMapRepository(
   private val locationMapsDao: LocationMapsDao,
   private val photosDao: PhotosDao,
+  database: Database,
   dispatcher: CoroutineDispatcher
-) : AbstractRepository(dispatcher) {
+) : AbstractRepository(database, dispatcher) {
   private val logger = LoggerFactory.getLogger(LocationMapRepository::class.java)
 
   open suspend fun save(photoId: PhotoId): Boolean {

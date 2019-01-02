@@ -7,27 +7,30 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils.create
 import org.jetbrains.exposed.sql.transactions.transaction
 
-object DatabaseFactory {
+class DatabaseFactory {
+  lateinit var db: Database
 
-  fun init() {
-    Database.connect(hikariPgsql())
+  init {
+    db = Database.connect(hikariPgsql())
 
     transaction {
-      create(Users)
-      create(Photos)
-      create(Bans)
-      create(FavouritedPhotos)
-      create(ReportedPhotos)
-      create(GalleryPhotos)
-      create(LocationMaps)
+      create(
+        Users,
+        Photos,
+        Bans,
+        FavouritedPhotos,
+        ReportedPhotos,
+        GalleryPhotos,
+        LocationMaps
+      )
     }
   }
 
   private fun hikariPgsql(): HikariDataSource {
     val config = HikariConfig()
     config.driverClassName = "jdbc:postgresql://192.168.99.100:5432/photoexchange"
-    config.username = "postgres"
-    config.password = "password"
+    config.username = ServerSettings.DATABASE_LOGIN
+    config.password = ServerSettings.DATABASE_PASSWORD
     config.jdbcUrl = "org.postgresql.Driver"
     config.maximumPoolSize = 20
     config.isAutoCommit = false

@@ -29,10 +29,10 @@ data class UserEntity(
       return UserEntity(id, userUuid, token)
     }
 
-    fun empty(userUuid: UserUuid): UserEntity {
+    fun empty(): UserEntity {
       return UserEntity(
         UserId.empty(),
-        userUuid,
+        UserUuid.empty(),
         FirebaseToken(SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN)
       )
     }
