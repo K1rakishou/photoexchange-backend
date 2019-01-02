@@ -1,6 +1,9 @@
 package com.kirakishou.photoexchange.handlers
 
-import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
+import com.kirakishou.photoexchange.TestUtils.createPhoto
+import com.kirakishou.photoexchange.database.entity.PhotoEntity
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
+import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
@@ -27,7 +30,7 @@ class ReceivePhotosHandlerTest : AbstractHandlerTest() {
       "/v1".nest {
         "/api".nest {
           accept(MediaType.APPLICATION_JSON).nest {
-            GET("/receive_photos/{photo_names}/{user_id}", handler::handle)
+            GET("/receive_photos/{${Router.PHOTO_NAME_LIST_VARIABLE}}/{${Router.USER_UUID_VARIABLE}}", handler::handle)
           }
         }
       }
@@ -51,16 +54,17 @@ class ReceivePhotosHandlerTest : AbstractHandlerTest() {
     val webClient = getWebTestClient(jsonConverterService, photosRepository)
 
     runBlocking {
-      photoInfoDao.save(PhotoInfo(1, 6, 1, "111", "photo1", true, 11.1, 11.1, 5L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(2, 7, 2, "111", "photo2", true, 11.1, 11.1, 6L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(3, 8, 3, "111", "photo3", true, 11.1, 11.1, 5L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(4, 9, 4, "111", "photo4", true, 11.1, 11.1, 6L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(5, 10, 5, "111", "photo5", true, 11.1, 11.1, 5L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(6, 1, 6, "222", "photo6", true, 22.2, 22.2, 6L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(7, 2, 7, "222", "photo7", true, 22.2, 22.2, 5L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(8, 3, 8, "222", "photo8", true, 22.2, 22.2, 6L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(9, 4, 9, "222", "photo9", true, 22.2, 22.2, 5L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(10, 5, 10, "222", "photo10", true, 22.2, 22.2, 6L, 0L, "123")).awaitFirst()
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(1, 1L, 6, 1,  "photo1", true, 11.1, 11.1, 5L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(2, 1L, 7, 2,  "photo2", true, 11.1, 11.1, 6L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(3, 1L, 8, 3,  "photo3", true, 11.1, 11.1, 5L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(4, 1L, 9, 4,  "photo4", true, 11.1, 11.1, 6L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(5, 1L, 10, 5, "photo5", true, 11.1, 11.1, 5L, 0L, "123")))
+
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(6, 2L, 1, 6, "photo6", true, 22.2, 22.2, 6L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(7, 2L, 2, 7, "photo7", true, 22.2, 22.2, 5L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(8, 2L, 3, 8, "photo8", true, 22.2, 22.2, 6L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(9, 2L, 4, 9, "photo9", true, 22.2, 22.2, 5L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(10, 2L, 5, 10, "photo10", true, 22.2, 22.2, 6L, 0L, "123")))
     }
 
     kotlin.run {
@@ -155,16 +159,17 @@ class ReceivePhotosHandlerTest : AbstractHandlerTest() {
     val webClient = getWebTestClient(jsonConverterService, photosRepository)
 
     runBlocking {
-      photoInfoDao.save(PhotoInfo(1, 6, -1, "111", "photo1", true, 11.1, 11.1, 5L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(2, 7, -1, "111", "photo2", true, 11.1, 11.1, 6L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(3, 8, -1, "111", "photo3", true, 11.1, 11.1, 5L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(4, 9, -1, "111", "photo4", true, 11.1, 11.1, 6L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(5, 10, -1, "111", "photo5", true, 11.1, 11.1, 5L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(6, 1, -1, "222", "photo6", true, 22.2, 22.2, 6L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(7, 2, -1, "222", "photo7", true, 22.2, 22.2, 5L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(8, 3, -1, "222", "photo8", true, 22.2, 22.2, 6L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(9, 4, -1, "222", "photo9", true, 22.2, 22.2, 5L, 0L, "123")).awaitFirst()
-      photoInfoDao.save(PhotoInfo(10, 5, -1, "222", "photo10", true, 22.2, 22.2, 6L, 0L, "123")).awaitFirst()
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(1, 1L, 6, -1, "photo1", true, 11.1, 11.1, 5L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(2, 1L, 7, -1, "photo2", true, 11.1, 11.1, 6L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(3, 1L, 8, -1, "photo3", true, 11.1, 11.1, 5L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(4, 1L, 9, -1, "photo4", true, 11.1, 11.1, 6L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(5, 1L, 10, -1, "photo5", true, 11.1, 11.1, 5L, 0L, "123")))
+
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(6, 2L, 1, -1, "photo6", true, 22.2, 22.2, 6L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(7, 2L, 2, -1, "photo7", true, 22.2, 22.2, 5L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(8, 2L, 3, -1, "photo8", true, 22.2, 22.2, 6L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(9, 2L, 4, -1, "photo9", true, 22.2, 22.2, 5L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(10, 2L, 5, -1, "photo10", true, 22.2, 22.2, 6L, 0L, "123")))
     }
 
     kotlin.run {

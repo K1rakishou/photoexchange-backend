@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.handlers
 import com.kirakishou.photoexchange.TestUtils.createPhoto
 import com.kirakishou.photoexchange.database.entity.PhotoEntity
 import com.kirakishou.photoexchange.database.repository.PhotosRepository
+import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
@@ -29,7 +30,7 @@ class GetUploadedPhotosHandlerTest : AbstractHandlerTest() {
       "/v1".nest {
         "/api".nest {
           accept(MediaType.APPLICATION_JSON).nest {
-            GET("/get_page_of_uploaded_photos/{user_id}/{last_uploaded_on}/{count}", handler::handle)
+            GET("/get_page_of_uploaded_photos/{${Router.USER_UUID_VARIABLE}}/{${Router.LAST_UPLOADED_ON_VARIABLE}}/{${Router.COUNT_VARIABLE}}", handler::handle)
           }
         }
       }
