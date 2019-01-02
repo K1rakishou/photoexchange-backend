@@ -1,28 +1,24 @@
 package com.kirakishou.photoexchange.service
 
 import com.google.gson.Gson
-import com.kirakishou.photoexchange.config.ServerSettings
-import com.kirakishou.photoexchange.database.mongo.dao.MongoSequenceDao
-import com.kirakishou.photoexchange.database.pgsql.repository.LocationMapRepository
-import com.kirakishou.photoexchange.database.pgsql.repository.PhotosRepository
-import com.kirakishou.photoexchange.database.pgsql.repository.UsersRepository
+import com.kirakishou.photoexchange.TestDatabaseFactory
+import com.kirakishou.photoexchange.database.dao.*
+import com.kirakishou.photoexchange.database.repository.LocationMapRepository
+import com.kirakishou.photoexchange.database.repository.PhotosRepository
+import com.kirakishou.photoexchange.database.repository.UsersRepository
 import kotlinx.coroutines.Dispatchers
 import org.mockito.Mockito
 
 abstract class AbstractServiceTest {
+  private val database = TestDatabaseFactory().db
 
-  val template = ReactiveMongoTemplate(SimpleReactiveMongoDatabaseFactory(
-    ConnectionString("mongodb://${ServerSettings.TestDatabaseInfo.HOST}:" +
-      "${ServerSettings.TestDatabaseInfo.PORT}/${ServerSettings.TestDatabaseInfo.DB_NAME}"))
-  )
-
-  lateinit var photoInfoDao: PhotoInfoDao
-  lateinit var mongoSequenceDao: MongoSequenceDao
-  lateinit var galleryPhotoDao: GalleryPhotoDao
-  lateinit var favouritedPhotoDao: FavouritedPhotoDao
-  lateinit var reportedPhotoDao: ReportedPhotoDao
-  lateinit var locationMapDao: LocationMapDao
-  lateinit var userInfoDao: UserInfoDao
+  lateinit var photosDao: PhotosDao
+  lateinit var usersDao: UsersDao
+  lateinit var galleryPhotosDao: GalleryPhotosDao
+  lateinit var favouritedPhotosDao: FavouritedPhotosDao
+  lateinit var reportedPhotosDao: ReportedPhotosDao
+  lateinit var locationMapsDao: LocationMapsDao
+  lateinit var bansDao: BansDao
 
   lateinit var generator: GeneratorService
   lateinit var diskManipulationService: DiskManipulationService
@@ -35,34 +31,13 @@ abstract class AbstractServiceTest {
   lateinit var locationMapRepository: LocationMapRepository
 
   open fun setUp() {
-    photoInfoDao = Mockito.spy(PhotoInfoDao(template).apply {
-      clear()
-      create()
-    })
-    mongoSequenceDao = Mockito.spy(MongoSequenceDao(template).apply {
-      clear()
-      create()
-    })
-    galleryPhotoDao = Mockito.spy(GalleryPhotoDao(template).apply {
-      clear()
-      create()
-    })
-    favouritedPhotoDao = Mockito.spy(FavouritedPhotoDao(template).apply {
-      clear()
-      create()
-    })
-    reportedPhotoDao = Mockito.spy(ReportedPhotoDao(template).apply {
-      clear()
-      create()
-    })
-    locationMapDao = Mockito.spy(LocationMapDao(template).apply {
-      clear()
-      create()
-    })
-    userInfoDao = Mockito.spy(UserInfoDao(template).apply {
-      clear()
-      create()
-    })
+    photosDao = Mockito.spy(PhotosDao())
+    usersDao = Mockito.spy(UsersDao())
+    galleryPhotosDao = Mockito.spy(GalleryPhotosDao())
+    favouritedPhotosDao = Mockito.spy(FavouritedPhotosDao())
+    reportedPhotosDao = Mockito.spy(ReportedPhotosDao())
+    locationMapsDao = Mockito.spy(LocationMapsDao())
+    bansDao = Mockito.spy(BansDao())
 
     generator = Mockito.spy(GeneratorService())
     diskManipulationService = Mockito.spy(DiskManipulationService())
@@ -74,47 +49,39 @@ abstract class AbstractServiceTest {
 
     usersRepository = Mockito.spy(
       UsersRepository(
-        mongoSequenceDao,
-        userInfoDao,
+        usersDao,
         generator,
+        database,
         Dispatchers.Unconfined
       )
     )
 
     photosRepository = Mockito.spy(
       PhotosRepository(
-        template,
-        mongoSequenceDao,
-        photoInfoDao,
-        galleryPhotoDao,
-        favouritedPhotoDao,
-        reportedPhotoDao,
-        locationMapDao,
+        photosDao,
+        usersDao,
+        galleryPhotosDao,
+        favouritedPhotosDao,
+        reportedPhotosDao,
+        locationMapsDao,
         generator,
         diskManipulationService,
+        database,
         Dispatchers.Unconfined
       )
     )
 
     locationMapRepository = Mockito.spy(
       LocationMapRepository(
-        template,
-        mongoSequenceDao,
-        locationMapDao,
-        photoInfoDao,
+        locationMapsDao,
+        photosDao,
+        database,
         Dispatchers.Unconfined
       )
     )
   }
 
   open fun tearDown() {
-    photoInfoDao.clear()
-    mongoSequenceDao.clear()
-    galleryPhotoDao.clear()
-    favouritedPhotoDao.clear()
-    reportedPhotoDao.clear()
-    locationMapDao.clear()
-    userInfoDao.clear()
   }
 
 
