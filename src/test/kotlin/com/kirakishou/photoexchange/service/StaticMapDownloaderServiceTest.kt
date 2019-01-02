@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.service
 
+import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.TestUtils.createPhoto
 import com.kirakishou.photoexchange.core.FileWrapper
 import com.kirakishou.photoexchange.core.Photo
@@ -17,7 +18,7 @@ import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class StaticMapDownloaderServiceTest : AbstractServiceTest() {
+class StaticMapDownloaderServiceTest : AbstractTest() {
 
   private val staticMapDownloaderService by lazy {
     StaticMapDownloaderService(

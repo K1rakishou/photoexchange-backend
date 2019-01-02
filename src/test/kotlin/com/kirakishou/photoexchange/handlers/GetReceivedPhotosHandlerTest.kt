@@ -1,5 +1,6 @@
 package com.kirakishou.photoexchange.handlers
 
+import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.TestUtils.createPhoto
 import com.kirakishou.photoexchange.database.entity.PhotoEntity
 import com.kirakishou.photoexchange.database.repository.PhotosRepository
@@ -20,7 +21,7 @@ import org.springframework.web.reactive.function.server.router
 import java.time.Duration
 
 @RunWith(SpringJUnit4ClassRunner::class)
-class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
+class GetReceivedPhotosHandlerTest : AbstractTest() {
 
 	private fun getWebTestClient(jsonConverterService: JsonConverterService,
                                photosRepository: PhotosRepository): WebTestClient {
@@ -40,13 +41,13 @@ class GetReceivedPhotosHandlerTest : AbstractHandlerTest() {
 	}
 
 	@Before
-	fun setUp() {
-		super.init()
+	override fun setUp() {
+		super.setUp()
 	}
 
 	@After
-	fun tearDown() {
-		super.clear()
+	override fun tearDown() {
+		super.tearDown()
 	}
 
 	@Test

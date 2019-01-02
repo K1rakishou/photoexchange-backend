@@ -261,7 +261,7 @@ class UploadPhotoHandler(
   }
 
   private suspend fun deletePhotoWithFile(photo: Photo) {
-    if (!photosRepository.delete(photo.photoId, photo.photoName)) {
+    if (!photosRepository.delete(photo.photoId)) {
       logger.error("Could not deletePhotoWithFile photo ${photo.photoName}")
       return
     }

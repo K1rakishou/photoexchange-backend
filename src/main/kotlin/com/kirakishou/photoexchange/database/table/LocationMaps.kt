@@ -19,6 +19,6 @@ object LocationMaps : Table() {
   }
 
   object Index {
-    const val PHOTO_ID = "photo_id_index"
+    const val PHOTO_ID = "location_maps_photo_id_index"
   }
 }

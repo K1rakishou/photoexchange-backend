@@ -15,7 +15,7 @@ object GalleryPhotos : Table() {
   }
 
   object Index {
-    const val PHOTO_ID_INDEX = "photo_id_index"
-    const val UPLOADED_ON = "uploaded_on_index"
+    const val PHOTO_ID_INDEX = "gallery_photos_photo_id_index"
+    const val UPLOADED_ON = "gallery_photos_uploaded_on_index"
   }
 }

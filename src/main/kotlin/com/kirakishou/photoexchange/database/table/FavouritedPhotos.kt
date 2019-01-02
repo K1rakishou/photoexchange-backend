@@ -15,7 +15,7 @@ object FavouritedPhotos : Table() {
   }
 
   object Index {
-    const val PHOTO_ID_INDEX = "photo_id_index"
-    const val USER_ID_INDEX = "user_id_index"
+    const val PHOTO_ID_INDEX = "favourited_photos_photo_id_index"
+    const val USER_ID_INDEX = "favourited_photos_user_id_index"
   }
 }

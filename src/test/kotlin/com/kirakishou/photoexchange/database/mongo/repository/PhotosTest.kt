@@ -1,9 +1,12 @@
 package com.kirakishou.photoexchange.database.mongo.repository
 
+import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.TestUtils
+import com.kirakishou.photoexchange.TestUtils.createPhoto
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
 import com.kirakishou.photoexchange.core.DatabaseTransactionException
+import com.kirakishou.photoexchange.core.IpHash
 import com.kirakishou.photoexchange.core.UserId
 import com.kirakishou.photoexchange.core.UserUuid
 import com.kirakishou.photoexchange.database.entity.PhotoEntity
@@ -20,7 +23,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class PhotosRepositoryTest : AbstractRepositoryTest() {
+class PhotosTest : AbstractTest() {
 
   @Before
   override fun setUp() {
@@ -36,9 +39,8 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
   fun `deletePhotoInternalInTransaction should cancel deletion when exception occurs inside transaction`() {
     val photo = createPhoto(1L, 1L, -2L, 0L, "test", true, 11.1, 22.2, 999L, 0L, "12121313")
 
-    runBlocking {
-      Mockito
-        .doReturn(Mono.error<Boolean>(DatabaseTransactionException("BAM")))
+    dbQuery {
+      Mockito.doReturn(Mono.error<Boolean>(DatabaseTransactionException("BAM")))
         .`when`(reportedPhotosDao).deleteAllFavouritesByPhotoId(any())
 
       val saved = photosDao.save(PhotoEntity.fromPhoto(photo))
@@ -47,7 +49,7 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
       favouritedPhotosDao.favouritePhoto(saved.photoId, saved.userId)
       locationMapsDao.save(photo.photoId)
 
-      assertFalse(photosRepository.delete(photo.photoId, photo.photoName))
+      assertFalse(photosRepository.delete(photo.photoId))
 
       assertEquals(1, photosDao.testFindAll().size)
       assertEquals(photo.photoName, photosDao.testFindAll().first().photoName)
@@ -60,10 +62,9 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
 
   @Test
   fun `save method should create gallery photo if uploaded photo is public`() {
-    val photo = createPhoto(1L, 1L, -2L, 0L, "test", true, 11.1, 22.2, 999L, 0L, "12121313")
-
-    runBlocking {
-      val saved = photosRepository.save(photo.userId, 11.1, 22.2, true, 5345L, photo.ipHash)
+    dbQuery {
+      usersDao.save(UserUuid("111"))
+      val saved = photosRepository.save(UserId(1L), 11.1, 22.2, true, 5345L, IpHash("12121313"))
 
       assertEquals(saved.photoName, photosDao.testFindAll().first().photoName)
       assertEquals(saved.photoId, galleryPhotosDao.testFindAll().first().photoId)
@@ -72,10 +73,9 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
 
   @Test
   fun `save method should NOT create gallery photo if uploaded photo is private`() {
-    val photo = createPhoto(1L, 1L, -2L, 0L, "test", true, 11.1, 22.2, 999L, 0L, "12121313")
-
-    runBlocking {
-      val saved = photosRepository.save(photo.userId, 11.1, 22.2, true, 5345L, photo.ipHash)
+    dbQuery {
+      usersDao.save(UserUuid("111"))
+      val saved = photosRepository.save(UserId(1L), 11.1, 22.2, false, 5345L, IpHash("12121313"))
 
       assertEquals(saved.photoName, photosDao.testFindAll().first().photoName)
       assertTrue(galleryPhotosDao.testFindAll().isEmpty())
@@ -84,7 +84,9 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
 
   @Test
   fun `tryDoExchange should return empty PhotoInfo when there is nothing to exchange with`() {
-    runBlocking {
+    dbQuery {
+      usersDao.save(UserUuid("111"))
+
       val photo = createPhoto(1L, 1L, -2L, 0L, "test", true, 11.1, 22.2, 999L, 0L, "12121313")
       val userUuid = UserUuid("1213")
 
@@ -96,9 +98,11 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
 
   @Test
   fun `tryDoExchange should return old photo when exchange was successful`() {
-    runBlocking {
+    dbQuery {
       val userId1 = UserUuid("111")
       val userId2 = UserUuid("222")
+
+      usersDao.save(userId1)
 
       val photo1 = createPhoto(1L, 1L, -2L, 1L, "ert", true, 11.1, 22.2, 5345L, 0L, "23123")
       val photo2 = createPhoto(2L, 2L, -2L, 2L, "ttt", true, 11.1, 22.2, 5345L, 0L, "23123")
@@ -115,7 +119,10 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
 
   @Test
   fun `should mark as deleted 4 photos`() {
-    runBlocking {
+    dbQuery {
+      usersDao.save(UserUuid("111"))
+      usersDao.save(UserUuid("222"))
+
       val generatedPhotos = TestUtils.createExchangedPhotoPairs(10, listOf(1L, 2L))
 
       for (generatedPhoto in generatedPhotos) {
@@ -137,7 +144,10 @@ class PhotosRepositoryTest : AbstractRepositoryTest() {
 
   @Test
   fun `should delete all photos with deletedOn field greater than zero`() {
-    runBlocking {
+    dbQuery {
+      usersDao.save(UserUuid("111"))
+      usersDao.save(UserUuid("222"))
+
       val generatedPhotos = TestUtils.createExchangedPhotoPairs(10, listOf(1L, 2L))
         .map { it.copy(deletedOn = 111L) }
 

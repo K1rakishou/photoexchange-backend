@@ -1,12 +1,14 @@
-package com.kirakishou.photoexchange.handlers
+package com.kirakishou.photoexchange
 
 import com.google.gson.GsonBuilder
-import com.kirakishou.photoexchange.TestDatabaseFactory
 import com.kirakishou.photoexchange.database.dao.*
 import com.kirakishou.photoexchange.database.repository.*
 import com.kirakishou.photoexchange.service.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import net.request.UploadPhotoPacket
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.mockito.Mockito
 import org.springframework.core.io.ClassPathResource
 import org.springframework.http.HttpEntity
@@ -18,8 +20,31 @@ import org.springframework.util.MultiValueMap
 import java.io.File
 import java.nio.file.Files
 
-abstract class AbstractHandlerTest {
-  private val database = TestDatabaseFactory().db
+abstract class AbstractTest {
+  private val factory = TestDatabaseFactory()
+  lateinit var database: Database
+
+  lateinit var photosDao: PhotosDao
+  lateinit var usersDao: UsersDao
+  lateinit var galleryPhotosDao: GalleryPhotosDao
+  lateinit var favouritedPhotosDao: FavouritedPhotosDao
+  lateinit var reportedPhotosDao: ReportedPhotosDao
+  lateinit var locationMapsDao: LocationMapsDao
+  lateinit var bansDao: BansDao
+
+  lateinit var jsonConverterService: JsonConverterService
+  lateinit var generator: GeneratorService
+  lateinit var remoteAddressExtractorService: RemoteAddressExtractorService
+  lateinit var diskManipulationService: DiskManipulationService
+  lateinit var cleanupService: CleanupService
+  lateinit var googleCredentialsService: GoogleCredentialsService
+  lateinit var webClientService: WebClientService
+
+  lateinit var locationMapRepository: LocationMapRepository
+  lateinit var photosRepository: PhotosRepository
+  lateinit var usersRepository: UsersRepository
+  lateinit var banListRepository: BanListRepository
+  lateinit var adminInfoRepository: AdminInfoRepository
 
   val EPSILON = 0.00001
   val gson = GsonBuilder().create()
@@ -36,46 +61,9 @@ abstract class AbstractHandlerTest {
 
   val ipAddress = "127.0.0.1"
 
-  lateinit var photosDao: PhotosDao
-  lateinit var usersDao: UsersDao
-  lateinit var galleryPhotosDao: GalleryPhotosDao
-  lateinit var favouritedPhotosDao: FavouritedPhotosDao
-  lateinit var reportedPhotosDao: ReportedPhotosDao
-  lateinit var locationMapsDao: LocationMapsDao
-  lateinit var bansDao: BansDao
-
-  lateinit var jsonConverterService: JsonConverterService
-  lateinit var generator: GeneratorService
-  lateinit var staticMapDownloaderService: StaticMapDownloaderService
-  lateinit var pushNotificationSenderService: PushNotificationSenderService
-  lateinit var remoteAddressExtractorService: RemoteAddressExtractorService
-  lateinit var diskManipulationService: DiskManipulationService
-  lateinit var cleanupService: CleanupService
-
-  lateinit var locationMapRepository: LocationMapRepository
-  lateinit var photosRepository: PhotosRepository
-  lateinit var usersRepository: UsersRepository
-  lateinit var banListRepository: BanListRepository
-  lateinit var adminInfoRepository: AdminInfoRepository
-
-  fun clearFilesDir() {
-    val dir = File(filesDir)
-
-    for (file in dir.listFiles()) {
-      if (!file.isDirectory) {
-        Files.deleteIfExists(file.toPath())
-      }
-    }
-  }
-
-  fun findAllFiles(): Array<File> {
-    return File(filesDir).listFiles()
-  }
-
-  fun init() {
-    clearFilesDir()
-
-    jsonConverterService = JsonConverterService(gson)
+  open fun setUp() {
+    factory.create()
+    database = factory.db
 
     photosDao = Mockito.spy(PhotosDao())
     usersDao = Mockito.spy(UsersDao())
@@ -85,13 +73,26 @@ abstract class AbstractHandlerTest {
     locationMapsDao = Mockito.spy(LocationMapsDao())
     bansDao = Mockito.spy(BansDao())
 
-    val generator = GeneratorService()
-
-    staticMapDownloaderService = Mockito.mock(StaticMapDownloaderService::class.java)
-    pushNotificationSenderService = Mockito.mock(PushNotificationSenderService::class.java)
+    generator = Mockito.spy(GeneratorService())
+    webClientService = Mockito.mock(WebClientService::class.java)
     remoteAddressExtractorService = Mockito.mock(RemoteAddressExtractorService::class.java)
     cleanupService = Mockito.mock(CleanupService::class.java)
+
+    googleCredentialsService = Mockito.mock(GoogleCredentialsService::class.java)
     diskManipulationService = Mockito.spy(DiskManipulationService())
+
+    photosRepository = PhotosRepository(
+      photosDao,
+      usersDao,
+      galleryPhotosDao,
+      favouritedPhotosDao,
+      reportedPhotosDao,
+      locationMapsDao,
+      generator,
+      diskManipulationService,
+      database,
+      Dispatchers.Unconfined
+    )
 
     locationMapRepository = LocationMapRepository(
       locationMapsDao,
@@ -108,6 +109,7 @@ abstract class AbstractHandlerTest {
         Dispatchers.Unconfined
       )
     )
+
     banListRepository = Mockito.spy(
       BanListRepository(
         bansDao,
@@ -115,7 +117,10 @@ abstract class AbstractHandlerTest {
         Dispatchers.Unconfined
       )
     )
-    adminInfoRepository = Mockito.spy(AdminInfoRepository::class.java)
+
+    adminInfoRepository = Mockito.spy(
+      AdminInfoRepository::class.java
+    )
 
     photosRepository = PhotosRepository(
       photosDao,
@@ -131,8 +136,22 @@ abstract class AbstractHandlerTest {
     )
   }
 
-  fun clear() {
-    clearFilesDir()
+  open fun tearDown() {
+    factory.destroy()
+  }
+
+  fun clearFilesDir() {
+    val dir = File(filesDir)
+
+    for (file in dir.listFiles()) {
+      if (!file.isDirectory) {
+        Files.deleteIfExists(file.toPath())
+      }
+    }
+  }
+
+  fun findAllFiles(): Array<File> {
+    return File(filesDir).listFiles()
   }
 
   fun createTestMultipartFile(fileResourceName: String, packet: UploadPhotoPacket): MultiValueMap<String, Any> {
@@ -152,5 +171,18 @@ abstract class AbstractHandlerTest {
 
   inline fun <reified T> fromBodyContent(content: WebTestClient.BodyContentSpec): T {
     return gson.fromJson<T>(String(content.returnResult().responseBody), T::class.java) as T
+  }
+
+  fun <T> dbQuery(block: suspend () -> T): T {
+    return transaction(database) {
+      runBlocking {
+        try {
+          block()
+        } catch (error: Throwable) {
+          error.printStackTrace()
+          throw error
+        }
+      }
+    }
   }
 }
