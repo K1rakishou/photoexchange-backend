@@ -8,7 +8,7 @@ import org.jetbrains.exposed.sql.Table
 object Photos : Table() {
   val id = long(Field.ID).primaryKey().autoIncrement()
   val userId = long(Field.USER_ID).references(Users.id, ReferenceOption.CASCADE).index(Index.USER_ID)
-  val exchangedPhotoId = long(Field.EXCHANGED_PHOTO_ID).index(Index.EXCHANGED_PHOTO_ID, true)
+  val exchangedPhotoId = long(Field.EXCHANGED_PHOTO_ID).index(Index.EXCHANGED_PHOTO_ID)
   val locationMapId = long(Field.LOCATION_MAP_ID)
   val photoName = varchar(Field.PHOTO_NAME, SharedConstants.MAX_PHOTO_NAME_LEN).index(Index.PHOTO_NAME, true)
   val isPublic = bool(Field.IS_PUBLIC)

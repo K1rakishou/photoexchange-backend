@@ -17,6 +17,14 @@ open class UsersDao {
     return UserEntity.create(UserId(id!!), newUserUuid)
   }
 
+  open fun userExists(userId: UserId): Boolean {
+    return Users.select {
+      withUserId(userId)
+    }
+      .firstOrNull()
+      ?.let { true } ?: false
+  }
+
   open fun userExists(userUuid: UserUuid): Boolean {
     return Users.select {
       withUserUuid(userUuid)

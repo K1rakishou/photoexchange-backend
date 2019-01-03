@@ -43,17 +43,8 @@ class ReportPhotoHandler(
           )
         }
 
-        val userId = usersRepository.getUserIdByUserUuid(UserUuid(packet.userUuid))
-        if (userId.isEmpty()) {
-          logger.debug("Could not favoutite photo (${packet.photoName})")
-          return@mono formatResponse(
-            HttpStatus.NOT_FOUND,
-            ReportPhotoResponse.fail(ErrorCode.AccountNotFound)
-          )
-        }
-
         val result = photosRepository.reportPhoto(
-          userId,
+          UserUuid(packet.userUuid),
           PhotoName(packet.photoName)
         )
 
@@ -73,6 +64,10 @@ class ReportPhotoHandler(
           is PhotosRepository.ReportPhotoResult.PhotoDoesNotExist -> {
             logger.debug("A photo (${packet.photoName}) does not exist")
             formatResponse(HttpStatus.NOT_FOUND, ReportPhotoResponse.fail(ErrorCode.PhotoDoesNotExist))
+          }
+          PhotosRepository.ReportPhotoResult.UserDoesNotExist -> {
+            logger.debug("User with userUuid (${packet.userUuid}) does not exist")
+            formatResponse(HttpStatus.NOT_FOUND, ReportPhotoResponse.fail(ErrorCode.AccountNotFound))
           }
         }
       } catch (error: Throwable) {

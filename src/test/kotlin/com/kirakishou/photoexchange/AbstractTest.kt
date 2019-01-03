@@ -22,32 +22,71 @@ import java.nio.file.Files
 
 abstract class AbstractTest {
   private val factory = TestDatabaseFactory()
-  lateinit var database: Database
 
-  lateinit var photosDao: PhotosDao
-  lateinit var usersDao: UsersDao
-  lateinit var galleryPhotosDao: GalleryPhotosDao
-  lateinit var favouritedPhotosDao: FavouritedPhotosDao
-  lateinit var reportedPhotosDao: ReportedPhotosDao
-  lateinit var locationMapsDao: LocationMapsDao
-  lateinit var bansDao: BansDao
+  val database: Database by lazy { factory.db }
+  val gson = GsonBuilder().create()
 
-  lateinit var jsonConverterService: JsonConverterService
-  lateinit var generator: GeneratorService
-  lateinit var remoteAddressExtractorService: RemoteAddressExtractorService
-  lateinit var diskManipulationService: DiskManipulationService
-  lateinit var cleanupService: CleanupService
-  lateinit var googleCredentialsService: GoogleCredentialsService
-  lateinit var webClientService: WebClientService
+  val photosDao = Mockito.spy(PhotosDao())
+  val usersDao = Mockito.spy(UsersDao())
+  val galleryPhotosDao = Mockito.spy(GalleryPhotosDao())
+  val favouritedPhotosDao = Mockito.spy(FavouritedPhotosDao())
+  val reportedPhotosDao = Mockito.spy(ReportedPhotosDao())
+  val locationMapsDao = Mockito.spy(LocationMapsDao())
+  val bansDao = Mockito.spy(BansDao())
 
-  lateinit var locationMapRepository: LocationMapRepository
-  lateinit var photosRepository: PhotosRepository
-  lateinit var usersRepository: UsersRepository
-  lateinit var banListRepository: BanListRepository
-  lateinit var adminInfoRepository: AdminInfoRepository
+  val generator = Mockito.spy(GeneratorService())
+  val webClientService = Mockito.mock(WebClientService::class.java)
+  val remoteAddressExtractorService = Mockito.mock(RemoteAddressExtractorService::class.java)
+  val cleanupService = Mockito.mock(CleanupService::class.java)
+
+  val googleCredentialsService = Mockito.mock(GoogleCredentialsService::class.java)
+  val diskManipulationService = Mockito.spy(DiskManipulationService())
+  val jsonConverterService = Mockito.spy(JsonConverterService(gson))
+
+  val locationMapRepository = LocationMapRepository(
+    locationMapsDao,
+    photosDao,
+    database,
+    Dispatchers.Unconfined
+  )
+
+  val usersRepository = Mockito.spy(
+    UsersRepository(
+      usersDao,
+      generator,
+      database,
+      Dispatchers.Unconfined
+    )
+  )
+
+  val banListRepository = Mockito.spy(
+    BanListRepository(
+      bansDao,
+      database,
+      Dispatchers.Unconfined
+    )
+  )
+
+  val adminInfoRepository = Mockito.spy(
+    AdminInfoRepository::class.java
+  )
+
+  val photosRepository = Mockito.spy(
+    PhotosRepository(
+      photosDao,
+      usersDao,
+      galleryPhotosDao,
+      favouritedPhotosDao,
+      reportedPhotosDao,
+      locationMapsDao,
+      generator,
+      diskManipulationService,
+      database,
+      Dispatchers.Unconfined
+    )
+  )
 
   val EPSILON = 0.00001
-  val gson = GsonBuilder().create()
   val filesDir = "D:\\projects\\data\\photos"
 
   //any photos should work
@@ -62,82 +101,13 @@ abstract class AbstractTest {
   val ipAddress = "127.0.0.1"
 
   open fun setUp() {
-    factory.create()
-    database = factory.db
-
-    photosDao = Mockito.spy(PhotosDao())
-    usersDao = Mockito.spy(UsersDao())
-    galleryPhotosDao = Mockito.spy(GalleryPhotosDao())
-    favouritedPhotosDao = Mockito.spy(FavouritedPhotosDao())
-    reportedPhotosDao = Mockito.spy(ReportedPhotosDao())
-    locationMapsDao = Mockito.spy(LocationMapsDao())
-    bansDao = Mockito.spy(BansDao())
-
-    generator = Mockito.spy(GeneratorService())
-    webClientService = Mockito.mock(WebClientService::class.java)
-    remoteAddressExtractorService = Mockito.mock(RemoteAddressExtractorService::class.java)
-    cleanupService = Mockito.mock(CleanupService::class.java)
-
-    googleCredentialsService = Mockito.mock(GoogleCredentialsService::class.java)
-    diskManipulationService = Mockito.spy(DiskManipulationService())
-
-    photosRepository = PhotosRepository(
-      photosDao,
-      usersDao,
-      galleryPhotosDao,
-      favouritedPhotosDao,
-      reportedPhotosDao,
-      locationMapsDao,
-      generator,
-      diskManipulationService,
-      database,
-      Dispatchers.Unconfined
-    )
-
-    locationMapRepository = LocationMapRepository(
-      locationMapsDao,
-      photosDao,
-      database,
-      Dispatchers.Unconfined
-    )
-
-    usersRepository = Mockito.spy(
-      UsersRepository(
-        usersDao,
-        generator,
-        database,
-        Dispatchers.Unconfined
-      )
-    )
-
-    banListRepository = Mockito.spy(
-      BanListRepository(
-        bansDao,
-        database,
-        Dispatchers.Unconfined
-      )
-    )
-
-    adminInfoRepository = Mockito.spy(
-      AdminInfoRepository::class.java
-    )
-
-    photosRepository = PhotosRepository(
-      photosDao,
-      usersDao,
-      galleryPhotosDao,
-      favouritedPhotosDao,
-      reportedPhotosDao,
-      locationMapsDao,
-      generator,
-      diskManipulationService,
-      database,
-      Dispatchers.Unconfined
-    )
+    clearFilesDir()
+    factory.createTables()
   }
 
   open fun tearDown() {
-    factory.destroy()
+    factory.dropTables()
+    clearFilesDir()
   }
 
   fun clearFilesDir() {

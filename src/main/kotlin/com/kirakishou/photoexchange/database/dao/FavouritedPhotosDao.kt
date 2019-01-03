@@ -44,7 +44,7 @@ open class FavouritedPhotosDao {
       ?.let { true } ?: false
   }
 
-  open fun countFavouritesByPhotoName(photoId: PhotoId): Long {
+  open fun countFavouritesByPhotoId(photoId: PhotoId): Long {
     return FavouritedPhotos.select {
       withPhotoId(photoId)
     }

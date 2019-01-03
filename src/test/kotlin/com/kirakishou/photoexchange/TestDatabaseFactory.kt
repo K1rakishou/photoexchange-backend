@@ -8,12 +8,10 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class TestDatabaseFactory {
-  lateinit var db: Database
+  val db: Database by lazy { Database.connect(hikariH2()) }
 
-  fun create() {
-    db = Database.connect(hikariH2())
-
-    transaction {
+  fun createTables() {
+    transaction(db) {
       SchemaUtils.create(
         Users,
         Photos,
@@ -26,8 +24,8 @@ class TestDatabaseFactory {
     }
   }
 
-  fun destroy() {
-    transaction {
+  fun dropTables() {
+    transaction(db) {
       SchemaUtils.drop(
         Users,
         Photos,
