@@ -512,8 +512,7 @@ open class PhotosRepository(
       val myPhotos = photosDao.findPhotosByNames(user.userId, photoNameList)
       val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
 
-      //TODO: maybe last parameter is incorrect
-      val theirPhotos = photosDao.findManyByExchangedIdList(theirPhotoIds, false)
+      val theirPhotos = photosDao.findManyByExchangedIdList(theirPhotoIds, true)
       val result = mutableListOf<ReceivedPhotoResponseData>()
 
       for (theirPhoto in theirPhotos) {

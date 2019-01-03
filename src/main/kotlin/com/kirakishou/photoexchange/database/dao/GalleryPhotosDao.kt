@@ -20,7 +20,7 @@ open class GalleryPhotosDao {
     return GalleryPhotos.select {
       uploadedEarlierThan(lastUploadedOn)
     }
-      .orderBy(GalleryPhotos.uploadedOn, false)
+      .orderBy(GalleryPhotos.id, false)
       .limit(count)
       .map { resultRow -> GalleryPhotoEntity.fromResultRow(resultRow) }
   }
