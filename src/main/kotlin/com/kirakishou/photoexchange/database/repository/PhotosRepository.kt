@@ -119,7 +119,9 @@ open class PhotosRepository(
       val myPhotos = photosDao.findPageOfUploadedPhotos(user.userId, lastUploadedOn, count)
 
       val exchangeIds = myPhotos.map { it.exchangedPhotoId }
-      val theirPhotos = photosDao.findManyByExchangedIdList(exchangeIds)
+
+      //TODO: maybe last parameter is incorrect
+      val theirPhotos = photosDao.findManyByExchangedIdList(exchangeIds, false)
 
       val result = mutableListOf<UploadedPhotoResponseData>()
 
@@ -284,11 +286,7 @@ open class PhotosRepository(
         logger.debug("Deleting ${photoEntity.photoName}")
 
         //TODO: probably should rewrite this to delete all photos in one transaction
-        if (!delete(photoEntity.photoId)) {
-          logger.error("Could not deletePhotoWithFile photo ${photoEntity.photoName}")
-          continue
-        }
-
+        photosDao.deleteById(photoEntity.photoId)
         photoFilesToDelete += PhotoName(photoEntity.photoName.name)
       }
 
@@ -361,55 +359,49 @@ open class PhotosRepository(
     }
   }
 
-  //FIXME: doesn't work in tests
-  open suspend fun delete(photoId: PhotoId): Boolean {
-    try {
-      return dbQuery(false) {
-        photosDao.deleteById(photoId)
-
-        // TODO:
-        // Probably don't need following 4 lines since they all have foreign keys to Photos
-        // table and should be deleted automatically. Needs testing.
-        favouritedPhotosDao.deleteAllFavouritesByPhotoId(photoId)
-        reportedPhotosDao.deleteAllFavouritesByPhotoId(photoId)
-        locationMapsDao.deleteById(photoId)
-        galleryPhotosDao.deleteByPhotoId(photoId)
-
-        true
-      }
-    } catch (error: Throwable) {
-      logger.error("Could not delete photo", error)
-      return false
+  open suspend fun delete(photoId: PhotoId) {
+    dbQuery(false) {
+      photosDao.deleteById(photoId)
     }
   }
 
-  suspend fun favouritePhoto(userId: UserId, photoName: PhotoName): FavouritePhotoResult {
+  suspend fun favouritePhoto(userUuid: UserUuid, photoName: PhotoName): FavouritePhotoResult {
     return dbQuery {
+      val userId = usersDao.getUser(userUuid).userId
+      if (userId.isEmpty()) {
+        return@dbQuery FavouritePhotoResult.UserDoesNotExist
+      }
+
       val photo = photosDao.findByPhotoName(photoName)
       if (photo.isEmpty()) {
         return@dbQuery FavouritePhotoResult.PhotoDoesNotExist
       }
 
-      return@dbQuery if (favouritedPhotosDao.isPhotoFavourited(photo.photoId, photo.userId)) {
-        if (!favouritedPhotosDao.unfavouritePhoto(photo.photoId, photo.userId)) {
+      return@dbQuery if (favouritedPhotosDao.isPhotoFavourited(photo.photoId, userId)) {
+        if (!favouritedPhotosDao.unfavouritePhoto(photo.photoId, userId)) {
           return@dbQuery FavouritePhotoResult.Error
         }
 
-        val favouritesCount = favouritedPhotosDao.countFavouritesByPhotoName(photo.photoId)
+        val favouritesCount = favouritedPhotosDao.countFavouritesByPhotoId(photo.photoId)
         FavouritePhotoResult.Unfavourited(favouritesCount)
       } else {
         if (!favouritedPhotosDao.favouritePhoto(photo.photoId, userId)) {
           return@dbQuery FavouritePhotoResult.Error
         }
 
-        val favouritesCount = favouritedPhotosDao.countFavouritesByPhotoName(photo.photoId)
+        val favouritesCount = favouritedPhotosDao.countFavouritesByPhotoId(photo.photoId)
         FavouritePhotoResult.Favourited(favouritesCount)
       }
     }
   }
 
-  suspend fun reportPhoto(userId: UserId, photoName: PhotoName): ReportPhotoResult {
+  suspend fun reportPhoto(userUuid: UserUuid, photoName: PhotoName): ReportPhotoResult {
     return dbQuery {
+      val userId = usersDao.getUser(userUuid).userId
+      if (userId.isEmpty()) {
+        return@dbQuery ReportPhotoResult.UserDoesNotExist
+      }
+
       val photo = photosDao.findByPhotoName(photoName)
       if (photo.isEmpty()) {
         return@dbQuery ReportPhotoResult.PhotoDoesNotExist
@@ -438,7 +430,7 @@ open class PhotosRepository(
       val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
       val photoIdList = pageOfGalleryPhotos.map { it.photoId }
 
-      val photoInfos = photosDao.findManyByPhotoIdList(photoIdList)
+      val photoInfos = photosDao.findManyByPhotoIdList(photoIdList, false)
       for (photo in photoInfos) {
         val galleryPhoto = pageOfGalleryPhotos.first { it.photoId.id == photo.photoId.id }
 
@@ -520,7 +512,7 @@ open class PhotosRepository(
       val myPhotos = photosDao.findPhotosByNames(user.userId, photoNameList)
       val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
 
-      val theirPhotos = photosDao.findManyByExchangedIdList(theirPhotoIds)
+      val theirPhotos = photosDao.findManyByExchangedIdList(theirPhotoIds, true)
       val result = mutableListOf<ReceivedPhotoResponseData>()
 
       for (theirPhoto in theirPhotos) {
@@ -584,6 +576,7 @@ open class PhotosRepository(
     object Reported : ReportPhotoResult()
     object Unreported : ReportPhotoResult()
     object PhotoDoesNotExist : ReportPhotoResult()
+    object UserDoesNotExist : ReportPhotoResult()
     object Error : ReportPhotoResult()
   }
 
@@ -591,6 +584,7 @@ open class PhotosRepository(
     class Favourited(val count: Long) : FavouritePhotoResult()
     class Unfavourited(val count: Long) : FavouritePhotoResult()
     object PhotoDoesNotExist : FavouritePhotoResult()
+    object UserDoesNotExist : FavouritePhotoResult()
     object Error : FavouritePhotoResult()
   }
 }

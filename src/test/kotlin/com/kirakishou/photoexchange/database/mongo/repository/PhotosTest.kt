@@ -5,22 +5,16 @@ import com.kirakishou.photoexchange.TestUtils
 import com.kirakishou.photoexchange.TestUtils.createPhoto
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
-import com.kirakishou.photoexchange.core.DatabaseTransactionException
 import com.kirakishou.photoexchange.core.IpHash
 import com.kirakishou.photoexchange.core.UserId
 import com.kirakishou.photoexchange.core.UserUuid
 import com.kirakishou.photoexchange.database.entity.PhotoEntity
-import com.nhaarman.mockito_kotlin.any
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito
 import org.springframework.core.io.ClassPathResource
-import reactor.core.publisher.Mono
 import java.io.File
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PhotosTest : AbstractTest() {
@@ -33,31 +27,6 @@ class PhotosTest : AbstractTest() {
   @After
   override fun tearDown() {
     super.tearDown()
-  }
-
-  @Test
-  fun `deletePhotoInternalInTransaction should cancel deletion when exception occurs inside transaction`() {
-    val photo = createPhoto(1L, 1L, -2L, 0L, "test", true, 11.1, 22.2, 999L, 0L, "12121313")
-
-    dbQuery {
-      Mockito.doReturn(Mono.error<Boolean>(DatabaseTransactionException("BAM")))
-        .`when`(reportedPhotosDao).deleteAllFavouritesByPhotoId(any())
-
-      val saved = photosDao.save(PhotoEntity.fromPhoto(photo))
-      galleryPhotosDao.save(saved.photoId, 777L)
-      reportedPhotosDao.reportPhoto(saved.photoId, saved.userId)
-      favouritedPhotosDao.favouritePhoto(saved.photoId, saved.userId)
-      locationMapsDao.save(photo.photoId)
-
-      assertFalse(photosRepository.delete(photo.photoId))
-
-      assertEquals(1, photosDao.testFindAll().size)
-      assertEquals(photo.photoName, photosDao.testFindAll().first().photoName)
-      assertEquals(photo.photoId, favouritedPhotosDao.testFindAll().first().photoId)
-      assertEquals(photo.photoId, reportedPhotosDao.testFindAll().first().photoId)
-      assertEquals(photo.photoId, galleryPhotosDao.testFindAll().first().photoId)
-      assertEquals(photo.photoId, locationMapsDao.testFindAll().first().photoId)
-    }
   }
 
   @Test
@@ -103,6 +72,7 @@ class PhotosTest : AbstractTest() {
       val userId2 = UserUuid("222")
 
       usersDao.save(userId1)
+      usersDao.save(userId2)
 
       val photo1 = createPhoto(1L, 1L, -2L, 1L, "ert", true, 11.1, 22.2, 5345L, 0L, "23123")
       val photo2 = createPhoto(2L, 2L, -2L, 2L, "ttt", true, 11.1, 22.2, 5345L, 0L, "23123")
@@ -168,14 +138,25 @@ class PhotosTest : AbstractTest() {
 
       assertTrue(File(FILE_DIR_PATH).list().isEmpty())
 
-      //FIXME: this assert does not work now because transactions do not work (but should work once transactions are fixed)
       assertTrue(photosDao.testFindAll().isEmpty())
+      assertTrue(favouritedPhotosDao.testFindAll().isEmpty())
+      assertTrue(reportedPhotosDao.testFindAll().isEmpty())
+      assertTrue(locationMapsDao.testFindAll().isEmpty())
+      assertTrue(galleryPhotosDao.testFindAll().isEmpty())
     }
   }
 
   @Test
   fun `should favourite and then unfavourite photos`() {
-    runBlocking {
+    dbQuery {
+      val user1uuid = UserUuid("111")
+      val user2uuid = UserUuid("222")
+      val user3uuid = UserUuid("333")
+
+      usersDao.save(user1uuid)
+      usersDao.save(user2uuid)
+      usersDao.save(user3uuid)
+
       val generatedPhotos = TestUtils.createExchangedPhotoPairs(2, listOf(1L, 2L))
 
       for (generatedPhoto in generatedPhotos) {
@@ -183,29 +164,29 @@ class PhotosTest : AbstractTest() {
       }
 
       for (generatedPhoto in generatedPhotos) {
-        photosRepository.favouritePhoto(UserId(3L), generatedPhoto.photoName)
-        photosRepository.favouritePhoto(UserId(4L), generatedPhoto.photoName)
-        photosRepository.favouritePhoto(UserId(5L), generatedPhoto.photoName)
+        photosRepository.favouritePhoto(user1uuid, generatedPhoto.photoName)
+        photosRepository.favouritePhoto(user2uuid, generatedPhoto.photoName)
+        photosRepository.favouritePhoto(user3uuid, generatedPhoto.photoName)
       }
 
       val favouritedPhotos = favouritedPhotosDao.testFindAll()
       assertEquals(6, favouritedPhotos.size)
 
       val groupedByPhotoIdPhotos = favouritedPhotos.groupBy { it.photoId }
-      val groupedByUserIdPhotos = favouritedPhotos.groupBy { it.userId }
+      val groupedByUserIdPhotos = favouritedPhotos.groupBy { it.userId.id }
 
       for (generatedPhoto in generatedPhotos) {
         assertEquals(3, groupedByPhotoIdPhotos[generatedPhoto.photoId]!!.size)
       }
 
-      assertEquals(2, groupedByUserIdPhotos[UserId(3L)]!!.size)
-      assertEquals(2, groupedByUserIdPhotos[UserId(4L)]!!.size)
-      assertEquals(2, groupedByUserIdPhotos[UserId(5L)]!!.size)
+      assertEquals(2, groupedByUserIdPhotos[1L]!!.size)
+      assertEquals(2, groupedByUserIdPhotos[2L]!!.size)
+      assertEquals(2, groupedByUserIdPhotos[3L]!!.size)
 
       for (generatedPhoto in generatedPhotos) {
-        photosRepository.favouritePhoto(UserId(3L), generatedPhoto.photoName)
-        photosRepository.favouritePhoto(UserId(4L), generatedPhoto.photoName)
-        photosRepository.favouritePhoto(UserId(5L), generatedPhoto.photoName)
+        photosRepository.favouritePhoto(user1uuid, generatedPhoto.photoName)
+        photosRepository.favouritePhoto(user2uuid, generatedPhoto.photoName)
+        photosRepository.favouritePhoto(user3uuid, generatedPhoto.photoName)
       }
 
       assertTrue(favouritedPhotosDao.testFindAll().isEmpty())
@@ -214,7 +195,15 @@ class PhotosTest : AbstractTest() {
 
   @Test
   fun `should report and then unreport photos`() {
-    runBlocking {
+    dbQuery {
+      val user1uuid = UserUuid("111")
+      val user2uuid = UserUuid("222")
+      val user3uuid = UserUuid("333")
+
+      usersDao.save(user1uuid)
+      usersDao.save(user2uuid)
+      usersDao.save(user3uuid)
+
       val generatedPhotos = TestUtils.createExchangedPhotoPairs(2, listOf(1L, 2L))
 
       for (generatedPhoto in generatedPhotos) {
@@ -222,29 +211,29 @@ class PhotosTest : AbstractTest() {
       }
 
       for (generatedPhoto in generatedPhotos) {
-        photosRepository.reportPhoto(UserId(3L), generatedPhoto.photoName)
-        photosRepository.reportPhoto(UserId(4L), generatedPhoto.photoName)
-        photosRepository.reportPhoto(UserId(5L), generatedPhoto.photoName)
+        photosRepository.reportPhoto(user1uuid, generatedPhoto.photoName)
+        photosRepository.reportPhoto(user2uuid, generatedPhoto.photoName)
+        photosRepository.reportPhoto(user3uuid, generatedPhoto.photoName)
       }
 
       val reportedPhotos = reportedPhotosDao.testFindAll()
       assertEquals(6, reportedPhotos.size)
 
       val groupedByPhotoIdPhotos = reportedPhotos.groupBy { it.photoId }
-      val groupedByUserIdPhotos = reportedPhotos.groupBy { it.userId }
+      val groupedByUserIdPhotos = reportedPhotos.groupBy { it.userId.id }
 
       for (generatedPhoto in generatedPhotos) {
         assertEquals(3, groupedByPhotoIdPhotos[generatedPhoto.photoId]!!.size)
       }
 
-      assertEquals(2, groupedByUserIdPhotos[UserId(3L)]!!.size)
-      assertEquals(2, groupedByUserIdPhotos[UserId(4L)]!!.size)
-      assertEquals(2, groupedByUserIdPhotos[UserId(5L)]!!.size)
+      assertEquals(2, groupedByUserIdPhotos[1L]!!.size)
+      assertEquals(2, groupedByUserIdPhotos[2L]!!.size)
+      assertEquals(2, groupedByUserIdPhotos[3L]!!.size)
 
       for (generatedPhoto in generatedPhotos) {
-        photosRepository.reportPhoto(UserId(3L), generatedPhoto.photoName)
-        photosRepository.reportPhoto(UserId(4L), generatedPhoto.photoName)
-        photosRepository.reportPhoto(UserId(5L), generatedPhoto.photoName)
+        photosRepository.reportPhoto(user1uuid, generatedPhoto.photoName)
+        photosRepository.reportPhoto(user2uuid, generatedPhoto.photoName)
+        photosRepository.reportPhoto(user3uuid, generatedPhoto.photoName)
       }
 
       assertTrue(reportedPhotosDao.testFindAll().isEmpty())

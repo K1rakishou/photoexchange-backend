@@ -43,44 +43,31 @@ class FavouritePhotoHandler(
           )
         }
 
-        val userId = usersRepository.getUserIdByUserUuid(UserUuid(packet.userUuid))
-        if (userId.isEmpty()) {
-          logger.debug("Could not favoutite photo (${packet.photoName})")
-          return@mono formatResponse(
-            HttpStatus.NOT_FOUND,
-            FavouritePhotoResponse.fail(ErrorCode.AccountNotFound)
-          )
-        }
+        val result = photosRepository.favouritePhoto(
+          UserUuid(packet.userUuid),
+          PhotoName(packet.photoName)
+        )
 
-        val result = photosRepository.favouritePhoto(userId, PhotoName(packet.photoName))
         return@mono when (result) {
           is PhotosRepository.FavouritePhotoResult.Error -> {
             logger.debug("Could not favoutite photo (${packet.photoName})")
-            formatResponse(
-              HttpStatus.INTERNAL_SERVER_ERROR,
-              FavouritePhotoResponse.fail(ErrorCode.UnknownError)
-            )
+            formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, FavouritePhotoResponse.fail(ErrorCode.UnknownError))
           }
           is PhotosRepository.FavouritePhotoResult.Unfavourited -> {
             logger.debug("A photo (${packet.photoName}) has been unfavourited")
-            formatResponse(
-              HttpStatus.OK,
-              FavouritePhotoResponse.success(false, result.count)
-            )
+            formatResponse(HttpStatus.OK, FavouritePhotoResponse.success(false, result.count))
           }
           is PhotosRepository.FavouritePhotoResult.Favourited -> {
             logger.debug("A photo (${packet.photoName}) has been favourited")
-            formatResponse(
-              HttpStatus.OK,
-              FavouritePhotoResponse.success(true, result.count)
-            )
+            formatResponse(HttpStatus.OK, FavouritePhotoResponse.success(true, result.count))
           }
           is PhotosRepository.FavouritePhotoResult.PhotoDoesNotExist -> {
             logger.debug("A photo (${packet.photoName}) does not exist")
-            formatResponse(
-              HttpStatus.NOT_FOUND,
-              FavouritePhotoResponse.fail(ErrorCode.PhotoDoesNotExist)
-            )
+            formatResponse(HttpStatus.NOT_FOUND, FavouritePhotoResponse.fail(ErrorCode.PhotoDoesNotExist))
+          }
+          PhotosRepository.FavouritePhotoResult.UserDoesNotExist -> {
+            logger.debug("User with userUuid (${packet.userUuid}) does not exist")
+            formatResponse(HttpStatus.NOT_FOUND, FavouritePhotoResponse.fail(ErrorCode.AccountNotFound))
           }
         }
       } catch (error: Throwable) {

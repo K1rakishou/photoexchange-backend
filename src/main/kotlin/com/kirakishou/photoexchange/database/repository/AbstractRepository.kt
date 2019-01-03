@@ -24,6 +24,7 @@ abstract class AbstractRepository(
             block()
           }
         }
+
       } catch (error: Throwable) {
         if (defaultOnError == null) {
           throw error

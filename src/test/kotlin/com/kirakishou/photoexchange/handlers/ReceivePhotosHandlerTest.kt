@@ -2,13 +2,13 @@ package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.TestUtils.createPhoto
+import com.kirakishou.photoexchange.core.UserUuid
 import com.kirakishou.photoexchange.database.entity.PhotoEntity
 import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.runBlocking
 import net.response.ReceivedPhotosResponse
 import org.junit.After
 import org.junit.Before
@@ -54,11 +54,14 @@ class ReceivePhotosHandlerTest : AbstractTest() {
   fun `should return uploaded photo name and exchanged photo name list with receiver coordinates`() {
     val webClient = getWebTestClient(jsonConverterService, photosRepository)
 
-    runBlocking {
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(1, 1L, 6, 1,  "photo1", true, 11.1, 11.1, 5L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(2, 1L, 7, 2,  "photo2", true, 11.1, 11.1, 6L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(3, 1L, 8, 3,  "photo3", true, 11.1, 11.1, 5L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(4, 1L, 9, 4,  "photo4", true, 11.1, 11.1, 6L, 0L, "123")))
+    dbQuery {
+      assertEquals(1, usersDao.save(UserUuid("111")).userId.id)
+      assertEquals(2, usersDao.save(UserUuid("222")).userId.id)
+
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(1, 1L, 6, 1, "photo1", true, 11.1, 11.1, 5L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(2, 1L, 7, 2, "photo2", true, 11.1, 11.1, 6L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(3, 1L, 8, 3, "photo3", true, 11.1, 11.1, 5L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(4, 1L, 9, 4, "photo4", true, 11.1, 11.1, 6L, 0L, "123")))
       photosDao.save(PhotoEntity.fromPhoto(createPhoto(5, 1L, 10, 5, "photo5", true, 11.1, 11.1, 5L, 0L, "123")))
 
       photosDao.save(PhotoEntity.fromPhoto(createPhoto(6, 2L, 1, 6, "photo6", true, 22.2, 22.2, 6L, 0L, "123")))
@@ -159,7 +162,10 @@ class ReceivePhotosHandlerTest : AbstractTest() {
   fun `should not return photo if it does not have location map`() {
     val webClient = getWebTestClient(jsonConverterService, photosRepository)
 
-    runBlocking {
+    dbQuery {
+      assertEquals(1, usersDao.save(UserUuid("111")).userId.id)
+      assertEquals(2, usersDao.save(UserUuid("222")).userId.id)
+
       photosDao.save(PhotoEntity.fromPhoto(createPhoto(1, 1L, 6, -1, "photo1", true, 11.1, 11.1, 5L, 0L, "123")))
       photosDao.save(PhotoEntity.fromPhoto(createPhoto(2, 1L, 7, -1, "photo2", true, 11.1, 11.1, 6L, 0L, "123")))
       photosDao.save(PhotoEntity.fromPhoto(createPhoto(3, 1L, 8, -1, "photo3", true, 11.1, 11.1, 5L, 0L, "123")))

@@ -31,7 +31,7 @@ open class PhotosDao {
         hasLocationMap() and
         notDeleted()
     }
-      .orderBy(Photos.uploadedOn, true)
+      .orderBy(Photos.id, true)
       .limit(1)
       .firstOrNull()
       ?.let { resultRow -> PhotoEntity.fromResultRow(resultRow) }
@@ -74,27 +74,27 @@ open class PhotosDao {
       withPhotoNameIn(photoNameList) and
         notDeleted()
     }
-      .orderBy(Photos.uploadedOn, false)
+      .orderBy(Photos.id, false)
       .limit(photoNameList.size)
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findManyByPhotoIdList(photoIdList: List<PhotoId>, sortAscending: Boolean = true): List<PhotoEntity> {
+  open fun findManyByPhotoIdList(photoIdList: List<PhotoId>, sortAscending: Boolean): List<PhotoEntity> {
     return Photos.select {
       withPhotoIdIn(photoIdList) and
         notDeleted()
     }
-      .orderBy(Photos.uploadedOn, sortAscending)
+      .orderBy(Photos.id, sortAscending)
       .limit(photoIdList.size)
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findManyByExchangedIdList(exchangedIdList: List<ExchangedPhotoId>, sortAscending: Boolean = true): List<PhotoEntity> {
+  open fun findManyByExchangedIdList(exchangedIdList: List<ExchangedPhotoId>, sortAscending: Boolean): List<PhotoEntity> {
     return Photos.select {
       withExchangedPhotoIdIn(exchangedIdList) and
         notDeleted()
     }
-      .orderBy(Photos.uploadedOn, sortAscending)
+      .orderBy(Photos.id, sortAscending)
       .limit(exchangedIdList.size)
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
@@ -105,7 +105,7 @@ open class PhotosDao {
         uploadedEarlierThan(lastUploadedOn) and
         notDeleted()
     }
-      .orderBy(Photos.uploadedOn, false)
+      .orderBy(Photos.id, false)
       .limit(count)
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
@@ -117,7 +117,7 @@ open class PhotosDao {
         uploadedEarlierThan(lastUploadedOn) and
         notDeleted()
     }
-      .orderBy(Photos.uploadedOn, false)
+      .orderBy(Photos.id, false)
       .limit(count)
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
@@ -156,7 +156,7 @@ open class PhotosDao {
         exchanged() and
         notDeleted()
     }
-      .orderBy(Photos.uploadedOn, false)
+      .orderBy(Photos.id, false)
       .limit(count)
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
@@ -166,7 +166,7 @@ open class PhotosDao {
       deletedEarlierThan(deletedEarlierThanTime) and
         exchanged()
     }
-      .orderBy(Photos.uploadedOn, false)
+      .orderBy(Photos.id, false)
       .limit(count)
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
@@ -198,7 +198,7 @@ open class PhotosDao {
         uploadedLaterThan(time) and
         notDeleted()
     }
-      .orderBy(Photos.uploadedOn, false)
+      .orderBy(Photos.id, false)
       .count()
   }
 
@@ -209,7 +209,7 @@ open class PhotosDao {
         exchanged() and
         notDeleted()
     }
-      .orderBy(Photos.uploadedOn, false)
+      .orderBy(Photos.id, false)
       .count()
   }
 
