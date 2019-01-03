@@ -3,13 +3,13 @@ package com.kirakishou.photoexchange.handlers
 import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.TestUtils.createPhoto
 import com.kirakishou.photoexchange.core.PhotoId
+import com.kirakishou.photoexchange.core.UserUuid
 import com.kirakishou.photoexchange.database.entity.PhotoEntity
 import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.runBlocking
 import net.response.GalleryPhotosResponse
 import org.junit.After
 import org.junit.Before
@@ -52,7 +52,16 @@ class GetGalleryPhotosHandlerTest : AbstractTest() {
   fun `should return one page of photos sorted by id in descending order`() {
     val webClient = getWebTestClient(jsonConverterService, photosRepository)
 
-    runBlocking {
+    dbQuery {
+      assertEquals(1, usersDao.save(UserUuid("111")).userId.id)
+      assertEquals(2, usersDao.save(UserUuid("222")).userId.id)
+      assertEquals(3, usersDao.save(UserUuid("333")).userId.id)
+      assertEquals(4, usersDao.save(UserUuid("444")).userId.id)
+      assertEquals(5, usersDao.save(UserUuid("555")).userId.id)
+      assertEquals(6, usersDao.save(UserUuid("666")).userId.id)
+      assertEquals(7, usersDao.save(UserUuid("777")).userId.id)
+      assertEquals(8, usersDao.save(UserUuid("888")).userId.id)
+
       photosDao.save(PhotoEntity.fromPhoto(createPhoto(1, 1, 1, 3L, "221", true, 11.1, 11.1, 111L, 0L, "123")))
       photosDao.save(PhotoEntity.fromPhoto(createPhoto(2, 2, 2, 4L, "222", true, 11.1, 11.1, 222L, 0L, "123")))
       photosDao.save(PhotoEntity.fromPhoto(createPhoto(3, 3, 3, 2L, "223", true, 11.1, 11.1, 333L, 0L, "123")))

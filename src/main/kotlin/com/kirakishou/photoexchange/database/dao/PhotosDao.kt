@@ -79,7 +79,7 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findManyByPhotoIdList(photoIdList: List<PhotoId>, sortAscending: Boolean = true): List<PhotoEntity> {
+  open fun findManyByPhotoIdList(photoIdList: List<PhotoId>, sortAscending: Boolean): List<PhotoEntity> {
     return Photos.select {
       withPhotoIdIn(photoIdList) and
         notDeleted()
@@ -89,7 +89,7 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findManyByExchangedIdList(exchangedIdList: List<ExchangedPhotoId>, sortAscending: Boolean = true): List<PhotoEntity> {
+  open fun findManyByExchangedIdList(exchangedIdList: List<ExchangedPhotoId>, sortAscending: Boolean): List<PhotoEntity> {
     return Photos.select {
       withExchangedPhotoIdIn(exchangedIdList) and
         notDeleted()

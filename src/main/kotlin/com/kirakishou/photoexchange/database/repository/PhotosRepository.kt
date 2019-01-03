@@ -119,7 +119,9 @@ open class PhotosRepository(
       val myPhotos = photosDao.findPageOfUploadedPhotos(user.userId, lastUploadedOn, count)
 
       val exchangeIds = myPhotos.map { it.exchangedPhotoId }
-      val theirPhotos = photosDao.findManyByExchangedIdList(exchangeIds)
+
+      //TODO: maybe last parameter is incorrect
+      val theirPhotos = photosDao.findManyByExchangedIdList(exchangeIds, false)
 
       val result = mutableListOf<UploadedPhotoResponseData>()
 
@@ -428,7 +430,7 @@ open class PhotosRepository(
       val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
       val photoIdList = pageOfGalleryPhotos.map { it.photoId }
 
-      val photoInfos = photosDao.findManyByPhotoIdList(photoIdList)
+      val photoInfos = photosDao.findManyByPhotoIdList(photoIdList, false)
       for (photo in photoInfos) {
         val galleryPhoto = pageOfGalleryPhotos.first { it.photoId.id == photo.photoId.id }
 
@@ -510,7 +512,8 @@ open class PhotosRepository(
       val myPhotos = photosDao.findPhotosByNames(user.userId, photoNameList)
       val theirPhotoIds = myPhotos.map { it.exchangedPhotoId }
 
-      val theirPhotos = photosDao.findManyByExchangedIdList(theirPhotoIds)
+      //TODO: maybe last parameter is incorrect
+      val theirPhotos = photosDao.findManyByExchangedIdList(theirPhotoIds, false)
       val result = mutableListOf<ReceivedPhotoResponseData>()
 
       for (theirPhoto in theirPhotos) {
