@@ -29,7 +29,10 @@ class GetGalleryPhotosHandlerTest : AbstractTest() {
       "/v1".nest {
         "/api".nest {
           accept(MediaType.APPLICATION_JSON).nest {
-            GET("/get_page_of_gallery_photos/{${Router.LAST_UPLOADED_ON_VARIABLE}}/{${Router.COUNT_VARIABLE}}", handler::handle)
+            GET(
+              "/get_page_of_gallery_photos/{${Router.LAST_UPLOADED_ON_VARIABLE}}/{${Router.COUNT_VARIABLE}}",
+              handler::handle
+            )
           }
         }
       }
