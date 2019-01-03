@@ -2,13 +2,13 @@ package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.TestUtils.createPhoto
+import com.kirakishou.photoexchange.core.UserUuid
 import com.kirakishou.photoexchange.database.entity.PhotoEntity
 import com.kirakishou.photoexchange.database.repository.PhotosRepository
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
-import kotlinx.coroutines.runBlocking
 import net.response.ReceivedPhotosResponse
 import org.junit.After
 import org.junit.Before
@@ -54,7 +54,10 @@ class GetReceivedPhotosHandlerTest : AbstractTest() {
 	fun `should return received photos with receiver coordinates`() {
 		val webClient = getWebTestClient(jsonConverterService, photosRepository)
 
-		runBlocking {
+		dbQuery {
+			assertEquals(1, usersDao.save(UserUuid("111")).userId.id)
+			assertEquals(2, usersDao.save(UserUuid("222")).userId.id)
+
       photosDao.save(PhotoEntity.fromPhoto(createPhoto(1, 1L, 9, -1L,  "photo1",  true, 11.1, 11.1, 1L, 0L, "123")))
       photosDao.save(PhotoEntity.fromPhoto(createPhoto(2, 1L, 10, -1L, "photo2",  true, 11.1, 11.1, 2L, 0L, "123")))
       photosDao.save(PhotoEntity.fromPhoto(createPhoto(3, 1L, 11, -1L, "photo3",  true, 11.1, 11.1, 3L, 0L, "123")))
