@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.handlers.admin
 import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.config.ServerSettings
 import core.ErrorCode
+import kotlinx.coroutines.Dispatchers
 import net.response.StartCleanupResponse
 import org.junit.After
 import org.junit.Before
@@ -16,9 +17,10 @@ class StartCleanupHandlerTest : AbstractTest() {
 
   private fun getWebTestClient(): WebTestClient {
     val handler = StartCleanupHandler(
-      jsonConverterService,
       adminInfoRepository,
-      cleanupService
+      cleanupService,
+      Dispatchers.Unconfined,
+      jsonConverterService
     )
 
     return WebTestClient.bindToRouterFunction(router {

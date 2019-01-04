@@ -12,6 +12,7 @@ import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import core.SharedConstants
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactor.mono
 import net.response.BanUserResponse
 import org.slf4j.LoggerFactory
@@ -21,11 +22,12 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
 
 class BanUserHandler(
-  jsonConverter: JsonConverterService,
   private val photosRepository: PhotosRepository,
   private val adminInfoRepository: AdminInfoRepository,
-  private val banListRepository: BanListRepository
-) : AbstractWebHandler(jsonConverter) {
+  private val banListRepository: BanListRepository,
+  dispatcher: CoroutineDispatcher,
+  jsonConverter: JsonConverterService
+) : AbstractWebHandler(dispatcher, jsonConverter) {
   private val logger = LoggerFactory.getLogger(BanUserHandler::class.java)
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {

@@ -8,6 +8,7 @@ import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactor.mono
 import net.response.GalleryPhotosResponse
 import org.slf4j.LoggerFactory
@@ -17,9 +18,10 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
 
 class GetGalleryPhotosHandler(
-  jsonConverter: JsonConverterService,
-  private val photosRepository: PhotosRepository
-) : AbstractWebHandler(jsonConverter) {
+  private val photosRepository: PhotosRepository,
+  dispatcher: CoroutineDispatcher,
+  jsonConverter: JsonConverterService
+) : AbstractWebHandler(dispatcher, jsonConverter) {
   private val logger = LoggerFactory.getLogger(GetGalleryPhotosHandler::class.java)
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {

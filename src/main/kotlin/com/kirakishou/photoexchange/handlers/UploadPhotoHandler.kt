@@ -12,6 +12,7 @@ import com.kirakishou.photoexchange.util.SecurityUtils
 import com.kirakishou.photoexchange.util.TimeUtils
 import core.ErrorCode
 import core.SharedConstants
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.mono
 import net.request.UploadPhotoPacket
@@ -29,7 +30,6 @@ import java.io.File
 import java.io.IOException
 
 class UploadPhotoHandler(
-  jsonConverter: JsonConverterService,
   private val photosRepository: PhotosRepository,
   private val usersRepository: UsersRepository,
   private val banListRepository: BanListRepository,
@@ -37,8 +37,10 @@ class UploadPhotoHandler(
   private val pushNotificationSenderService: PushNotificationSenderService,
   private val remoteAddressExtractorService: RemoteAddressExtractorService,
   private val diskManipulationService: DiskManipulationService,
-  private val cleanupService: CleanupService
-) : AbstractWebHandler(jsonConverter) {
+  private val cleanupService: CleanupService,
+  dispatcher: CoroutineDispatcher,
+  jsonConverter: JsonConverterService
+) : AbstractWebHandler(dispatcher, jsonConverter) {
   private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
   private val PACKET_PART_KEY = "packet"
   private val PHOTO_PART_KEY = "photo"
@@ -53,7 +55,9 @@ class UploadPhotoHandler(
     logger.debug("New UploadPhoto request")
 
     try {
-      val ipHash = getIpAddressHash(remoteAddressExtractorService.extractRemoteAddress(request))
+      val address = remoteAddressExtractorService.extractRemoteAddress(request)
+      val ipHash = getIpAddressHash(address)
+
       if (banListRepository.isBanned(IpHash(ipHash))) {
         logger.error("User is banned. ipHash = $ipHash")
         return formatResponse(HttpStatus.FORBIDDEN, UploadPhotoResponse.fail(ErrorCode.YouAreBanned))

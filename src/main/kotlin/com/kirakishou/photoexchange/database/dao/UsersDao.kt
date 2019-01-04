@@ -55,6 +55,11 @@ open class UsersDao {
     } == 1
   }
 
+  open fun testFindAll(): List<UserEntity> {
+    return Users.selectAll()
+      .map { resultRow -> UserEntity.fromResultRow(resultRow) }
+  }
+
   /**
    * User must have this userUuid
    * */

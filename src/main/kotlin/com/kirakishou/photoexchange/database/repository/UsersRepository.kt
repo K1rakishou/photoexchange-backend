@@ -31,7 +31,7 @@ open class UsersRepository(
     return userUuid
   }
 
-  suspend fun createNew(): User {
+  open suspend fun createNew(): User {
     return dbQuery(User.empty()) {
       val userUuid = generateUserUuid()
 
@@ -47,23 +47,38 @@ open class UsersRepository(
 
   open suspend fun getFirebaseToken(userUuid: UserUuid): FirebaseToken {
     return dbQuery(FirebaseToken.empty()) {
-      return@dbQuery usersDao.getUser(userUuid).firebaseToken
+      val user = usersDao.getUser(userUuid)
+      if (user.isEmpty()) {
+        return@dbQuery FirebaseToken.empty()
+      }
+
+      return@dbQuery user.firebaseToken
     }
   }
 
   open suspend fun getUserUuidByUserId(userId: UserId): UserUuid {
     return dbQuery(UserUuid.empty()) {
-      return@dbQuery usersDao.getUser(userId).userUuid
+      val user = usersDao.getUser(userId)
+      if (user.isEmpty()) {
+        return@dbQuery UserUuid.empty()
+      }
+
+      return@dbQuery user.userUuid
     }
   }
 
   open suspend fun getUserIdByUserUuid(userUuid: UserUuid): UserId {
     return dbQuery(UserId.empty()) {
-      return@dbQuery usersDao.getUser(userUuid).userId
+      val user = usersDao.getUser(userUuid)
+      if (user.isEmpty()) {
+        return@dbQuery UserId.empty()
+      }
+
+      return@dbQuery user.userId
     }
   }
 
-  suspend fun updateFirebaseToken(userUuid: UserUuid, newToken: FirebaseToken): Boolean {
+  open suspend fun updateFirebaseToken(userUuid: UserUuid, newToken: FirebaseToken): Boolean {
     return dbQuery(false) {
       return@dbQuery usersDao.updateFirebaseToken(userUuid, newToken)
     }

@@ -82,7 +82,7 @@ abstract class AbstractTest {
       generator,
       diskManipulationService,
       database,
-      Dispatchers.Unconfined
+      Dispatchers.IO
     )
   )
 
@@ -94,8 +94,6 @@ abstract class AbstractTest {
   val PHOTO2 = "test_photos/photo_2.jpg"
   val PHOTO3 = "test_photos/photo_3.jpg"
   val PHOTO4 = "test_photos/photo_4.jpg"
-  val PHOTO5 = "test_photos/photo_5.jpg"
-  val PHOTO6 = "test_photos/photo_6.jpg"
   val BIG_PHOTO = "test_photos/big_photo.png"
 
   val ipAddress = "127.0.0.1"

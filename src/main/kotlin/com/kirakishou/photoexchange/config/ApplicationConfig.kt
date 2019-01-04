@@ -25,113 +25,194 @@ import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.server.HandlerStrategies
 import org.springframework.web.reactive.function.server.RouterFunctions
 
-fun myBeans(adminToken: String) = beans {
-  //router
-  bean<Router>()
+object ApplicationConfig {
+  const val COROUTINE_SCHEDULER_DEFAULT_NAME = "default"
+  const val COROUTINE_SCHEDULER_IO_NAME = "io"
+  const val COROUTINE_SCHEDULER_MAP_DOWNLOADER_NAME = "map-downloader"
+  const val COROUTINE_SCHEDULER_PUSH_SENDER_NAME = "push-sender"
+  const val COROUTINE_SCHEDULER_GOOGLE_TOKEN_REFRESHER_NAME = "google-token-refresher"
 
-  bean { WebClient.builder().build() }
-  bean { GsonBuilder().excludeFieldsWithoutExposeAnnotation().create() }
-  bean<DatabaseFactory>()
 
-  //dao
-  bean { AdminInfoRepository(adminToken) }
-  bean<PhotosDao>()
-  bean<GalleryPhotosDao>()
-  bean<FavouritedPhotosDao>()
-  bean<ReportedPhotosDao>()
-  bean<UsersDao>()
-  bean<LocationMapsDao>()
-  bean<BansDao>()
+  fun initBeans(adminToken: String) = beans {
+    //router
+    bean<Router>()
 
-  //dispatchers
-  bean("IO") {
-    Dispatchers.IO
-  }
-  bean("map-downloader") {
-    newFixedThreadPoolContext(4, "map-downloader")
-  }
-  bean("push-sender") {
-    newFixedThreadPoolContext(4, "push-sender")
-  }
-  bean("google-token-refresher") {
-    newFixedThreadPoolContext(1, "google-token-refresher")
-  }
+    bean { WebClient.builder().build() }
+    bean { GsonBuilder().excludeFieldsWithoutExposeAnnotation().create() }
+    bean<DatabaseFactory>()
 
-  //repository
-  bean {
-    PhotosRepository(ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref<DatabaseFactory>().db, ref("IO"))
-  }
-  bean {
-    UsersRepository(ref(), ref(), ref<DatabaseFactory>().db, ref("IO"))
-  }
-  bean {
-    LocationMapRepository(ref(), ref(), ref<DatabaseFactory>().db, ref("IO"))
-  }
-  bean {
-    BanListRepository(ref(), ref<DatabaseFactory>().db, ref("IO"))
-  }
+    //dao
+    bean { AdminInfoRepository(adminToken) }
+    bean<PhotosDao>()
+    bean<GalleryPhotosDao>()
+    bean<FavouritedPhotosDao>()
+    bean<ReportedPhotosDao>()
+    bean<UsersDao>()
+    bean<LocationMapsDao>()
+    bean<BansDao>()
 
-  //service
-  bean {
-    StaticMapDownloaderService(ref(), ref(), ref(), ref(), ref("map-downloader")).also { it.init() }
-  }
-  bean {
-    PushNotificationSenderService(ref(), ref(), ref(), ref(), ref(), ref("push-sender"))
-  }
-  bean {
-    GoogleCredentialsService(ref("google-token-refresher"))
-  }
+    //dispatchers
+    bean(COROUTINE_SCHEDULER_DEFAULT_NAME) {
+      newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), COROUTINE_SCHEDULER_DEFAULT_NAME)
+    }
+    bean(COROUTINE_SCHEDULER_IO_NAME) {
+      Dispatchers.IO
+    }
+    bean(COROUTINE_SCHEDULER_MAP_DOWNLOADER_NAME) {
+      newFixedThreadPoolContext(4, COROUTINE_SCHEDULER_MAP_DOWNLOADER_NAME)
+    }
+    bean(COROUTINE_SCHEDULER_PUSH_SENDER_NAME) {
+      newFixedThreadPoolContext(4, COROUTINE_SCHEDULER_PUSH_SENDER_NAME)
+    }
+    bean(COROUTINE_SCHEDULER_GOOGLE_TOKEN_REFRESHER_NAME) {
+      newFixedThreadPoolContext(1, COROUTINE_SCHEDULER_GOOGLE_TOKEN_REFRESHER_NAME)
+    }
 
-  bean { JsonConverterService(ref()) }
-  bean<GeneratorService>()
-  bean<RemoteAddressExtractorService>()
-  bean<DiskManipulationService>()
-  bean<WebClientService>()
-  bean {
-    CleanupService(
-      ref(),
-      ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL,
-      ServerSettings.UPLOADED_OLDER_THAN_TIME_DELTA,
-      ServerSettings.DELETED_EARLIER_THAN_TIME_DELTA
-    ).also { GlobalScope.launch { it.startCleaningRoutine() } }
-  }
+    //repository
+    bean {
+      PhotosRepository(
+        ref(),
+        ref(),
+        ref(),
+        ref(),
+        ref(),
+        ref(),
+        ref(),
+        ref(),
+        ref<DatabaseFactory>().db,
+        ref(COROUTINE_SCHEDULER_IO_NAME)
+      )
+    }
+    bean {
+      UsersRepository(ref(), ref(), ref<DatabaseFactory>().db, ref(COROUTINE_SCHEDULER_IO_NAME))
+    }
+    bean {
+      LocationMapRepository(ref(), ref(), ref<DatabaseFactory>().db, ref(COROUTINE_SCHEDULER_IO_NAME))
+    }
+    bean {
+      BanListRepository(ref(), ref<DatabaseFactory>().db, ref(COROUTINE_SCHEDULER_IO_NAME))
+    }
 
-  //handler
-  bean<UploadPhotoHandler>()
-  bean<ReceivePhotosHandler>()
-  bean<GetPhotoHandler>()
-  bean<GetGalleryPhotosHandler>()
-  bean<FavouritePhotoHandler>()
-  bean<ReportPhotoHandler>()
-  bean<GetUserUuidHandler>()
-  bean<GetUploadedPhotosHandler>()
-  bean<GetReceivedPhotosHandler>()
-  bean<GetStaticMapHandler>()
-  bean<CheckAccountExistsHandler>()
-  bean<UpdateFirebaseTokenHandler>()
-  bean<GetFreshGalleryPhotosCountHandler>()
-  bean<GetFreshUploadedPhotosCountHandler>()
-  bean<GetFreshReceivedPhotosCountHandler>()
-  bean<BanPhotoHandler>()
-  bean<BanUserHandler>()
-  bean<StartCleanupHandler>()
-  bean<GetPhotosAdditionalInfoHandler>()
-  bean<BanUserAndAllTheirPhotosHandler>()
+    //service
+    bean {
+      StaticMapDownloaderService(
+        ref(),
+        ref(),
+        ref(),
+        ref(),
+        ref(COROUTINE_SCHEDULER_MAP_DOWNLOADER_NAME)
+      ).also { it.init() }
+    }
+    bean {
+      PushNotificationSenderService(ref(), ref(), ref(), ref(), ref(), ref(COROUTINE_SCHEDULER_PUSH_SENDER_NAME))
+    }
+    bean {
+      GoogleCredentialsService(ref(COROUTINE_SCHEDULER_GOOGLE_TOKEN_REFRESHER_NAME))
+    }
 
-  //etc
-  bean("webHandler") {
-    RouterFunctions.toWebHandler(
-      ref<Router>().setUpRouter(),
-      HandlerStrategies.builder().viewResolver(ref()).build()
-    )
-  }
-  bean {
-    val prefix = "classpath:/templates/"
-    val suffix = ".mustache"
-    val loader = MustacheResourceTemplateLoader(prefix, suffix)
-    MustacheViewResolver(Mustache.compiler().withLoader(loader)).apply {
-      setPrefix(prefix)
-      setSuffix(suffix)
+    bean { JsonConverterService(ref()) }
+    bean<GeneratorService>()
+    bean<RemoteAddressExtractorService>()
+    bean<DiskManipulationService>()
+    bean<WebClientService>()
+    bean {
+      CleanupService(
+        ref(),
+        ServerSettings.OLD_PHOTOS_CLEANUP_ROUTINE_INTERVAL,
+        ServerSettings.UPLOADED_OLDER_THAN_TIME_DELTA,
+        ServerSettings.DELETED_EARLIER_THAN_TIME_DELTA
+      ).also { GlobalScope.launch { it.startCleaningRoutine() } }
+    }
+
+    //handler
+    bean {
+      UploadPhotoHandler(
+        ref(),
+        ref(),
+        ref(),
+        ref(),
+        ref(),
+        ref(),
+        ref(),
+        ref(),
+        ref(COROUTINE_SCHEDULER_DEFAULT_NAME),
+        ref()
+      )
+    }
+    bean {
+      ReceivePhotosHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      GetPhotoHandler(ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      GetGalleryPhotosHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      FavouritePhotoHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      ReportPhotoHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      GetUserUuidHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      GetUploadedPhotosHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      GetReceivedPhotosHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      GetStaticMapHandler(ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      CheckAccountExistsHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      UpdateFirebaseTokenHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      GetFreshGalleryPhotosCountHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      GetFreshUploadedPhotosCountHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      GetFreshReceivedPhotosCountHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      BanPhotoHandler(ref(), ref(), ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      BanUserHandler(ref(), ref(), ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      StartCleanupHandler(ref(), ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      GetPhotosAdditionalInfoHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+    bean {
+      BanUserAndAllTheirPhotosHandler(ref(), ref(), ref(), ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+    }
+
+    //etc
+    bean("webHandler") {
+      RouterFunctions.toWebHandler(
+        ref<Router>().setUpRouter(),
+        HandlerStrategies.builder().viewResolver(ref()).build()
+      )
+    }
+    bean {
+      val prefix = "classpath:/templates/"
+      val suffix = ".mustache"
+      val loader = MustacheResourceTemplateLoader(prefix, suffix)
+      MustacheViewResolver(Mustache.compiler().withLoader(loader)).apply {
+        setPrefix(prefix)
+        setSuffix(suffix)
+      }
     }
   }
+
 }
