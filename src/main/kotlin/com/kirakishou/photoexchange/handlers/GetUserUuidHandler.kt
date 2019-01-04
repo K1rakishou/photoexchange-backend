@@ -4,6 +4,7 @@ import com.kirakishou.photoexchange.database.repository.UsersRepository
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactor.mono
 import net.response.GetUserUuidResponse
 import org.slf4j.LoggerFactory
@@ -13,9 +14,10 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
 
 class GetUserUuidHandler(
-  jsonConverter: JsonConverterService,
-  private val usersRepository: UsersRepository
-) : AbstractWebHandler(jsonConverter) {
+  private val usersRepository: UsersRepository,
+  dispatcher: CoroutineDispatcher,
+  jsonConverter: JsonConverterService
+) : AbstractWebHandler(dispatcher, jsonConverter) {
   private val logger = LoggerFactory.getLogger(GetUserUuidHandler::class.java)
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {

@@ -1,8 +1,8 @@
 package com.kirakishou.photoexchange.handlers.base
 
 import com.kirakishou.photoexchange.service.JsonConverterService
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -13,12 +13,13 @@ import reactor.core.publisher.Mono
 import kotlin.coroutines.CoroutineContext
 
 abstract class AbstractWebHandler(
+  protected val dispatcher: CoroutineDispatcher,
   protected val jsonConverter: JsonConverterService
 ) : CoroutineScope {
   private val job = Job()
 
   final override val coroutineContext: CoroutineContext
-    get() = job + Dispatchers.Default
+    get() = job + dispatcher
 
   abstract fun handle(request: ServerRequest): Mono<ServerResponse>
 

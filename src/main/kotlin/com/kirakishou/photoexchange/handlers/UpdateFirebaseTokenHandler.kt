@@ -7,6 +7,7 @@ import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import core.SharedConstants
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactor.mono
 import net.request.UpdateFirebaseTokenPacket
@@ -20,9 +21,9 @@ import reactor.core.publisher.Mono
 
 class UpdateFirebaseTokenHandler(
   private val usersRepository: UsersRepository,
-  jsonConverterService: JsonConverterService
-) : AbstractWebHandler(jsonConverterService) {
-
+  dispatcher: CoroutineDispatcher,
+  jsonConverter: JsonConverterService
+) : AbstractWebHandler(dispatcher, jsonConverter) {
   private val logger = LoggerFactory.getLogger(UpdateFirebaseTokenHandler::class.java)
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {

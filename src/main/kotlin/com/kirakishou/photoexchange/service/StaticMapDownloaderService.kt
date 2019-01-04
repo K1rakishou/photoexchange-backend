@@ -113,7 +113,7 @@ open class StaticMapDownloaderService(
     try {
       val photo = photosRepository.findOneById(locationMap.photoId)
       if (photo.isEmpty()) {
-        throw CouldNotFindPhotoInfo("Could not find photoInfo with photoId = ${locationMap.photoId}")
+        throw CouldNotFindPhotoInfo("Could not find photoInfo with photoId = ${locationMap.photoId.id}")
       }
 
       if (photo.isAnonymous()) {
@@ -185,9 +185,9 @@ open class StaticMapDownloaderService(
 
     try {
       diskManipulationService.replaceMapOnDiskWithNoMapAvailablePlaceholder(photoInfo.photoName)
-      logger.debug("Successfully updated location map as failed for photo (${photoInfo.photoName})")
+      logger.debug("Successfully updated location map as failed for photo (${photoInfo.photoName.name})")
     } catch (error: Throwable) {
-      logger.error("Could not replace map with placeholder for photo with name (${photoInfo.photoName})", error)
+      logger.error("Could not replace map with placeholder for photo with name (${photoInfo.photoName.name})", error)
     }
   }
 

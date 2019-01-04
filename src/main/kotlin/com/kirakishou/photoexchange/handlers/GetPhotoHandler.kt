@@ -7,6 +7,7 @@ import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.SharedConstants
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactor.mono
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.FileSystemResource
@@ -21,8 +22,9 @@ import reactor.core.publisher.Mono
 import java.io.File
 
 class GetPhotoHandler(
+  dispatcher: CoroutineDispatcher,
   jsonConverter: JsonConverterService
-) : AbstractWebHandler(jsonConverter) {
+) : AbstractWebHandler(dispatcher, jsonConverter) {
   private val logger = LoggerFactory.getLogger(GetPhotoHandler::class.java)
   private val readChuckSize = 16384
 

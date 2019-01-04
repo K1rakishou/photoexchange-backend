@@ -13,6 +13,7 @@ import com.kirakishou.photoexchange.service.DiskManipulationService
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import core.SharedConstants
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactor.mono
 import net.response.BanUserAndAllTheirPhotosResponse
 import org.slf4j.LoggerFactory
@@ -22,12 +23,13 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
 
 class BanUserAndAllTheirPhotosHandler(
-  jsonConverter: JsonConverterService,
   private val photosRepository: PhotosRepository,
   private val adminInfoRepository: AdminInfoRepository,
   private val banListRepository: BanListRepository,
-  private val diskManipulationService: DiskManipulationService
-) : AbstractWebHandler(jsonConverter) {
+  private val diskManipulationService: DiskManipulationService,
+  dispatcher: CoroutineDispatcher,
+  jsonConverter: JsonConverterService
+) : AbstractWebHandler(dispatcher, jsonConverter) {
   private val logger = LoggerFactory.getLogger(BanUserAndAllTheirPhotosHandler::class.java)
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {

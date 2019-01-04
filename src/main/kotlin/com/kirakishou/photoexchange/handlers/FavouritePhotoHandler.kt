@@ -3,11 +3,11 @@ package com.kirakishou.photoexchange.handlers
 import com.kirakishou.photoexchange.core.PhotoName
 import com.kirakishou.photoexchange.core.UserUuid
 import com.kirakishou.photoexchange.database.repository.PhotosRepository
-import com.kirakishou.photoexchange.database.repository.UsersRepository
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import core.SharedConstants
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.mono
 import net.request.FavouritePhotoPacket
@@ -20,10 +20,10 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
 
 class FavouritePhotoHandler(
-  jsonConverter: JsonConverterService,
   private val photosRepository: PhotosRepository,
-  private val usersRepository: UsersRepository
-) : AbstractWebHandler(jsonConverter) {
+  dispatcher: CoroutineDispatcher,
+  jsonConverter: JsonConverterService
+) : AbstractWebHandler(dispatcher, jsonConverter) {
   private val logger = LoggerFactory.getLogger(FavouritePhotoHandler::class.java)
 
   override fun handle(request: ServerRequest): Mono<ServerResponse> {

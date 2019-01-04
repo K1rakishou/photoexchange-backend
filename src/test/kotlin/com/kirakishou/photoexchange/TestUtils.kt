@@ -8,6 +8,7 @@ object TestUtils {
 
   fun createPhoto(
     photoId: Long,
+    exchangeState: ExchangeState,
     userId: Long,
     exchangedPhotoId: Long,
     locationMapId: Long,
@@ -21,6 +22,7 @@ object TestUtils {
   ): Photo {
     return Photo(
       PhotoId(photoId),
+      exchangeState,
       UserId(userId),
       ExchangedPhotoId(exchangedPhotoId),
       LocationMapId(locationMapId),
@@ -65,6 +67,7 @@ object TestUtils {
 
       resultList += Photo(
         PhotoId(currentPhotoId),
+        ExchangeState.Exchanged,
         UserId(userIdList[i % 2]),
         ExchangedPhotoId(exchangedPhotoId),
         LocationMapId(locationMapId + 1),
@@ -79,6 +82,7 @@ object TestUtils {
 
       resultList += Photo(
         PhotoId(exchangedPhotoId),
+        ExchangeState.Exchanged,
         UserId(userIdList[(i + 1) % 2]),
         ExchangedPhotoId(currentPhotoId),
         LocationMapId(locationMapId + 2),

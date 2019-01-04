@@ -2,6 +2,7 @@ package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.TestUtils.createPhoto
+import com.kirakishou.photoexchange.core.ExchangeState
 import com.kirakishou.photoexchange.core.UserUuid
 import com.kirakishou.photoexchange.database.entity.PhotoEntity
 import com.kirakishou.photoexchange.database.repository.PhotosRepository
@@ -9,6 +10,7 @@ import com.kirakishou.photoexchange.routers.Router
 import com.kirakishou.photoexchange.service.JsonConverterService
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
+import kotlinx.coroutines.Dispatchers
 import net.response.GetUploadedPhotosResponse
 import org.junit.After
 import org.junit.Before
@@ -25,7 +27,11 @@ class GetUploadedPhotosHandlerTest : AbstractTest() {
 
   private fun getWebTestClient(jsonConverterService: JsonConverterService,
                                photosRepository: PhotosRepository): WebTestClient {
-    val handler = GetUploadedPhotosHandler(jsonConverterService, photosRepository)
+    val handler = GetUploadedPhotosHandler(
+      photosRepository,
+      Dispatchers.Unconfined,
+      jsonConverterService
+    )
 
     return WebTestClient.bindToRouterFunction(router {
       "/v1".nest {
@@ -60,23 +66,23 @@ class GetUploadedPhotosHandlerTest : AbstractTest() {
       assertEquals(1, usersDao.save(UserUuid("111")).userId.id)
       assertEquals(2, usersDao.save(UserUuid("222")).userId.id)
 
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(1, 1L, 9, -1L, "photo1", true, 11.1, 11.1, 1L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(2, 1L, 10, -1L, "photo2", true, 11.1, 11.1, 2L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(3, 1L, 11, -1L, "photo3", true, 11.1, 11.1, 3L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(4, 1L, 12, -1L, "photo4", true, 11.1, 11.1, 4L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(5, 1L, 13, -1L, "photo5", true, 11.1, 11.1, 5L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(6, 1L, 14, -1L, "photo6", true, 11.1, 11.1, 6L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(7, 1L, 15, -1L, "photo7", true, 11.1, 11.1, 7L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(8, 1L, 16, -1L, "photo8", true, 11.1, 11.1, 8L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(1, ExchangeState.ReadyToExchange, 1L, 9, -1L, "photo1", true, 11.1, 11.1, 1L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(2, ExchangeState.ReadyToExchange, 1L, 10, -1L, "photo2", true, 11.1, 11.1, 2L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(3, ExchangeState.ReadyToExchange, 1L, 11, -1L, "photo3", true, 11.1, 11.1, 3L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(4, ExchangeState.ReadyToExchange, 1L, 12, -1L, "photo4", true, 11.1, 11.1, 4L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(5, ExchangeState.ReadyToExchange, 1L, 13, -1L, "photo5", true, 11.1, 11.1, 5L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(6, ExchangeState.ReadyToExchange, 1L, 14, -1L, "photo6", true, 11.1, 11.1, 6L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(7, ExchangeState.ReadyToExchange, 1L, 15, -1L, "photo7", true, 11.1, 11.1, 7L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(8, ExchangeState.ReadyToExchange, 1L, 16, -1L, "photo8", true, 11.1, 11.1, 8L, 0L, "123")))
 
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(9, 2L, 1, -1L, "photo9", true, 22.2, 22.2, 1L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(10, 2L, 2, -1L, "photo10", true, 22.2, 22.2, 2L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(11, 2L, 3, -1L, "photo11", true, 22.2, 22.2, 3L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(12, 2L, 4, -1L, "photo12", true, 22.2, 22.2, 4L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(13, 2L, 5, -1L, "photo13", true, 22.2, 22.2, 5L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(14, 2L, 6, -1L, "photo14", true, 22.2, 22.2, 6L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(15, 2L, 7, -1L, "photo15", true, 22.2, 22.2, 7L, 0L, "123")))
-      photosDao.save(PhotoEntity.fromPhoto(createPhoto(16, 2L, 8, -1L, "photo16", true, 22.2, 22.2, 8L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(9,  ExchangeState.ReadyToExchange, 2L, 1, -1L, "photo9", true, 22.2, 22.2, 1L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(10, ExchangeState.ReadyToExchange, 2L, 2, -1L, "photo10", true, 22.2, 22.2, 2L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(11, ExchangeState.ReadyToExchange, 2L, 3, -1L, "photo11", true, 22.2, 22.2, 3L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(12, ExchangeState.ReadyToExchange, 2L, 4, -1L, "photo12", true, 22.2, 22.2, 4L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(13, ExchangeState.ReadyToExchange, 2L, 5, -1L, "photo13", true, 22.2, 22.2, 5L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(14, ExchangeState.ReadyToExchange, 2L, 6, -1L, "photo14", true, 22.2, 22.2, 6L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(15, ExchangeState.ReadyToExchange, 2L, 7, -1L, "photo15", true, 22.2, 22.2, 7L, 0L, "123")))
+      photosDao.save(PhotoEntity.fromPhoto(createPhoto(16, ExchangeState.ReadyToExchange, 2L, 8, -1L, "photo16", true, 22.2, 22.2, 8L, 0L, "123")))
     }
 
     kotlin.run {

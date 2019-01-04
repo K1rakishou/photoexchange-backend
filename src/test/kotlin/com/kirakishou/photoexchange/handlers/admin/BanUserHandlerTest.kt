@@ -4,6 +4,7 @@ import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.routers.Router
 import core.ErrorCode
+import kotlinx.coroutines.Dispatchers
 import net.response.BanUserResponse
 import org.junit.After
 import org.junit.Before
@@ -17,10 +18,11 @@ class BanUserHandlerTest : AbstractTest() {
 
   private fun getWebTestClient(): WebTestClient {
     val handler = BanUserHandler(
-      jsonConverterService,
       photosRepository,
       adminInfoRepository,
-      banListRepository
+      banListRepository,
+      Dispatchers.Unconfined,
+      jsonConverterService
     )
 
     return WebTestClient.bindToRouterFunction(router {

@@ -2,12 +2,11 @@ package com.kirakishou.photoexchange.core
 
 import core.SharedConstants
 
-inline class FirebaseToken(val token: String) {
+//TODO: make these classes inlined once that feature is supported by mockito
+data class FirebaseToken(val token: String) {
   fun isDefault() = token == SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN
   fun isEmpty() = token.isEmpty()
   fun isNotEmpty() = !isEmpty()
-
-  override fun toString() = token
 
   companion object {
     fun default(): FirebaseToken = FirebaseToken(SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN)
@@ -15,49 +14,45 @@ inline class FirebaseToken(val token: String) {
   }
 }
 
-inline class PhotoId(val id: Long) {
-  fun isEmpty() = id == -2L
+data class PhotoId(val id: Long) {
+  fun isEmpty() = id == EMPTY_PHOTO_ID
 
   companion object {
-    fun empty(): PhotoId = PhotoId(-2L)
+    const val EMPTY_PHOTO_ID = -1L
+    fun empty(): PhotoId = PhotoId(EMPTY_PHOTO_ID)
   }
 }
 
-inline class UserId(val id: Long) {
-  fun isEmpty() = id == -1L
+data class UserId(val id: Long) {
+  fun isEmpty() = id == EMPTY_USER_ID
 
   companion object {
-    fun empty(): UserId = UserId(-1L)
+    const val EMPTY_USER_ID = -1L
+    fun empty(): UserId = UserId(EMPTY_USER_ID)
   }
 }
 
-inline class ExchangedPhotoId(val id: Long) {
-  /**
-    This is a default exchangedPhotoId when photo is uploading.
-    This is used so other uploading requests won't be able to find this photo to do the exchange
-    Upon successful exchange exchangedPhotoId is set to theirPhoto.photoId
-    Upon unsuccessful exchange (when there are no photos to exchange with) exchangedPhotoId is set to EMPTY_PHOTO_ID
-   */
-  fun isExchanging() = id == -1L
-  fun isEmpty() = id == -2L
+data class ExchangedPhotoId(val id: Long) {
+  fun isEmpty() = id == EMPTY_EXCHANGED_PHOTO_ID
 
   fun toPhotoId(): PhotoId = PhotoId(id)
 
   companion object {
-    fun photoIsExchanging(): ExchangedPhotoId = ExchangedPhotoId(-1L)
-    fun empty(): ExchangedPhotoId = ExchangedPhotoId(-2L)
+    const val EMPTY_EXCHANGED_PHOTO_ID = -1L
+    fun empty(): ExchangedPhotoId = ExchangedPhotoId(EMPTY_EXCHANGED_PHOTO_ID)
   }
 }
 
-inline class LocationMapId(val id: Long) {
-  fun isEmpty() = id == -1L
+data class LocationMapId(val id: Long) {
+  fun isEmpty() = id == EMPTY_LOCATION_MAP_ID
 
   companion object {
-    fun empty(): LocationMapId = LocationMapId(-1L)
+    const val EMPTY_LOCATION_MAP_ID = -1L
+    fun empty(): LocationMapId = LocationMapId(EMPTY_LOCATION_MAP_ID)
   }
 }
 
-inline class PhotoName(val name: String) {
+data class PhotoName(val name: String) {
   fun isEmpty() = name.isEmpty()
 
   override fun toString() = name
@@ -67,7 +62,7 @@ inline class PhotoName(val name: String) {
   }
 }
 
-inline class IpHash(val hash: String) {
+data class IpHash(val hash: String) {
   fun isEmpty() = hash.isEmpty()
 
   override fun toString() = hash
@@ -77,7 +72,7 @@ inline class IpHash(val hash: String) {
   }
 }
 
-inline class UserUuid(val uuid: String) {
+data class UserUuid(val uuid: String) {
   fun isEmpty() = uuid.isEmpty()
 
   override fun toString() = uuid
@@ -87,7 +82,7 @@ inline class UserUuid(val uuid: String) {
   }
 }
 
-inline class FavouritedPhotoId(val id: Long) {
+data class FavouritedPhotoId(val id: Long) {
   fun isEmpty() = id == -1L
 
   companion object {
@@ -95,7 +90,7 @@ inline class FavouritedPhotoId(val id: Long) {
   }
 }
 
-inline class ReportedPhotoId(val id: Long) {
+data class ReportedPhotoId(val id: Long) {
   fun isEmpty() = id == -1L
 
   companion object {
@@ -103,7 +98,7 @@ inline class ReportedPhotoId(val id: Long) {
   }
 }
 
-inline class GalleryPhotoId(val id: Long) {
+data class GalleryPhotoId(val id: Long) {
   fun isEmpty() = id == -1L
 
   companion object {
@@ -111,7 +106,7 @@ inline class GalleryPhotoId(val id: Long) {
   }
 }
 
-inline class BanId(val id: Long) {
+data class BanId(val id: Long) {
   fun isEmpty() = id == -1L
 
   companion object {

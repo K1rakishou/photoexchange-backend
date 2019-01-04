@@ -2,6 +2,7 @@ package com.kirakishou.photoexchange.core
 
 data class Photo(
   val photoId: PhotoId,
+  val exchangeState: ExchangeState,
   val userId: UserId,
   val exchangedPhotoId: ExchangedPhotoId,
   val locationMapId: LocationMapId,
@@ -24,6 +25,7 @@ data class Photo(
     fun empty(): Photo {
       return Photo(
         PhotoId.empty(),
+        ExchangeState.ReadyToExchange,
         UserId.empty(),
         ExchangedPhotoId.empty(),
         LocationMapId.empty(),

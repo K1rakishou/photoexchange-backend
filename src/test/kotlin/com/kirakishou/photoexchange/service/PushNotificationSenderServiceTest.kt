@@ -2,8 +2,8 @@ package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.TestUtils.createPhoto
-import com.kirakishou.photoexchange.core.Photo
-import com.nhaarman.mockito_kotlin.any
+import com.kirakishou.photoexchange.core.*
+import com.nhaarman.mockitokotlin2.any
 import core.SharedConstants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -26,12 +26,10 @@ class PushNotificationSenderServiceTest : AbstractTest() {
   )
 
   private val BAD_FIREBASE_TOKEN = SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN
-  private val GOOD_FIREBASE_TOKEN = "4234234"
-  private val BAD_GOOGLE_TOKEN = ""
-  private val GOOD_GOOGLE_TOKEN = "tttttttttt"
 
   private val photoInfo1 = createPhoto(
     1L,
+    ExchangeState.ReadyToExchange,
     1L,
     2L,
     1L,
@@ -45,6 +43,7 @@ class PushNotificationSenderServiceTest : AbstractTest() {
   )
   private val photoInfo2 = createPhoto(
     2L,
+    ExchangeState.ReadyToExchange,
     2L,
     1L,
     2L,
@@ -82,11 +81,13 @@ class PushNotificationSenderServiceTest : AbstractTest() {
 
   @Test
   fun `should not send push if could not get google token`() {
+    dbQuery {
+      usersDao.save(UserUuid("111"))
+    }
+
     runBlocking {
-      Mockito.doReturn(GOOD_FIREBASE_TOKEN)
-        .`when`(usersRepository).getFirebaseToken(any())
-      Mockito.doReturn(BAD_GOOGLE_TOKEN)
-        .`when`(googleCredentialsService).getAccessToken()
+      Mockito.doReturn(FirebaseToken("test_token")).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn("").`when`(googleCredentialsService).getAccessToken()
 
       pushNotificationSenderService.enqueue(photoInfo1)
 
@@ -98,12 +99,9 @@ class PushNotificationSenderServiceTest : AbstractTest() {
   @Test
   fun `should not send push if exchanged photo has already been deleted`() {
     runBlocking {
-      Mockito.doReturn(GOOD_FIREBASE_TOKEN)
-        .`when`(usersRepository).getFirebaseToken(any())
-      Mockito.doReturn(GOOD_GOOGLE_TOKEN)
-        .`when`(googleCredentialsService).getAccessToken()
-      Mockito.doReturn(Photo.empty())
-        .`when`(photosRepository).findOneById(any())
+      Mockito.doReturn(FirebaseToken("test_token")).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn("").`when`(googleCredentialsService).getAccessToken()
+      Mockito.doReturn(Photo.empty()).`when`(photosRepository).findOneById(any())
 
       pushNotificationSenderService.enqueue(photoInfo1)
 
@@ -120,14 +118,11 @@ class PushNotificationSenderServiceTest : AbstractTest() {
   @Test
   fun `should send push`() {
     runBlocking {
-      Mockito.doReturn(GOOD_FIREBASE_TOKEN)
-        .`when`(usersRepository).getFirebaseToken(any())
-      Mockito.doReturn(GOOD_GOOGLE_TOKEN)
-        .`when`(googleCredentialsService).getAccessToken()
-      Mockito.doReturn(photoInfo2)
-        .`when`(photosRepository).findOneById(any())
-      Mockito.doReturn(Mono.just(true))
-        .`when`(webClientService).sendPushNotification(Mockito.anyString(), Mockito.anyString(), Mockito.anyLong())
+      Mockito.doReturn(UserUuid("111")).`when`(usersRepository).getUserUuidByUserId(UserId(1L))
+      Mockito.doReturn(FirebaseToken("test_token")).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn("test").`when`(googleCredentialsService).getAccessToken()
+      Mockito.doReturn(photoInfo2).`when`(photosRepository).findOneById(any())
+      Mockito.doReturn(Mono.just(true)).`when`(webClientService).sendPushNotification(Mockito.anyString(), Mockito.anyString(), Mockito.anyLong())
 
       pushNotificationSenderService.enqueue(photoInfo1)
 

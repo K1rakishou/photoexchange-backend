@@ -10,6 +10,7 @@ open class PhotosDao {
   open fun save(photoEntity: PhotoEntity): PhotoEntity {
     val id = Photos.insert {
       it[Photos.userId] = photoEntity.userId.id
+      it[Photos.exchangeState] = photoEntity.exchangeState.state
       it[Photos.exchangedPhotoId] = photoEntity.exchangedPhotoId.id
       it[Photos.locationMapId] = photoEntity.locationMapId.id
       it[Photos.photoName] = photoEntity.photoName.name
@@ -38,9 +39,9 @@ open class PhotosDao {
       ?: PhotoEntity.empty()
   }
 
-  open fun updatePhotoAsEmpty(photoId: PhotoId): Boolean {
+  open fun updateExchangeState(photoId: PhotoId, newExchangeState: ExchangeState): Boolean {
     return Photos.update({ withPhotoId(photoId) }) {
-      it[Photos.exchangedPhotoId] = ExchangedPhotoId.empty().id
+      it[Photos.exchangeState] = newExchangeState.state
     } == 1
   }
 
@@ -306,14 +307,15 @@ open class PhotosDao {
    * Photo must not be exchanged photo
    * */
   private fun SqlExpressionBuilder.notExchanged(): Op<Boolean> {
-    return Photos.exchangedPhotoId.eq(ExchangedPhotoId.empty().id)
+    return Photos.exchangeState.eq(ExchangeState.ReadyToExchange.state) and
+      Photos.exchangedPhotoId.eq(ExchangedPhotoId.EMPTY_EXCHANGED_PHOTO_ID)
   }
 
   /**
    * Photo must be exchanged
    * */
   private fun SqlExpressionBuilder.exchanged(): Op<Boolean> {
-    return Photos.exchangedPhotoId.greater(0L)
+    return Photos.exchangeState.eq(ExchangeState.Exchanged.state)
   }
 
   /**

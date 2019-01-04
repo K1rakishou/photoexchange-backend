@@ -6,6 +6,7 @@ import org.jetbrains.exposed.sql.ResultRow
 
 data class PhotoEntity(
   val photoId: PhotoId,
+  val exchangeState: ExchangeState,
   val userId: UserId,
   val exchangedPhotoId: ExchangedPhotoId,
   val locationMapId: LocationMapId,
@@ -26,6 +27,7 @@ data class PhotoEntity(
   fun toPhoto(): Photo {
     return Photo(
       photoId,
+      exchangeState,
       userId,
       exchangedPhotoId,
       locationMapId,
@@ -52,8 +54,9 @@ data class PhotoEntity(
     ): PhotoEntity {
       return PhotoEntity(
         PhotoId.empty(),
+        ExchangeState.ReadyToExchange,
         userId,
-        ExchangedPhotoId.photoIsExchanging(),
+        ExchangedPhotoId.empty(),
         LocationMapId.empty(),
         photoName,
         isPublic,
@@ -68,6 +71,7 @@ data class PhotoEntity(
     fun empty(): PhotoEntity {
       return PhotoEntity(
         PhotoId.empty(),
+        ExchangeState.ReadyToExchange,
         UserId.empty(),
         ExchangedPhotoId.empty(),
         LocationMapId.empty(),
@@ -84,6 +88,7 @@ data class PhotoEntity(
     fun fromResultRow(resultRow: ResultRow): PhotoEntity {
       return PhotoEntity(
         PhotoId(resultRow[Photos.id]),
+        ExchangeState.fromInt(resultRow[Photos.exchangeState]),
         UserId(resultRow[Photos.userId]),
         ExchangedPhotoId(resultRow[Photos.exchangedPhotoId]),
         LocationMapId(resultRow[Photos.locationMapId]),
@@ -100,6 +105,7 @@ data class PhotoEntity(
     fun fromPhoto(photo: Photo): PhotoEntity {
       return PhotoEntity(
         photo.photoId,
+        photo.exchangeState,
         photo.userId,
         photo.exchangedPhotoId,
         photo.locationMapId,

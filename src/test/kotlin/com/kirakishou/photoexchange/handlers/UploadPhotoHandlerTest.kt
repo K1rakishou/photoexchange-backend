@@ -1,15 +1,14 @@
 package com.kirakishou.photoexchange.handlers
 
 import com.kirakishou.photoexchange.AbstractTest
-import com.kirakishou.photoexchange.core.FirebaseToken
-import com.kirakishou.photoexchange.core.LocationMapId
-import com.kirakishou.photoexchange.core.PhotoId
-import com.kirakishou.photoexchange.core.UserUuid
+import com.kirakishou.photoexchange.core.*
+import com.kirakishou.photoexchange.database.entity.PhotoEntity
 import com.kirakishou.photoexchange.service.PushNotificationSenderService
 import com.kirakishou.photoexchange.service.StaticMapDownloaderService
-import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockitokotlin2.any
 import core.ErrorCode
 import junit.framework.Assert.assertEquals
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import net.request.UploadPhotoPacket
 import net.response.UploadPhotoResponse
@@ -28,7 +27,9 @@ import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import java.io.IOException
 import java.time.Duration
+import java.util.*
 import java.util.concurrent.Executors
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 @RunWith(SpringJUnit4ClassRunner::class)
@@ -38,7 +39,6 @@ class UploadPhotoHandlerTest : AbstractTest() {
 
   private fun getWebTestClient(): WebTestClient {
     val handler = UploadPhotoHandler(
-      jsonConverterService,
       photosRepository,
       usersRepository,
       banListRepository,
@@ -46,7 +46,9 @@ class UploadPhotoHandlerTest : AbstractTest() {
       pushNotificationSenderService,
       remoteAddressExtractorService,
       diskManipulationService,
-      cleanupService
+      cleanupService,
+      Dispatchers.Unconfined,
+      jsonConverterService
     )
 
     return WebTestClient.bindToRouterFunction(router {
@@ -58,8 +60,7 @@ class UploadPhotoHandlerTest : AbstractTest() {
         }
       }
     })
-      .configureClient()
-      .responseTimeout(Duration.ofMillis(1_000_000))
+      .configureClient().responseTimeout(Duration.ofMinutes(1))
       .build()
   }
 
@@ -76,19 +77,23 @@ class UploadPhotoHandlerTest : AbstractTest() {
   @Test
   fun `photo should not be uploaded if could not enqueue static map downloading request`() {
     val webClient = getWebTestClient()
-    val userUuid = UserUuid("1234235236")
-    val token = FirebaseToken("fwerwe")
+    val token = FirebaseToken("test_token")
+    val user1uuid = UserUuid("111")
 
     runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(any())).thenReturn(false)
-      Mockito.`when`(usersRepository.accountExists(userUuid)).thenReturn(true)
-      Mockito.`when`(usersRepository.getFirebaseToken(any())).thenReturn(token)
-      Mockito.`when`(staticMapDownloaderService.enqueue(any())).thenReturn(false)
+      dbQuery {
+        usersDao.save(user1uuid)
+      }
+
+      Mockito.doReturn(ipAddress).`when`(remoteAddressExtractorService).extractRemoteAddress(any())
+      Mockito.doReturn(false).`when`(staticMapDownloaderService).enqueue(any())
+      Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
+      Mockito.doReturn(token).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn(UserId(1L), UserId(2L)).`when`(usersRepository).getUserIdByUserUuid(any())
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(33.4, 55.2, userUuid.uuid, true)
+      val packet = UploadPhotoPacket(33.4, 55.2, user1uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO1, packet)
 
       val content = webClient
@@ -105,7 +110,7 @@ class UploadPhotoHandlerTest : AbstractTest() {
 
       assertEquals(0, findAllFiles().size)
 
-      runBlocking {
+      dbQuery {
         assertEquals(0, galleryPhotosDao.testFindAll().size)
         assertEquals(0, photosDao.testFindAll().size)
       }
@@ -115,22 +120,26 @@ class UploadPhotoHandlerTest : AbstractTest() {
   @Test
   fun `photo should not be uploaded when resizeAndSavePhotos throws an exception`() {
     val webClient = getWebTestClient()
-    val userUuid = UserUuid("1234235236")
-    val token = FirebaseToken("fwerwe")
+    val token = FirebaseToken("test_token")
+    val user1uuid = UserUuid("111")
 
     runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(any())).thenReturn(false)
-      Mockito.`when`(usersRepository.accountExists(userUuid)).thenReturn(true)
-      Mockito.`when`(usersRepository.getFirebaseToken(any())).thenReturn(token)
-      Mockito.`when`(staticMapDownloaderService.enqueue(any())).thenReturn(true)
+      dbQuery {
+        usersDao.save(user1uuid)
+      }
+
+      Mockito.doReturn(ipAddress).`when`(remoteAddressExtractorService).extractRemoteAddress(any())
+      Mockito.doReturn(true).`when`(staticMapDownloaderService).enqueue(any())
+      Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
+      Mockito.doReturn(token).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn(UserId(1L), UserId(2L)).`when`(usersRepository).getUserIdByUserUuid(any())
 
       Mockito.doThrow(IOException("BAM"))
         .`when`(diskManipulationService).resizeAndSavePhotos(any(), any())
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(33.4, 55.2, userUuid.uuid, true)
+      val packet = UploadPhotoPacket(33.4, 55.2, user1uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO1, packet)
 
       val content = webClient
@@ -147,7 +156,7 @@ class UploadPhotoHandlerTest : AbstractTest() {
 
       assertEquals(0, findAllFiles().size)
 
-      runBlocking {
+      dbQuery {
         assertEquals(0, galleryPhotosDao.testFindAll().size)
         assertEquals(0, photosDao.testFindAll().size)
       }
@@ -157,22 +166,26 @@ class UploadPhotoHandlerTest : AbstractTest() {
   @Test
   fun `photo should not be uploaded when copyDataBuffersToFile throws an exception`() {
     val webClient = getWebTestClient()
-    val userUuid = UserUuid("1234235236")
-    val token = FirebaseToken("fwerwe")
+    val token = FirebaseToken("test_token")
+    val user1uuid = UserUuid("111")
 
     runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(any())).thenReturn(false)
-      Mockito.`when`(usersRepository.accountExists(userUuid)).thenReturn(true)
-      Mockito.`when`(usersRepository.getFirebaseToken(any())).thenReturn(token)
-      Mockito.`when`(staticMapDownloaderService.enqueue(any())).thenReturn(true)
+      dbQuery {
+        usersDao.save(user1uuid)
+      }
+
+      Mockito.doReturn(ipAddress).`when`(remoteAddressExtractorService).extractRemoteAddress(any())
+      Mockito.doReturn(true).`when`(staticMapDownloaderService).enqueue(any())
+      Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
+      Mockito.doReturn(token).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn(UserId(1L), UserId(2L)).`when`(usersRepository).getUserIdByUserUuid(any())
 
       Mockito.doThrow(IOException("BAM"))
         .`when`(diskManipulationService).copyDataBuffersToFile(Mockito.anyList(), any())
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(33.4, 55.2, userUuid.uuid, true)
+      val packet = UploadPhotoPacket(33.4, 55.2, user1uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO1, packet)
 
       val content = webClient
@@ -189,7 +202,7 @@ class UploadPhotoHandlerTest : AbstractTest() {
 
       assertEquals(0, findAllFiles().size)
 
-      runBlocking {
+      dbQuery {
         assertEquals(0, galleryPhotosDao.testFindAll().size)
         assertEquals(0, photosDao.testFindAll().size)
       }
@@ -199,19 +212,23 @@ class UploadPhotoHandlerTest : AbstractTest() {
   @Test
   fun `should not be allowed to upload photo that exceeds MaxPhotoSize`() {
     val webClient = getWebTestClient()
-    val userUuid = UserUuid("1234235236")
-    val token = FirebaseToken("fwerwe")
+    val token = FirebaseToken("test_token")
+    val user1uuid = UserUuid("111")
 
     runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(any())).thenReturn(false)
-      Mockito.`when`(usersRepository.accountExists(userUuid)).thenReturn(true)
-      Mockito.`when`(usersRepository.getFirebaseToken(any())).thenReturn(token)
-      Mockito.`when`(staticMapDownloaderService.enqueue(any())).thenReturn(true)
+      dbQuery {
+        usersDao.save(user1uuid)
+      }
+
+      Mockito.doReturn(ipAddress).`when`(remoteAddressExtractorService).extractRemoteAddress(any())
+      Mockito.doReturn(true).`when`(staticMapDownloaderService).enqueue(any())
+      Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
+      Mockito.doReturn(token).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn(UserId(1L), UserId(2L)).`when`(usersRepository).getUserIdByUserUuid(any())
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(33.4, 55.2, userUuid.uuid, true)
+      val packet = UploadPhotoPacket(33.4, 55.2, user1uuid.uuid, true)
       val multipartData = createTestMultipartFile(BIG_PHOTO, packet)
 
       val content = webClient
@@ -259,18 +276,22 @@ class UploadPhotoHandlerTest : AbstractTest() {
   @Test
   fun `should be allowed to upload photos when firebase token is NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN`() {
     val webClient = getWebTestClient()
-    val userUuid = UserUuid("1234235236")
+    val user1uuid = UserUuid("111")
 
     runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(any())).thenReturn(false)
-      Mockito.`when`(usersRepository.accountExists(userUuid)).thenReturn(true)
-      Mockito.`when`(usersRepository.getFirebaseToken(any())).thenReturn(FirebaseToken.default())
-      Mockito.`when`(staticMapDownloaderService.enqueue(any())).thenReturn(true)
+      dbQuery {
+        usersDao.save(user1uuid)
+      }
+
+      Mockito.doReturn(ipAddress).`when`(remoteAddressExtractorService).extractRemoteAddress(any())
+      Mockito.doReturn(true).`when`(staticMapDownloaderService).enqueue(any())
+      Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
+      Mockito.doReturn(FirebaseToken.default()).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn(UserId(1L), UserId(2L)).`when`(usersRepository).getUserIdByUserUuid(any())
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(33.4, 55.2, userUuid.uuid, true)
+      val packet = UploadPhotoPacket(33.4, 55.2, user1uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO1, packet)
 
       val content = webClient
@@ -290,18 +311,22 @@ class UploadPhotoHandlerTest : AbstractTest() {
   @Test
   fun `should not be allowed to upload photos when firebase token is empty`() {
     val webClient = getWebTestClient()
-    val userUuid = UserUuid("1234235236")
-    val token = FirebaseToken("fwerwe")
+    val user1uuid = UserUuid("111")
 
     runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(any())).thenReturn(false)
-      Mockito.`when`(usersRepository.accountExists(userUuid)).thenReturn(true)
-      Mockito.`when`(usersRepository.getFirebaseToken(any())).thenReturn(token)
+      dbQuery {
+        usersDao.save(user1uuid)
+      }
+
+      Mockito.doReturn(ipAddress).`when`(remoteAddressExtractorService).extractRemoteAddress(any())
+      Mockito.doReturn(true).`when`(staticMapDownloaderService).enqueue(any())
+      Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
+      Mockito.doReturn(FirebaseToken.empty()).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn(UserId(1L), UserId(2L)).`when`(usersRepository).getUserIdByUserUuid(any())
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(33.4, 55.2, userUuid.uuid, true)
+      val packet = UploadPhotoPacket(33.4, 55.2, user1uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO1, packet)
 
       val content = webClient
@@ -321,16 +346,23 @@ class UploadPhotoHandlerTest : AbstractTest() {
   @Test
   fun `should not be allowed to upload photos when user has no account`() {
     val webClient = getWebTestClient()
-    val userUuid = UserUuid("1234235236")
+    val token = FirebaseToken("test_token")
+    val user1uuid = UserUuid("111")
 
     runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(any())).thenReturn(false)
-      Mockito.`when`(usersRepository.accountExists(userUuid)).thenReturn(false)
+      dbQuery {
+        usersDao.save(user1uuid)
+      }
+
+      Mockito.doReturn(ipAddress).`when`(remoteAddressExtractorService).extractRemoteAddress(any())
+      Mockito.doReturn(true).`when`(staticMapDownloaderService).enqueue(any())
+      Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
+      Mockito.doReturn(token).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn(UserId.empty()).`when`(usersRepository).getUserIdByUserUuid(any())
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(33.4, 55.2, userUuid.uuid, true)
+      val packet = UploadPhotoPacket(33.4, 55.2, user1uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO1, packet)
 
       val content = webClient
@@ -350,15 +382,21 @@ class UploadPhotoHandlerTest : AbstractTest() {
   @Test
   fun `should not be allowed to upload photo when banned`() {
     val webClient = getWebTestClient()
+    val token = FirebaseToken("test_token")
+    val user1uuid = UserUuid("111")
 
     runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(any())).thenReturn(true)
-      Mockito.`when`(usersRepository.getFirebaseToken(any())).thenReturn(FirebaseToken("test_token"))
+      dbQuery {
+        usersDao.save(user1uuid)
+      }
+
+      Mockito.doReturn(ipAddress).`when`(remoteAddressExtractorService).extractRemoteAddress(any())
+      Mockito.doReturn(true).`when`(banListRepository).isBanned(any())
+      Mockito.doReturn(token).`when`(usersRepository).getFirebaseToken(any())
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(33.4, 55.2, "111", true)
+      val packet = UploadPhotoPacket(33.4, 55.2, user1uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO1, packet)
 
       val content = webClient
@@ -378,17 +416,25 @@ class UploadPhotoHandlerTest : AbstractTest() {
   @Test
   fun `should not exchange photos when one of the photos has no static map`() {
     val webClient = getWebTestClient()
+    val token = FirebaseToken("test_token")
+    val user1uuid = UserUuid("111")
+    val user2uuid = UserUuid("222")
 
     runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(any())).thenReturn(false)
-      Mockito.`when`(staticMapDownloaderService.enqueue(any())).thenReturn(true)
-      Mockito.`when`(usersRepository.getFirebaseToken(any())).thenReturn(FirebaseToken("test_token"))
-      Mockito.`when`(usersRepository.accountExists(any())).thenReturn(true)
+      dbQuery {
+        usersDao.save(user1uuid)
+        usersDao.save(user2uuid)
+      }
+
+      Mockito.doReturn(ipAddress).`when`(remoteAddressExtractorService).extractRemoteAddress(any())
+      Mockito.doReturn(true).`when`(staticMapDownloaderService).enqueue(any())
+      Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
+      Mockito.doReturn(token).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn(UserId(1L), UserId(2L)).`when`(usersRepository).getUserIdByUserUuid(any())
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(33.4, 55.2, "111", true)
+      val packet = UploadPhotoPacket(33.4, 55.2, user1uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO1, packet)
 
       val content = webClient
@@ -403,11 +449,11 @@ class UploadPhotoHandlerTest : AbstractTest() {
       val response = fromBodyContent<UploadPhotoResponse>(content)
       assertEquals(ErrorCode.Ok.value, response.errorCode)
 
-      val photoInfo = runBlocking {
+      val photoInfo = dbQuery {
         photosDao.findById(PhotoId(1))
       }
 
-      assertEquals(1, photoInfo.photoId)
+      assertEquals(1, photoInfo.photoId.id)
       assertTrue(photoInfo.exchangedPhotoId.isEmpty())
       assertTrue(photoInfo.locationMapId.isEmpty())
       assertEquals(packet.isPublic, photoInfo.isPublic)
@@ -419,7 +465,7 @@ class UploadPhotoHandlerTest : AbstractTest() {
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(11.4, 44.2, "222", true)
+      val packet = UploadPhotoPacket(11.4, 44.2, user2uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO2, packet)
 
       val content = webClient
@@ -434,11 +480,11 @@ class UploadPhotoHandlerTest : AbstractTest() {
       val response = fromBodyContent<UploadPhotoResponse>(content)
       assertEquals(ErrorCode.Ok.value, response.errorCode)
 
-      val photoInfo = runBlocking {
+      val photoInfo = dbQuery {
         photosDao.findById(PhotoId(2))
       }
 
-      assertEquals(2, photoInfo.photoId)
+      assertEquals(2, photoInfo.photoId.id)
       assertTrue(photoInfo.exchangedPhotoId.isEmpty())
       assertTrue(photoInfo.locationMapId.isEmpty())
       assertEquals(packet.isPublic, photoInfo.isPublic)
@@ -453,17 +499,25 @@ class UploadPhotoHandlerTest : AbstractTest() {
   @Test
   fun `test should exchange two photos`() {
     val webClient = getWebTestClient()
+    val token = FirebaseToken("test_token")
+    val user1uuid = UserUuid("111")
+    val user2uuid = UserUuid("222")
 
     runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(any())).thenReturn(false)
-      Mockito.`when`(staticMapDownloaderService.enqueue(any())).thenReturn(true)
-      Mockito.`when`(usersRepository.getFirebaseToken(any())).thenReturn(FirebaseToken("test_token"))
-      Mockito.`when`(usersRepository.accountExists(any())).thenReturn(true)
+      dbQuery {
+        usersDao.save(user1uuid)
+        usersDao.save(user2uuid)
+      }
+
+      Mockito.doReturn(ipAddress).`when`(remoteAddressExtractorService).extractRemoteAddress(any())
+      Mockito.doReturn(true).`when`(staticMapDownloaderService).enqueue(any())
+      Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
+      Mockito.doReturn(token).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn(UserId(1L), UserId(2L)).`when`(usersRepository).getUserIdByUserUuid(any())
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(33.4, 55.2, "111", true)
+      val packet = UploadPhotoPacket(33.4, 55.2, user1uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO1, packet)
 
       val content = webClient
@@ -478,13 +532,13 @@ class UploadPhotoHandlerTest : AbstractTest() {
       val response = fromBodyContent<UploadPhotoResponse>(content)
       assertEquals(ErrorCode.Ok.value, response.errorCode)
 
-      val photoInfo = runBlocking {
+      val photoInfo = dbQuery {
         photosDao.updateSetLocationMapId(PhotoId(1), LocationMapId(1))
         photosDao.findById(PhotoId(1))
       }
 
-      assertEquals(1, photoInfo.photoId)
-      assertEquals(1, photoInfo.locationMapId)
+      assertEquals(1, photoInfo.photoId.id)
+      assertEquals(1, photoInfo.locationMapId.id)
       assertTrue(photoInfo.exchangedPhotoId.isEmpty())
       assertEquals(packet.isPublic, photoInfo.isPublic)
       assertEquals(packet.lon, photoInfo.lon, EPSILON)
@@ -492,7 +546,7 @@ class UploadPhotoHandlerTest : AbstractTest() {
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(11.4, 24.45, "222", true)
+      val packet = UploadPhotoPacket(11.4, 24.45, user2uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO2, packet)
 
       val content = webClient
@@ -507,27 +561,27 @@ class UploadPhotoHandlerTest : AbstractTest() {
       val response = fromBodyContent<UploadPhotoResponse>(content)
       assertEquals(ErrorCode.Ok.value, response.errorCode)
 
-      val photoInfo1 = runBlocking {
+      val photoInfo1 = dbQuery {
         photosDao.findById(PhotoId(1))
       }
 
-      val photoInfo2 = runBlocking {
+      val photoInfo2 = dbQuery {
         photosDao.updateSetLocationMapId(PhotoId(2), LocationMapId(2))
         photosDao.findById(PhotoId(2))
       }
 
-      assertEquals(1, photoInfo1.photoId)
-      assertEquals(2, photoInfo1.exchangedPhotoId)
-      assertEquals(1, photoInfo1.locationMapId)
-      assertEquals("111", photoInfo1.userId)
+      assertEquals(1, photoInfo1.photoId.id)
+      assertEquals(2, photoInfo1.exchangedPhotoId.id)
+      assertEquals(1, photoInfo1.locationMapId.id)
+      assertEquals(1, photoInfo1.userId.id)
       assertEquals(true, photoInfo1.isPublic)
       assertEquals(33.4, photoInfo1.lon, EPSILON)
       assertEquals(55.2, photoInfo1.lat, EPSILON)
 
-      assertEquals(2, photoInfo2.photoId)
-      assertEquals(1, photoInfo2.exchangedPhotoId)
-      assertEquals(2, photoInfo2.locationMapId)
-      assertEquals("222", photoInfo2.userId)
+      assertEquals(2, photoInfo2.photoId.id)
+      assertEquals(1, photoInfo2.exchangedPhotoId.id)
+      assertEquals(2, photoInfo2.locationMapId.id)
+      assertEquals(2, photoInfo2.userId.id)
       assertEquals(true, photoInfo2.isPublic)
       assertEquals(11.4, photoInfo2.lon, EPSILON)
       assertEquals(24.45, photoInfo2.lat, EPSILON)
@@ -537,17 +591,23 @@ class UploadPhotoHandlerTest : AbstractTest() {
   @Test
   fun `test should not exchange two photos with the same user id`() {
     val webClient = getWebTestClient()
+    val token = FirebaseToken("test_token")
+    val user1uuid = UserUuid("111")
 
     runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(any())).thenReturn(false)
-      Mockito.`when`(staticMapDownloaderService.enqueue(any())).thenReturn(true)
-      Mockito.`when`(usersRepository.getFirebaseToken(any())).thenReturn(FirebaseToken("test_token"))
-      Mockito.`when`(usersRepository.accountExists(any())).thenReturn(true)
+      dbQuery {
+        usersDao.save(user1uuid)
+      }
+
+      Mockito.doReturn(ipAddress).`when`(remoteAddressExtractorService).extractRemoteAddress(any())
+      Mockito.doReturn(true).`when`(staticMapDownloaderService).enqueue(any())
+      Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
+      Mockito.doReturn(token).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn(UserId(1L)).`when`(usersRepository).getUserIdByUserUuid(any())
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(33.4, 55.2, "111", true)
+      val packet = UploadPhotoPacket(33.4, 55.2, user1uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO1, packet)
 
       val content = webClient
@@ -562,11 +622,11 @@ class UploadPhotoHandlerTest : AbstractTest() {
       val response = fromBodyContent<UploadPhotoResponse>(content)
       assertEquals(ErrorCode.Ok.value, response.errorCode)
 
-      val photoInfo = runBlocking {
+      val photoInfo = dbQuery {
         photosDao.findById(PhotoId(1))
       }
 
-      assertEquals(1, photoInfo.photoId)
+      assertEquals(1, photoInfo.photoId.id)
       assertTrue(photoInfo.exchangedPhotoId.isEmpty())
       assertEquals(packet.isPublic, photoInfo.isPublic)
       assertEquals(packet.lon, photoInfo.lon, EPSILON)
@@ -574,7 +634,7 @@ class UploadPhotoHandlerTest : AbstractTest() {
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(11.4, 24.45, "111", true)
+      val packet = UploadPhotoPacket(11.4, 24.45, user1uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO2, packet)
 
       val content = webClient
@@ -589,21 +649,21 @@ class UploadPhotoHandlerTest : AbstractTest() {
       val response = fromBodyContent<UploadPhotoResponse>(content)
       assertEquals(ErrorCode.Ok.value, response.errorCode)
 
-      val photoInfo1 = runBlocking {
+      val photoInfo1 = dbQuery {
         photosDao.findById(PhotoId(1))
       }
 
-      val photoInfo2 = runBlocking {
+      val photoInfo2 = dbQuery {
         photosDao.findById(PhotoId(2))
       }
 
-      assertEquals(1, photoInfo1.photoId)
+      assertEquals(1, photoInfo1.photoId.id)
       assertTrue(photoInfo1.exchangedPhotoId.isEmpty())
       assertEquals(true, photoInfo1.isPublic)
       assertEquals(33.4, photoInfo1.lon, EPSILON)
       assertEquals(55.2, photoInfo1.lat, EPSILON)
 
-      assertEquals(2, photoInfo2.photoId)
+      assertEquals(2, photoInfo2.photoId.id)
       assertTrue(photoInfo2.exchangedPhotoId.isEmpty())
       assertEquals(true, photoInfo2.isPublic)
       assertEquals(11.4, photoInfo2.lon, EPSILON)
@@ -614,17 +674,29 @@ class UploadPhotoHandlerTest : AbstractTest() {
   @Test
   fun `test should exchange 4 photos`() {
     val webClient = getWebTestClient()
+    val token = FirebaseToken("test_token")
+    val user1uuid = UserUuid("111")
+    val user2uuid = UserUuid("222")
+    val user3uuid = UserUuid("333")
+    val user4uuid = UserUuid("444")
 
     runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(any())).thenReturn(false)
-      Mockito.`when`(staticMapDownloaderService.enqueue(any())).thenReturn(true)
-      Mockito.`when`(usersRepository.getFirebaseToken(any())).thenReturn(FirebaseToken("test_token"))
-      Mockito.`when`(usersRepository.accountExists(any())).thenReturn(true)
+      dbQuery {
+        usersDao.save(user1uuid)
+        usersDao.save(user2uuid)
+        usersDao.save(user3uuid)
+        usersDao.save(user4uuid)
+      }
+
+      Mockito.doReturn(ipAddress).`when`(remoteAddressExtractorService).extractRemoteAddress(any())
+      Mockito.doReturn(true).`when`(staticMapDownloaderService).enqueue(any())
+      Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
+      Mockito.doReturn(token).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn(UserId(1L), UserId(2L), UserId(3L), UserId(4L)).`when`(usersRepository).getUserIdByUserUuid(any())
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(33.4, 55.2, "111", true)
+      val packet = UploadPhotoPacket(33.4, 55.2, user1uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO1, packet)
 
       val content = webClient
@@ -639,12 +711,12 @@ class UploadPhotoHandlerTest : AbstractTest() {
       val response = fromBodyContent<UploadPhotoResponse>(content)
       assertEquals(ErrorCode.Ok.value, response.errorCode)
 
-      val photoInfo = runBlocking {
-        photosDao.updateSetLocationMapId(PhotoId(2), LocationMapId(2))
-        photosDao.findById(PhotoId(2))
+      val photoInfo = dbQuery {
+        photosDao.updateSetLocationMapId(PhotoId(1), LocationMapId(1))
+        photosDao.findById(PhotoId(1))
       }
 
-      assertEquals(1, photoInfo.photoId)
+      assertEquals(1, photoInfo.photoId.id)
       assertTrue(photoInfo.exchangedPhotoId.isEmpty())
       assertEquals(packet.isPublic, photoInfo.isPublic)
       assertEquals(packet.lon, photoInfo.lon, EPSILON)
@@ -652,7 +724,7 @@ class UploadPhotoHandlerTest : AbstractTest() {
     }
 
     kotlin.run {
-      val packet = UploadPhotoPacket(11.4, 24.45, "222", true)
+      val packet = UploadPhotoPacket(11.4, 24.45, user2uuid.uuid, true)
       val multipartData = createTestMultipartFile(PHOTO2, packet)
 
       val content = webClient
@@ -667,35 +739,35 @@ class UploadPhotoHandlerTest : AbstractTest() {
       val response = fromBodyContent<UploadPhotoResponse>(content)
       assertEquals(ErrorCode.Ok.value, response.errorCode)
 
-      val photoInfo1 = runBlocking {
+      val photoInfo1 = dbQuery {
         photosDao.findById(PhotoId(1))
       }
 
-      val photoInfo2 = runBlocking {
+      val photoInfo2 = dbQuery {
         photosDao.updateSetLocationMapId(PhotoId(2), LocationMapId(2))
         photosDao.findById(PhotoId(2))
       }
 
-      assertEquals(1, photoInfo1.photoId)
-      assertEquals(2, photoInfo1.exchangedPhotoId)
-      assertEquals("111", photoInfo1.userId)
+      assertEquals(1, photoInfo1.photoId.id)
+      assertEquals(2, photoInfo1.exchangedPhotoId.id)
+      assertEquals(1, photoInfo1.userId.id)
       assertEquals(true, photoInfo1.isPublic)
       assertEquals(33.4, photoInfo1.lon, EPSILON)
       assertEquals(55.2, photoInfo1.lat, EPSILON)
 
-      assertEquals(2, photoInfo2.photoId)
-      assertEquals(1, photoInfo2.exchangedPhotoId)
-      assertEquals("222", photoInfo2.userId)
+      assertEquals(2, photoInfo2.photoId.id)
+      assertEquals(1, photoInfo2.exchangedPhotoId.id)
+      assertEquals(2, photoInfo2.userId.id)
       assertEquals(true, photoInfo2.isPublic)
       assertEquals(11.4, photoInfo2.lon, EPSILON)
       assertEquals(24.45, photoInfo2.lat, EPSILON)
     }
 
     kotlin.run {
-      val packet3 = UploadPhotoPacket(36.4, 66.66, "333", true)
+      val packet3 = UploadPhotoPacket(36.4, 66.66, user3uuid.uuid, true)
       val multipartData3 = createTestMultipartFile(PHOTO3, packet3)
 
-      val packet4 = UploadPhotoPacket(38.4235, 16.7788, "444", true)
+      val packet4 = UploadPhotoPacket(38.4235, 16.7788, user4uuid.uuid, true)
       val multipartData4 = createTestMultipartFile(PHOTO4, packet4)
 
       val content1 = webClient
@@ -710,7 +782,7 @@ class UploadPhotoHandlerTest : AbstractTest() {
       val response1 = fromBodyContent<UploadPhotoResponse>(content1)
       assertEquals(ErrorCode.Ok.value, response1.errorCode)
 
-      runBlocking {
+      dbQuery {
         photosDao.updateSetLocationMapId(PhotoId(3), LocationMapId(3))
       }
 
@@ -726,50 +798,50 @@ class UploadPhotoHandlerTest : AbstractTest() {
       val response2 = fromBodyContent<UploadPhotoResponse>(content2)
       assertEquals(ErrorCode.Ok.value, response2.errorCode)
 
-      runBlocking {
+      dbQuery {
         photosDao.updateSetLocationMapId(PhotoId(4), LocationMapId(4))
       }
 
-      val photoInfo1 = runBlocking {
+      val photoInfo1 = dbQuery {
         photosDao.findById(PhotoId(1))
       }
 
-      val photoInfo2 = runBlocking {
+      val photoInfo2 = dbQuery {
         photosDao.findById(PhotoId(2))
       }
 
-      val photoInfo3 = runBlocking {
+      val photoInfo3 = dbQuery {
         photosDao.findById(PhotoId(3))
       }
 
-      val photoInfo4 = runBlocking {
+      val photoInfo4 = dbQuery {
         photosDao.findById(PhotoId(4))
       }
 
-      assertEquals(1, photoInfo1.photoId)
-      assertEquals(2, photoInfo1.exchangedPhotoId)
-      assertEquals("111", photoInfo1.userId)
+      assertEquals(1, photoInfo1.photoId.id)
+      assertEquals(2, photoInfo1.exchangedPhotoId.id)
+      assertEquals(1, photoInfo1.userId.id)
       assertEquals(true, photoInfo1.isPublic)
       assertEquals(33.4, photoInfo1.lon, EPSILON)
       assertEquals(55.2, photoInfo1.lat, EPSILON)
 
-      assertEquals(2, photoInfo2.photoId)
-      assertEquals(1, photoInfo2.exchangedPhotoId)
-      assertEquals("222", photoInfo2.userId)
+      assertEquals(2, photoInfo2.photoId.id)
+      assertEquals(1, photoInfo2.exchangedPhotoId.id)
+      assertEquals(2, photoInfo2.userId.id)
       assertEquals(true, photoInfo2.isPublic)
       assertEquals(11.4, photoInfo2.lon, EPSILON)
       assertEquals(24.45, photoInfo2.lat, EPSILON)
 
-      assertEquals(3, photoInfo3.photoId)
-      assertEquals(4, photoInfo3.exchangedPhotoId)
-      assertEquals("333", photoInfo3.userId)
+      assertEquals(3, photoInfo3.photoId.id)
+      assertEquals(4, photoInfo3.exchangedPhotoId.id)
+      assertEquals(3, photoInfo3.userId.id)
       assertEquals(true, photoInfo3.isPublic)
       assertEquals(36.4, photoInfo3.lon, EPSILON)
       assertEquals(66.66, photoInfo3.lat, EPSILON)
 
-      assertEquals(4, photoInfo4.photoId)
-      assertEquals(3, photoInfo4.exchangedPhotoId)
-      assertEquals("444", photoInfo4.userId)
+      assertEquals(4, photoInfo4.photoId.id)
+      assertEquals(3, photoInfo4.exchangedPhotoId.id)
+      assertEquals(4, photoInfo4.userId.id)
       assertEquals(true, photoInfo4.isPublic)
       assertEquals(38.4235, photoInfo4.lon, EPSILON)
       assertEquals(16.7788, photoInfo4.lat, EPSILON)
@@ -780,13 +852,22 @@ class UploadPhotoHandlerTest : AbstractTest() {
   fun `test 100 concurrent uploadings at the same time`() {
     val concurrency = 100
     val webClient = getWebTestClient()
+    val token = FirebaseToken("test_token")
+    val user1uuid = UserUuid("111")
+    val user2uuid = UserUuid("222")
 
     runBlocking {
-      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-      Mockito.`when`(banListRepository.isBanned(any())).thenReturn(false)
-      Mockito.`when`(staticMapDownloaderService.enqueue(any())).thenReturn(true)
-      Mockito.`when`(usersRepository.getFirebaseToken(any())).thenReturn(FirebaseToken("test_token"))
-      Mockito.`when`(usersRepository.accountExists(any())).thenReturn(true)
+      dbQuery {
+        usersDao.save(user1uuid)
+        usersDao.save(user2uuid)
+      }
+
+      Mockito.doReturn(ipAddress).`when`(remoteAddressExtractorService).extractRemoteAddress(any())
+      Mockito.doReturn(true).`when`(staticMapDownloaderService).enqueue(any())
+      Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
+      Mockito.doReturn(token).`when`(usersRepository).getFirebaseToken(any())
+      Mockito.doReturn(UserId(1L)).`when`(usersRepository).getUserIdByUserUuid(user1uuid)
+      Mockito.doReturn(UserId(2L)).`when`(usersRepository).getUserIdByUserUuid(user2uuid)
     }
 
     fun uploadPhoto(packet: UploadPhotoPacket): Mono<Unit> {
@@ -805,7 +886,7 @@ class UploadPhotoHandlerTest : AbstractTest() {
         val response = fromBodyContent<UploadPhotoResponse>(content)
         assertEquals(ErrorCode.Ok.value, response.errorCode)
 
-        runBlocking {
+        dbQuery {
           //set locationMapId for every photo to 10 so they can exchange between themselves
           photosDao.updateSetLocationMapId(PhotoId(response.photoId), LocationMapId(10))
         }
@@ -824,31 +905,41 @@ class UploadPhotoHandlerTest : AbstractTest() {
             println("Sending packet #$index out of $concurrency")
 
             if (index % 2 == 0) {
-              return@flatMap uploadPhoto(UploadPhotoPacket(11.1, 22.2, "111", true))
+              return@flatMap uploadPhoto(UploadPhotoPacket(11.1, 22.2, user1uuid.uuid, true))
             } else {
-              return@flatMap uploadPhoto(UploadPhotoPacket(33.3, 44.4, "222", true))
+              return@flatMap uploadPhoto(UploadPhotoPacket(33.3, 44.4, user2uuid.uuid, true))
             }
           }
       }
       .collectList()
       .block()
 
-    runBlocking {
-      val allPhotoInfo = photosDao.testFindAll()
-      assertEquals(concurrency, allPhotoInfo.size)
+    val allPhotoInfo = dbQuery {
+      photosDao.testFindAll()
+    }
 
-      for (photoInfo in allPhotoInfo) {
-        assertEquals(true, photoInfo.photoId.id != photoInfo.exchangedPhotoId.id)
-        assertEquals(false, photoInfo.exchangedPhotoId.id == -1L)
-      }
+    assertEquals(concurrency, allPhotoInfo.size)
+    assertEquals(concurrency / 2, allPhotoInfo.count { it.userId.id == 1L })
+    assertEquals(concurrency / 2, allPhotoInfo.count { it.userId.id == 2L })
 
-      val mapByPhotoId = allPhotoInfo.associateBy { it.photoId }
-      val mapByExchangedPhotoId = allPhotoInfo.associateBy { it.exchangedPhotoId }
+    for (photoInfo in allPhotoInfo) {
+      assertNotEquals(photoInfo.photoId.id, photoInfo.exchangedPhotoId.id)
+      assertNotEquals(-1L, photoInfo.exchangedPhotoId.id)
+    }
 
-      for (photo in mapByPhotoId.values) {
-        assertEquals(photo.photoId, mapByExchangedPhotoId[photo.exchangedPhotoId]!!.photoId)
-        assertEquals(photo.exchangedPhotoId, mapByPhotoId[photo.photoId]!!.exchangedPhotoId)
-      }
+    val mapByPhotoId = TreeMap<Long, PhotoEntity>()
+    val mapByExchangedPhotoId = TreeMap<Long, PhotoEntity>()
+
+    for (photo in allPhotoInfo) {
+      mapByPhotoId[photo.photoId.id] = photo
+      mapByExchangedPhotoId[photo.exchangedPhotoId.id] = photo
+    }
+
+    assertEquals(mapByPhotoId.size, mapByExchangedPhotoId.size)
+
+    for (photo in mapByPhotoId.values) {
+      assertEquals(photo.photoId.id, mapByExchangedPhotoId[photo.exchangedPhotoId.id]!!.photoId.id)
+      assertEquals(photo.exchangedPhotoId.id, mapByPhotoId[photo.photoId.id]!!.exchangedPhotoId.id)
     }
   }
 }
