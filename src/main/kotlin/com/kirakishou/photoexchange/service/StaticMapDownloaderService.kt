@@ -135,7 +135,7 @@ open class StaticMapDownloaderService(
       )
 
       if (outFile.isEmpty()) {
-        throw CouldNotDownloadMap()
+        throw CouldNotDownloadMap("downloadLocationMap returned empty file")
       }
 
       try {
@@ -163,8 +163,12 @@ open class StaticMapDownloaderService(
     val repeatTimeDelta = repeatTimesList.getOrElse(locationMap.attemptsCount + 1, { -1L })
     if (repeatTimeDelta == -1L) {
       //no more attempts left
+      logger.debug("No more attempts left, updating location map state as failed")
+
       updateMapAsFailed(locationMap)
     } else {
+      logger.debug("There are attempts left, increasing attempts count")
+
       try {
         locationMapRepository.increaseAttemptsCountAndNextAttemptTime(locationMap.photoId, repeatTimeDelta)
       } catch (error: DatabaseTransactionException) {
@@ -196,6 +200,6 @@ open class StaticMapDownloaderService(
   }
 
   class CouldNotFindPhotoInfo(message: String) : Exception(message)
-  class CouldNotDownloadMap : Exception()
+  class CouldNotDownloadMap(message: String) : Exception(message)
   class ResponseIsNot2xxSuccessful(message: String) : Exception(message)
 }

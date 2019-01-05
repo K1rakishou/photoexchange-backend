@@ -160,6 +160,9 @@ class UploadPhotoHandler(
 
         val exchangedPhoto = try {
           //FIXME: this works, but it's slow. Gotta figure out how to exchange photos without locks
+          //Maybe should make another service to do exchanging?
+          //Every time a new photos is uploaded - trigger the service. The service than check whether there is an old not exchanged photo
+          //If there is - do the exchange, otherwise wait for another photo
           mutex.withLock { photosRepository.tryDoExchange(UserUuid(packet.userUuid), newUploadingPhoto) }
         } catch (error: Throwable) {
           logger.error("Unknown error while trying to do photo exchange", error)
