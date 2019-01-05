@@ -245,34 +245,6 @@ class UploadPhotoHandlerTest : AbstractTest() {
     }
   }
 
-  //TODO: does not work
-//  @Test
-//  fun `should return RequestPartIsEmpty when packet part is empty`() {
-//    val webClient = getWebTestClient()
-//
-//    runBlocking {
-//      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-//      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
-//      Mockito.`when`(usersRepository.accountExists(Mockito.anyString())).thenReturn(true)
-//    }
-//
-//    kotlin.run {
-//      val multipartData = createMultipartFileWithEmptyPacket(PHOTO1)
-//
-//      val content = webClient
-//        .post()
-//        .uri("/v1/api/upload")
-//        .contentType(MediaType.MULTIPART_FORM_DATA)
-//        .body(BodyInserters.fromMultipartData(multipartData))
-//        .exchange()
-//        .expectStatus().isBadRequest
-//        .expectBody()
-//
-//      val response = fromBodyContent<UploadPhotoResponse>(content)
-//      Assert.assertEquals(ErrorCode.RequestPartIsEmpty.value, response.errorCode)
-//    }
-//  }
-
   @Test
   fun `should be allowed to upload photos when firebase token is NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN`() {
     val webClient = getWebTestClient()

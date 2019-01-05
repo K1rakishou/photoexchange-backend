@@ -113,10 +113,7 @@ open class PhotosRepository(
       }
 
       val myPhotos = photosDao.findPageOfUploadedPhotos(user.userId, lastUploadedOn, count)
-
       val exchangeIds = myPhotos.map { it.exchangedPhotoId }
-
-      //TODO: maybe last parameter is incorrect
       val theirPhotos = photosDao.findManyByExchangedIdList(exchangeIds, false)
 
       val result = mutableListOf<UploadedPhotoResponseData>()
@@ -355,7 +352,7 @@ open class PhotosRepository(
   }
 
   suspend fun favouritePhoto(userUuid: UserUuid, photoName: PhotoName): FavouritePhotoResult {
-    return dbQuery {
+    return dbQuery<FavouritePhotoResult>(FavouritePhotoResult.Error) {
       val userId = usersDao.getUser(userUuid).userId
       if (userId.isEmpty()) {
         return@dbQuery FavouritePhotoResult.UserDoesNotExist
@@ -367,9 +364,7 @@ open class PhotosRepository(
       }
 
       return@dbQuery if (favouritedPhotosDao.isPhotoFavourited(photo.photoId, userId)) {
-        if (!favouritedPhotosDao.unfavouritePhoto(photo.photoId, userId)) {
-          return@dbQuery FavouritePhotoResult.Error
-        }
+        favouritedPhotosDao.unfavouritePhoto(photo.photoId, userId)
 
         val favouritesCount = favouritedPhotosDao.countFavouritesByPhotoId(photo.photoId)
         FavouritePhotoResult.Unfavourited(favouritesCount)
@@ -385,7 +380,7 @@ open class PhotosRepository(
   }
 
   suspend fun reportPhoto(userUuid: UserUuid, photoName: PhotoName): ReportPhotoResult {
-    return dbQuery {
+    return dbQuery<ReportPhotoResult>(ReportPhotoResult.Error) {
       val userId = usersDao.getUser(userUuid).userId
       if (userId.isEmpty()) {
         return@dbQuery ReportPhotoResult.UserDoesNotExist
@@ -397,10 +392,7 @@ open class PhotosRepository(
       }
 
       return@dbQuery if (reportedPhotosDao.isPhotoReported(photo.photoId, userId)) {
-        if (!reportedPhotosDao.unreportPhoto(photo.photoId, userId)) {
-          return@dbQuery ReportPhotoResult.Error
-        }
-
+        reportedPhotosDao.unreportPhoto(photo.photoId, userId)
         ReportPhotoResult.Unreported
       } else {
         if (!reportedPhotosDao.reportPhoto(photo.photoId, userId)) {
