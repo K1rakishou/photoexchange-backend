@@ -13,7 +13,7 @@ class PhotosDaoTest : AbstractTest() {
   override fun setUp() {
     super.setUp()
   }
-
+ 
   @After
   override fun tearDown() {
     super.tearDown()
