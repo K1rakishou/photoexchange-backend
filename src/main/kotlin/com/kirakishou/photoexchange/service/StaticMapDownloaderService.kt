@@ -81,7 +81,11 @@ open class StaticMapDownloaderService(
   }
 
   private suspend fun startDownloadingMapFiles() {
-    val requestsBatch = locationMapRepository.getOldest(REQUESTS_PER_BATCH, TimeUtils.getTimeFast())
+    val requestsBatch = locationMapRepository.getOldest(
+      REQUESTS_PER_BATCH,
+      TimeUtils.getTimeFast()
+    )
+
     if (requestsBatch.isEmpty()) {
       logger.debug("No requests for map downloading")
       return

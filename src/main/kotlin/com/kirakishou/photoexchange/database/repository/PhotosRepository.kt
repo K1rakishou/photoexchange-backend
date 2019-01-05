@@ -10,7 +10,6 @@ import net.response.data.*
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.sql.Connection
 
 open class PhotosRepository(
   private val photosDao: PhotosDao,
@@ -309,48 +308,43 @@ open class PhotosRepository(
         return@dbQuery Photo.empty()
       }
 
-      val oldestPhoto = innerDbQuery(PhotoEntity.empty(), Connection.TRANSACTION_SERIALIZABLE) {
-        val oldestPhoto = photosDao.findOldestEmptyPhoto(user.userId)
-        if (oldestPhoto.isEmpty()) {
-          this@PhotosRepository.logger.debug("No oldest empty photo in the database")
-          return@innerDbQuery PhotoEntity.empty()
-        }
-
-        if (!photosDao.updateExchangeState(oldestPhoto.photoId, ExchangeState.Exchanging)) {
-          throw DatabaseTransactionException(
-            "Couldn't update exchange state for photo with id (${oldestPhoto.photoId.id}) with Exchanging state"
-          )
-        }
-
-        return@innerDbQuery oldestPhoto
-      }
-
+      val oldestPhoto = photosDao.findOldestEmptyPhoto(user.userId)
       if (oldestPhoto.isEmpty()) {
+        this@PhotosRepository.logger.debug("No oldest empty photo in the database")
         return@dbQuery Photo.empty()
       }
 
-      if (!photosDao.updatePhotoSetReceiverId(oldestPhoto.photoId, ExchangedPhotoId(newUploadingPhoto.photoId.id))) {
+      if (!photosDao.updateExchangeState(oldestPhoto.photoId, ExchangeState.Exchanging)) {
+        throw DatabaseTransactionException(
+          "Couldn't update exchange state for oldestPhoto with id (${oldestPhoto.photoId.id}) with Exchanging state"
+        )
+      }
+
+      if (!photosDao.updateExchangeState(newUploadingPhoto.photoId, ExchangeState.Exchanging)) {
+        throw DatabaseTransactionException(
+          "Couldn't update exchange state for newUploadingPhoto with id (${oldestPhoto.photoId.id}) with Exchanging state"
+        )
+      }
+
+      if (!photosDao.exchangePhotoWithOtherPhotoId(oldestPhoto.photoId, ExchangedPhotoId(newUploadingPhoto.photoId.id))) {
         throw DatabaseTransactionException(
           "Could not update receivedId for oldestPhoto with id (${oldestPhoto.photoId.id}) " +
             "with newUploadingPhoto.photoId.id (${newUploadingPhoto.photoId.id})"
         )
       }
 
-      if (!photosDao.updatePhotoSetReceiverId(newUploadingPhoto.photoId, ExchangedPhotoId(oldestPhoto.photoId.id))) {
+      if (!photosDao.exchangePhotoWithOtherPhotoId(newUploadingPhoto.photoId, ExchangedPhotoId(oldestPhoto.photoId.id))) {
         throw DatabaseTransactionException(
           "Could not update receivedId for newUploadingPhoto with id (${newUploadingPhoto.photoId.id}) " +
             "with oldestPhoto.photoId.id (${oldestPhoto.photoId.id})"
         )
       }
 
-      if (!photosDao.updateExchangeState(oldestPhoto.photoId, ExchangeState.Exchanged)) {
-        throw DatabaseTransactionException(
-          "Couldn't update exchange state for photo with id (${oldestPhoto.photoId.id}) with Exchanged state"
-        )
-      }
-
       return@dbQuery oldestPhoto.toPhoto()
-        .copy(exchangedPhotoId = ExchangedPhotoId(newUploadingPhoto.photoId.id))
+        .copy(
+          exchangeState = ExchangeState.Exchanged,
+          exchangedPhotoId = ExchangedPhotoId(newUploadingPhoto.photoId.id)
+        )
     }
   }
 

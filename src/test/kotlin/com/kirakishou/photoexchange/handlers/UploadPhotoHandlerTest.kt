@@ -692,7 +692,12 @@ class UploadPhotoHandlerTest : AbstractTest() {
       Mockito.doReturn(true).`when`(staticMapDownloaderService).enqueue(any())
       Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
       Mockito.doReturn(token).`when`(usersRepository).getFirebaseToken(any())
-      Mockito.doReturn(UserId(1L), UserId(2L), UserId(3L), UserId(4L)).`when`(usersRepository).getUserIdByUserUuid(any())
+      Mockito.doReturn(
+        UserId(1L),
+        UserId(2L),
+        UserId(3L),
+        UserId(4L)
+      ).`when`(usersRepository).getUserIdByUserUuid(any())
     }
 
     kotlin.run {
@@ -918,9 +923,22 @@ class UploadPhotoHandlerTest : AbstractTest() {
       photosDao.testFindAll()
     }
 
-    assertEquals(concurrency, allPhotoInfo.size)
+    allPhotoInfo.forEach { println(it) }
+
+    assertEquals("resulted photos count != requested", concurrency, allPhotoInfo.size)
     assertEquals(concurrency / 2, allPhotoInfo.count { it.userId.id == 1L })
     assertEquals(concurrency / 2, allPhotoInfo.count { it.userId.id == 2L })
+
+    allPhotoInfo
+      .groupBy { it.exchangedPhotoId.id }.values
+      .filter { it.size > 1 }
+      .forEach {
+        assertTrue(
+          it.size <= 1,
+          "photos should not be grouped by more than one, current size = ${it.size}, " +
+            "ids = ${it.map { it.photoId.id }}, states = ${it.map { it.exchangeState }}, exchangedIds = ${it.map { it.exchangedPhotoId.id }}"
+        )
+      }
 
     for (photoInfo in allPhotoInfo) {
       assertNotEquals(photoInfo.photoId.id, photoInfo.exchangedPhotoId.id)
@@ -935,7 +953,7 @@ class UploadPhotoHandlerTest : AbstractTest() {
       mapByExchangedPhotoId[photo.exchangedPhotoId.id] = photo
     }
 
-    assertEquals(mapByPhotoId.size, mapByExchangedPhotoId.size)
+    assertEquals("mapByPhotoId.size != mapByExchangedPhotoId.size", mapByPhotoId.size, mapByExchangedPhotoId.size)
 
     for (photo in mapByPhotoId.values) {
       assertEquals(photo.photoId.id, mapByExchangedPhotoId[photo.exchangedPhotoId.id]!!.photoId.id)
