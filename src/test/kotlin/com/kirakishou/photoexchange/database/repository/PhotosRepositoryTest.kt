@@ -1,4 +1,4 @@
-package com.kirakishou.photoexchange.database.pgsql.repository
+package com.kirakishou.photoexchange.database.repository
 
 import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.TestUtils

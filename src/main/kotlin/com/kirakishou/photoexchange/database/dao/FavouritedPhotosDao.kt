@@ -50,8 +50,6 @@ open class FavouritedPhotosDao {
       .toLong()
   }
 
-  //TODO: NOT TESTED AT ALL
-  //TODO: test ordering of the returned list
   open fun countFavouritesByPhotoIdList(photoIdList: List<PhotoId>): Map<Long, Long> {
     val resultMap = hashMapOf<Long, Long>()
 
