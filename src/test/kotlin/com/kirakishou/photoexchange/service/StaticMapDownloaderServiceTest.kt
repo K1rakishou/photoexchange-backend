@@ -73,22 +73,27 @@ class StaticMapDownloaderServiceTest : AbstractTest() {
 
   @Test
   fun `should not start downloading map when photo is anonymous`() {
-    runBlocking {
-      val photo = createPhoto(
-        1L,
-        ExchangeState.ReadyToExchange,
-        1L,
-        2L,
-        -1L,
-        "222",
-        true,
-        -1.0,
-        -1.0,
-        999L,
-        0L,
-        "34234"
-      )
+    val photo = createPhoto(
+      1L,
+      ExchangeState.ReadyToExchange,
+      1L,
+      2L,
+      -1L,
+      "222",
+      true,
+      -1.0,
+      -1.0,
+      999L,
+      0L,
+      "34234"
+    )
 
+    dbQuery {
+      usersDao.save(UserUuid("111"))
+      photosDao.save(PhotoEntity.fromPhoto(photo))
+    }
+
+    runBlocking {
       Mockito.doReturn(photo).`when`(photosRepository).findOneById(any())
 
       assertTrue(staticMapDownloaderService.testEnqueue(PhotoId(1)))
@@ -100,22 +105,27 @@ class StaticMapDownloaderServiceTest : AbstractTest() {
 
   @Test
   fun `increase failed attempts or set map status to failed when couldn't download map`() {
-    runBlocking {
-      val photo = createPhoto(
-        1L,
-        ExchangeState.ReadyToExchange,
-        1L,
-        2L,
-        -1L,
-        "222",
-        true,
-        11.0,
-        22.0,
-        999L,
-        0L,
-        "34234"
-      )
+    val photo = createPhoto(
+      1L,
+      ExchangeState.ReadyToExchange,
+      1L,
+      2L,
+      -1L,
+      "222",
+      true,
+      11.0,
+      22.0,
+      999L,
+      0L,
+      "34234"
+    )
 
+    dbQuery {
+      usersDao.save(UserUuid("111"))
+      photosDao.save(PhotoEntity.fromPhoto(photo))
+    }
+
+    runBlocking {
       Mockito.doReturn(photo).`when`(photosRepository).findOneById(any())
       Mockito.doReturn(null).`when`(webClientService).downloadLocationMap(any(), any(), any())
 
@@ -128,22 +138,27 @@ class StaticMapDownloaderServiceTest : AbstractTest() {
 
   @Test
   fun `should set map status ready when successfully downloaded map`() {
-    runBlocking {
-      val photo = createPhoto(
-        1L,
-        ExchangeState.ReadyToExchange,
-        1L,
-        2L,
-        -1L,
-        "222",
-        true,
-        11.0,
-        22.0,
-        999L,
-        0L,
-        "34234"
-      )
+    val photo = createPhoto(
+      1L,
+      ExchangeState.ReadyToExchange,
+      1L,
+      2L,
+      -1L,
+      "222",
+      true,
+      11.0,
+      22.0,
+      999L,
+      0L,
+      "34234"
+    )
 
+    dbQuery {
+      usersDao.save(UserUuid("111"))
+      photosDao.save(PhotoEntity.fromPhoto(photo))
+    }
+
+    runBlocking {
       Mockito.doReturn(photo).`when`(photosRepository).findOneById(any())
       Mockito.doReturn(FileWrapper(File("test"))).`when`(webClientService).downloadLocationMap(any(), any(), any())
 
@@ -152,7 +167,7 @@ class StaticMapDownloaderServiceTest : AbstractTest() {
       Mockito.verify(webClientService).downloadLocationMap(any(), any(), any())
       Mockito.verify(locationMapRepository).setMapReady(any(), any())
 
-      val locationMapList = locationMapsDao.testFindAll()
+      val locationMapList = dbQuery { locationMapsDao.testFindAll() }
 
       assertEquals(1, locationMapList.size)
       assertEquals(LocationMapEntity.MapStatus.Ready, locationMapList.first().mapStatus)
@@ -161,26 +176,37 @@ class StaticMapDownloaderServiceTest : AbstractTest() {
 
   @Test
   fun `should set map status failed when there are no more attempts to download a file`() {
+    val photo = createPhoto(
+      1L,
+      ExchangeState.ReadyToExchange,
+      1L,
+      2L,
+      -1L,
+      "222",
+      true,
+      11.0,
+      22.0,
+      999L,
+      0L,
+      "34234"
+    )
+
+    dbQuery {
+      usersDao.save(UserUuid("111"))
+      photosDao.save(PhotoEntity.fromPhoto(photo))
+
+      locationMapsDao.save(photo.photoId)
+      locationMapsDao.incrementAttemptsCount(photo.photoId)
+      locationMapsDao.incrementAttemptsCount(photo.photoId)
+      locationMapsDao.incrementAttemptsCount(photo.photoId)
+      locationMapsDao.incrementAttemptsCount(photo.photoId)
+      locationMapsDao.incrementAttemptsCount(photo.photoId)
+      locationMapsDao.incrementAttemptsCount(photo.photoId)
+    }
+
     runBlocking {
-      val photo = createPhoto(
-        1L,
-        ExchangeState.ReadyToExchange,
-        1L,
-        2L,
-        -1L,
-        "222",
-        true,
-        11.0,
-        22.0,
-        999L,
-        0L,
-        "34234"
-      )
-
       Mockito.doReturn(photo).`when`(photosRepository).findOneById(any())
-      Mockito.doReturn(null).`when`(webClientService).downloadLocationMap(any(), any(), any())
-
-      dbQuery { locationMapsDao.save(photo.photoId) }
+      Mockito.doReturn(FileWrapper(null)).`when`(webClientService).downloadLocationMap(any(), any(), any())
 
       assertTrue(staticMapDownloaderService.testEnqueue(null))
 

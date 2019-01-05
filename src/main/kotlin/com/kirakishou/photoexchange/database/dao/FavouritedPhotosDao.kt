@@ -8,7 +8,6 @@ import org.jetbrains.exposed.sql.*
 
 open class FavouritedPhotosDao {
 
-  //TODO: test when there is already favourited photo with the same photoId and userId
   open fun favouritePhoto(photoId: PhotoId, userId: UserId): Boolean {
     val id = FavouritedPhotos.insert {
       it[FavouritedPhotos.photoId] = photoId.id
@@ -18,12 +17,11 @@ open class FavouritedPhotosDao {
     return id != null
   }
 
-  //TODO: test when there is no photo with provided photoId and userId
-  open fun unfavouritePhoto(photoId: PhotoId, userId: UserId): Boolean {
-    return FavouritedPhotos.deleteWhere {
+  open fun unfavouritePhoto(photoId: PhotoId, userId: UserId) {
+    FavouritedPhotos.deleteWhere {
       withPhotoId(photoId) and
         withUserId(userId)
-    } == 1
+    }
   }
 
   open fun findManyFavouritedPhotos(userId: UserId, photoIdList: List<PhotoId>): List<FavouritedPhotoEntity> {
@@ -52,8 +50,6 @@ open class FavouritedPhotosDao {
       .toLong()
   }
 
-  //TODO: NOT TESTED AT ALL
-  //TODO: test ordering of the returned list
   open fun countFavouritesByPhotoIdList(photoIdList: List<PhotoId>): Map<Long, Long> {
     val resultMap = hashMapOf<Long, Long>()
 

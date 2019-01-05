@@ -40,25 +40,4 @@ abstract class AbstractRepository(
       }
     }
   }
-
-  suspend fun <T> innerDbQuery(
-    defaultOnError: T? = null,
-    transactionIsolation: Int = Connection.TRANSACTION_REPEATABLE_READ,
-    block: suspend () -> T
-  ): T {
-    return try {
-      transaction(transactionIsolation, 3, database) {
-        runBlocking {
-          block()
-        }
-      }
-    } catch (error: Throwable) {
-      if (defaultOnError == null) {
-        throw error
-      }
-
-      logger.error("DB error", error)
-      defaultOnError!!
-    }
-  }
 }

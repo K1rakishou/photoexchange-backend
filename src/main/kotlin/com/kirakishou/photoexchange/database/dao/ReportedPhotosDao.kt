@@ -17,11 +17,11 @@ open class ReportedPhotosDao {
     return id != null
   }
 
-  open fun unreportPhoto(photoId: PhotoId, userId: UserId): Boolean {
-    return ReportedPhotos.deleteWhere {
+  open fun unreportPhoto(photoId: PhotoId, userId: UserId) {
+    ReportedPhotos.deleteWhere {
       withPhotoId(photoId) and
         withUserId(userId)
-    } == 1
+    }
   }
 
   open fun findManyReportedPhotos(userId: UserId, photoIdList: List<PhotoId>): List<ReportedPhotoEntity> {

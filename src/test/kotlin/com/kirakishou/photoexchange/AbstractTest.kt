@@ -43,11 +43,13 @@ abstract class AbstractTest {
   val diskManipulationService = Mockito.spy(DiskManipulationService())
   val jsonConverterService = Mockito.spy(JsonConverterService(gson))
 
-  val locationMapRepository = LocationMapRepository(
-    locationMapsDao,
-    photosDao,
-    database,
-    Dispatchers.Unconfined
+  val locationMapRepository = Mockito.spy(
+    LocationMapRepository(
+      locationMapsDao,
+      photosDao,
+      database,
+      Dispatchers.Unconfined
+    )
   )
 
   val usersRepository = Mockito.spy(

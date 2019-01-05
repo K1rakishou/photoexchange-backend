@@ -1,25 +1,25 @@
-package com.kirakishou.photoexchange.database.mongo.repository
+package com.kirakishou.photoexchange.database.repository
 
 import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.TestUtils
 import com.kirakishou.photoexchange.TestUtils.createPhoto
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
-import com.kirakishou.photoexchange.core.ExchangeState
-import com.kirakishou.photoexchange.core.IpHash
-import com.kirakishou.photoexchange.core.UserId
-import com.kirakishou.photoexchange.core.UserUuid
+import com.kirakishou.photoexchange.core.*
 import com.kirakishou.photoexchange.database.entity.PhotoEntity
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.springframework.core.io.ClassPathResource
+import reactor.core.publisher.Flux
+import reactor.core.scheduler.Schedulers
 import java.io.File
+import java.util.concurrent.Executors
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class PhotosTest : AbstractTest() {
+class PhotosRepositoryTest : AbstractTest() {
 
   @Before
   override fun setUp() {
@@ -64,7 +64,20 @@ class PhotosTest : AbstractTest() {
     dbQuery {
       usersDao.save(UserUuid("111"))
 
-      val photo = createPhoto(1L, ExchangeState.ReadyToExchange, 1L, -2L, 0L, "test", true, 11.1, 22.2, 999L, 0L, "12121313")
+      val photo = createPhoto(
+        1L,
+        ExchangeState.ReadyToExchange,
+        1L,
+        -2L,
+        0L,
+        "test",
+        true,
+        11.1,
+        22.2,
+        999L,
+        0L,
+        "12121313"
+      )
       val userUuid = UserUuid("1213")
 
       val resultPhoto = photosRepository.tryDoExchange(userUuid, photo)
@@ -78,8 +91,34 @@ class PhotosTest : AbstractTest() {
     val userId1 = UserUuid("111")
     val userId2 = UserUuid("222")
 
-    val photo1 = createPhoto(1L, ExchangeState.ReadyToExchange, 1L, -1L, 1L, "ert", true, 11.1, 22.2, 5345L, 0L, "23123")
-    val photo2 = createPhoto(2L, ExchangeState.ReadyToExchange, 2L, -1L, 2L, "ttt", true, 11.1, 22.2, 5345L, 0L, "23123")
+    val photo1 = createPhoto(
+      1L,
+      ExchangeState.ReadyToExchange,
+      1L,
+      -1L,
+      1L,
+      "ert",
+      true,
+      11.1,
+      22.2,
+      5345L,
+      0L,
+      "23123"
+    )
+    val photo2 = createPhoto(
+      2L,
+      ExchangeState.ReadyToExchange,
+      2L,
+      -1L,
+      2L,
+      "ttt",
+      true,
+      11.1,
+      22.2,
+      5345L,
+      0L,
+      "23123"
+    )
 
     dbQuery {
       usersDao.save(userId1)
@@ -255,6 +294,124 @@ class PhotosTest : AbstractTest() {
       }
 
       assertTrue(dbQuery { reportedPhotosDao.testFindAll() }.isEmpty())
+    }
+  }
+
+  @Test
+  fun `test favourite unfavourite photo concurrently 500 times`() {
+    val concurrency = 500
+    val photoName = "1212"
+    val userUuidList = (2 until concurrency + 2)
+      .map { UserUuid(it.toString()) }
+    val photo = createPhoto(1L, ExchangeState.Exchanged, 1L, 1L, 1L, photoName, true, 11.1, 22.2, 444L, 0L, "45345")
+
+    dbQuery {
+      for (userUuid in userUuidList) {
+        usersDao.save(userUuid)
+      }
+
+      photosDao.save(PhotoEntity.fromPhoto(photo))
+    }
+
+    val executor = Executors.newFixedThreadPool(40)
+
+    Flux.fromIterable(userUuidList.shuffled())
+      .flatMap {
+        return@flatMap Flux.just(it)
+          .subscribeOn(Schedulers.fromExecutor(executor))
+          .map { uuid ->
+            println("Executing request for uuid $uuid")
+
+            runBlocking { photosRepository.favouritePhoto(uuid, PhotoName(photoName)) }
+          }
+      }
+      .collectList()
+      .block()
+
+    kotlin.run {
+      val allFavourites = dbQuery { favouritedPhotosDao.testFindAll() }
+      assertEquals(concurrency, allFavourites.size)
+
+      assertEquals(concurrency, allFavourites.distinctBy { it.userId.id }.size)
+      assertEquals(concurrency, allFavourites.distinctBy { it.favouritedPhotoId.id }.size)
+      assertEquals(1, allFavourites.distinctBy { it.photoId.id }.size)
+    }
+
+    Flux.fromIterable(userUuidList.shuffled())
+      .flatMap {
+        return@flatMap Flux.just(it)
+          .subscribeOn(Schedulers.fromExecutor(executor))
+          .map { uuid ->
+            println("Executing request for uuid $uuid")
+
+            runBlocking { photosRepository.favouritePhoto(uuid, PhotoName(photoName)) }
+          }
+      }
+      .collectList()
+      .block()
+
+    kotlin.run {
+      val allFavourites = dbQuery { favouritedPhotosDao.testFindAll() }
+      assertEquals(0, allFavourites.size)
+    }
+  }
+
+  @Test
+  fun `test report unreport photo concurrently 500 times`() {
+    val concurrency = 500
+    val photoName = "1212"
+    val userUuidList = (2 until concurrency + 2)
+      .map { UserUuid(it.toString()) }
+    val photo = createPhoto(1L, ExchangeState.Exchanged, 1L, 1L, 1L, photoName, true, 11.1, 22.2, 444L, 0L, "45345")
+
+    dbQuery {
+      for (userUuid in userUuidList) {
+        usersDao.save(userUuid)
+      }
+
+      photosDao.save(PhotoEntity.fromPhoto(photo))
+    }
+
+    val executor = Executors.newFixedThreadPool(40)
+
+    Flux.fromIterable(userUuidList.shuffled())
+      .flatMap {
+        return@flatMap Flux.just(it)
+          .subscribeOn(Schedulers.fromExecutor(executor))
+          .map { uuid ->
+            println("Executing request for uuid $uuid")
+
+            runBlocking { photosRepository.reportPhoto(uuid, PhotoName(photoName)) }
+          }
+      }
+      .collectList()
+      .block()
+
+    kotlin.run {
+      val allReports = dbQuery { reportedPhotosDao.testFindAll() }
+      assertEquals(concurrency, allReports.size)
+
+      assertEquals(concurrency, allReports.distinctBy { it.userId.id }.size)
+      assertEquals(concurrency, allReports.distinctBy { it.reportedPhotoId.id }.size)
+      assertEquals(1, allReports.distinctBy { it.photoId.id }.size)
+    }
+
+    Flux.fromIterable(userUuidList.shuffled())
+      .flatMap {
+        return@flatMap Flux.just(it)
+          .subscribeOn(Schedulers.fromExecutor(executor))
+          .map { uuid ->
+            println("Executing request for uuid $uuid")
+
+            runBlocking { photosRepository.reportPhoto(uuid, PhotoName(photoName)) }
+          }
+      }
+      .collectList()
+      .block()
+
+    kotlin.run {
+      val allReports = dbQuery { reportedPhotosDao.testFindAll() }
+      assertEquals(0, allReports.size)
     }
   }
 }

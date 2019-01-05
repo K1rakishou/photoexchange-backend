@@ -45,9 +45,10 @@ open class PhotosDao {
     } == 1
   }
 
-  open fun updatePhotoSetReceiverId(photoId: PhotoId, receiverId: ExchangedPhotoId): Boolean {
+  open fun exchangePhotoWithOtherPhotoId(photoId: PhotoId, receiverId: ExchangedPhotoId): Boolean {
     return Photos.update({ withPhotoId(photoId) }) {
       it[Photos.exchangedPhotoId] = receiverId.id
+      it[Photos.exchangeState] = ExchangeState.Exchanged.state
     } == 1
   }
 

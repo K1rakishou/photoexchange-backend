@@ -21,10 +21,12 @@ object SecurityUtils {
   object Hashing {
     private val sha3 = MessageDigest.getInstance("SHA-512")
 
+    @Synchronized
     fun sha3(data: ByteArray): String {
       return sha3.digest(data).toHex().toUpperCase()
     }
 
+    @Synchronized
     fun sha3(data: String): String {
       return sha3(data.toByteArray())
     }

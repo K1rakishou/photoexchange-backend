@@ -15,6 +15,8 @@ import core.SharedConstants
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.mono
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import net.request.UploadPhotoPacket
 import net.response.UploadPhotoResponse
 import org.slf4j.LoggerFactory
@@ -42,6 +44,7 @@ class UploadPhotoHandler(
   jsonConverter: JsonConverterService
 ) : AbstractWebHandler(dispatcher, jsonConverter) {
   private val logger = LoggerFactory.getLogger(UploadPhotoHandler::class.java)
+  private val mutex = Mutex()
   private val PACKET_PART_KEY = "packet"
   private val PHOTO_PART_KEY = "photo"
 
@@ -156,7 +159,11 @@ class UploadPhotoHandler(
         }
 
         val exchangedPhoto = try {
-          photosRepository.tryDoExchange(UserUuid(packet.userUuid), newUploadingPhoto)
+          //FIXME: this works, but it's slow. Gotta figure out how to exchange photos without locks
+          //Maybe should make another service to do exchanging?
+          //Every time a new photos is uploaded - trigger the service. The service than check whether there is an old not exchanged photo
+          //If there is - do the exchange, otherwise wait for another photo
+          mutex.withLock { photosRepository.tryDoExchange(UserUuid(packet.userUuid), newUploadingPhoto) }
         } catch (error: Throwable) {
           logger.error("Unknown error while trying to do photo exchange", error)
 

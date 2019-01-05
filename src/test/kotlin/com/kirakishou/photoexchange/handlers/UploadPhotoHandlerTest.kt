@@ -245,34 +245,6 @@ class UploadPhotoHandlerTest : AbstractTest() {
     }
   }
 
-  //TODO: does not work
-//  @Test
-//  fun `should return RequestPartIsEmpty when packet part is empty`() {
-//    val webClient = getWebTestClient()
-//
-//    runBlocking {
-//      Mockito.`when`(remoteAddressExtractorService.extractRemoteAddress(any())).thenReturn(ipAddress)
-//      Mockito.`when`(banListRepository.isBanned(Mockito.anyString())).thenReturn(false)
-//      Mockito.`when`(usersRepository.accountExists(Mockito.anyString())).thenReturn(true)
-//    }
-//
-//    kotlin.run {
-//      val multipartData = createMultipartFileWithEmptyPacket(PHOTO1)
-//
-//      val content = webClient
-//        .post()
-//        .uri("/v1/api/upload")
-//        .contentType(MediaType.MULTIPART_FORM_DATA)
-//        .body(BodyInserters.fromMultipartData(multipartData))
-//        .exchange()
-//        .expectStatus().isBadRequest
-//        .expectBody()
-//
-//      val response = fromBodyContent<UploadPhotoResponse>(content)
-//      Assert.assertEquals(ErrorCode.RequestPartIsEmpty.value, response.errorCode)
-//    }
-//  }
-
   @Test
   fun `should be allowed to upload photos when firebase token is NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN`() {
     val webClient = getWebTestClient()
@@ -692,7 +664,12 @@ class UploadPhotoHandlerTest : AbstractTest() {
       Mockito.doReturn(true).`when`(staticMapDownloaderService).enqueue(any())
       Mockito.doReturn(false).`when`(banListRepository).isBanned(any())
       Mockito.doReturn(token).`when`(usersRepository).getFirebaseToken(any())
-      Mockito.doReturn(UserId(1L), UserId(2L), UserId(3L), UserId(4L)).`when`(usersRepository).getUserIdByUserUuid(any())
+      Mockito.doReturn(
+        UserId(1L),
+        UserId(2L),
+        UserId(3L),
+        UserId(4L)
+      ).`when`(usersRepository).getUserIdByUserUuid(any())
     }
 
     kotlin.run {
@@ -918,9 +895,22 @@ class UploadPhotoHandlerTest : AbstractTest() {
       photosDao.testFindAll()
     }
 
-    assertEquals(concurrency, allPhotoInfo.size)
+    allPhotoInfo.forEach { println(it) }
+
+    assertEquals("resulted photos count != requested", concurrency, allPhotoInfo.size)
     assertEquals(concurrency / 2, allPhotoInfo.count { it.userId.id == 1L })
     assertEquals(concurrency / 2, allPhotoInfo.count { it.userId.id == 2L })
+
+    allPhotoInfo
+      .groupBy { it.exchangedPhotoId.id }.values
+      .filter { it.size > 1 }
+      .forEach {
+        assertTrue(
+          it.size <= 1,
+          "photos should not be grouped by more than one, current size = ${it.size}, " +
+            "ids = ${it.map { it.photoId.id }}, states = ${it.map { it.exchangeState }}, exchangedIds = ${it.map { it.exchangedPhotoId.id }}"
+        )
+      }
 
     for (photoInfo in allPhotoInfo) {
       assertNotEquals(photoInfo.photoId.id, photoInfo.exchangedPhotoId.id)
@@ -935,7 +925,7 @@ class UploadPhotoHandlerTest : AbstractTest() {
       mapByExchangedPhotoId[photo.exchangedPhotoId.id] = photo
     }
 
-    assertEquals(mapByPhotoId.size, mapByExchangedPhotoId.size)
+    assertEquals("mapByPhotoId.size != mapByExchangedPhotoId.size", mapByPhotoId.size, mapByExchangedPhotoId.size)
 
     for (photo in mapByPhotoId.values) {
       assertEquals(photo.photoId.id, mapByExchangedPhotoId[photo.exchangedPhotoId.id]!!.photoId.id)
