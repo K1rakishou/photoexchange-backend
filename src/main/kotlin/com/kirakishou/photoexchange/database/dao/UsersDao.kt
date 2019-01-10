@@ -5,6 +5,7 @@ import com.kirakishou.photoexchange.core.UserId
 import com.kirakishou.photoexchange.core.UserUuid
 import com.kirakishou.photoexchange.database.entity.UserEntity
 import com.kirakishou.photoexchange.database.table.Users
+import com.kirakishou.photoexchange.util.TimeUtils
 import org.jetbrains.exposed.sql.*
 
 open class UsersDao {
@@ -12,6 +13,7 @@ open class UsersDao {
   open fun save(newUserUuid: UserUuid): UserEntity {
     val id = Users.insert {
       it[Users.userUuid] = newUserUuid.uuid
+      it[Users.lastLoginTime] = TimeUtils.getCurrentDateTime()
     } get Users.id
 
     return UserEntity.create(UserId(id!!), newUserUuid)
@@ -53,6 +55,18 @@ open class UsersDao {
     return Users.update({ withUserUuid(userUuid) }) {
       it[Users.firebaseToken] = newToken.token
     } == 1
+  }
+
+  open fun updateLastLoginTimeWithCurrentTime(userUuid: UserUuid) {
+    Users.update({ withUserUuid(userUuid) }) {
+      it[Users.lastLoginTime] = TimeUtils.getCurrentDateTime()
+    }
+  }
+
+  open fun updateLastLoginTimeWithCurrentTime(userId: UserId) {
+    Users.update({ withUserId(userId) }) {
+      it[Users.lastLoginTime] = TimeUtils.getCurrentDateTime()
+    }
   }
 
   open fun testFindAll(): List<UserEntity> {

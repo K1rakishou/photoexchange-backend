@@ -41,7 +41,12 @@ open class UsersRepository(
 
   open suspend fun accountExists(userUuid: UserUuid): Boolean {
     return dbQuery {
-      return@dbQuery usersDao.userExists(userUuid)
+      val exists = usersDao.userExists(userUuid)
+      if (exists) {
+        usersDao.updateLastLoginTimeWithCurrentTime(userUuid)
+      }
+
+      return@dbQuery exists
     }
   }
 
@@ -52,6 +57,7 @@ open class UsersRepository(
         return@dbQuery FirebaseToken.empty()
       }
 
+      usersDao.updateLastLoginTimeWithCurrentTime(userUuid)
       return@dbQuery user.firebaseToken
     }
   }
@@ -63,6 +69,7 @@ open class UsersRepository(
         return@dbQuery UserUuid.empty()
       }
 
+      usersDao.updateLastLoginTimeWithCurrentTime(userId)
       return@dbQuery user.userUuid
     }
   }
@@ -74,13 +81,19 @@ open class UsersRepository(
         return@dbQuery UserId.empty()
       }
 
+      usersDao.updateLastLoginTimeWithCurrentTime(userUuid)
       return@dbQuery user.userId
     }
   }
 
   open suspend fun updateFirebaseToken(userUuid: UserUuid, newToken: FirebaseToken): Boolean {
     return dbQuery(false) {
-      return@dbQuery usersDao.updateFirebaseToken(userUuid, newToken)
+      val result = usersDao.updateFirebaseToken(userUuid, newToken)
+      if (result) {
+        usersDao.updateLastLoginTimeWithCurrentTime(userUuid)
+      }
+
+      return@dbQuery result
     }
   }
 }
