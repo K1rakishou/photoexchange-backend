@@ -8,6 +8,7 @@ import com.kirakishou.photoexchange.database.entity.PhotoEntity
 import com.nhaarman.mockitokotlin2.any
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import org.joda.time.DateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -54,8 +55,8 @@ class StaticMapDownloaderServiceTest : AbstractTest() {
           true,
           11.1,
           22.2,
-          444L,
-          0L,
+          DateTime(444L),
+          DateTime(0L),
           IpHash("1213")
         )
       )

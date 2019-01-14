@@ -2,6 +2,8 @@ package com.kirakishou.photoexchange
 
 import com.kirakishou.photoexchange.core.*
 import com.kirakishou.photoexchange.util.SecurityUtils
+import com.kirakishou.photoexchange.util.TimeUtils
+import org.joda.time.DateTime
 import java.util.*
 
 object TestUtils {
@@ -30,8 +32,8 @@ object TestUtils {
       isPublic,
       lon,
       lat,
-      uploadedOn,
-      deletedOn,
+      DateTime(uploadedOn),
+      DateTime(deletedOn),
       IpHash(ipHash)
     )
   }
@@ -75,8 +77,8 @@ object TestUtils {
         photosVisibilityList[i],
         random.nextDouble() * 45.0,
         random.nextDouble() * 45.0,
-        uploadedOn,
-        0L,
+        DateTime(uploadedOn),
+        TimeUtils.dateTimeZero,
         IpHash("ipHash_${SecurityUtils.Generation.generateRandomString(10)}")
       )
 
@@ -90,8 +92,8 @@ object TestUtils {
         photosVisibilityList[i + 1],
         random.nextDouble() * 45.0,
         random.nextDouble() * 45.0,
-        uploadedOn + 1,
-        0L,
+        DateTime(uploadedOn + 1),
+        TimeUtils.dateTimeZero,
         IpHash("ipHash_${SecurityUtils.Generation.generateRandomString(10)}")
       )
     }

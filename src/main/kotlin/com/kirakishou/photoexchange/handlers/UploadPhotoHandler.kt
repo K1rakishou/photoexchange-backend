@@ -116,7 +116,7 @@ class UploadPhotoHandler(
         packet.lon,
         packet.lat,
         packet.isPublic,
-        TimeUtils.getTimeFast(),
+        TimeUtils.getCurrentDateTime(),
         IpHash(ipHash)
       )
 
@@ -180,7 +180,7 @@ class UploadPhotoHandler(
         val response = UploadPhotoResponse.success(
           newUploadingPhoto.photoId.id,
           newUploadingPhoto.photoName.name,
-          newUploadingPhoto.uploadedOn
+          newUploadingPhoto.uploadedOn.millis
         )
 
         return formatResponse(HttpStatus.OK, response)

@@ -13,6 +13,7 @@ import core.ErrorCode
 import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.Dispatchers
 import net.response.GalleryPhotosResponse
+import org.joda.time.DateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -80,14 +81,14 @@ class GetGalleryPhotosHandlerTest : AbstractTest() {
       photosDao.save(PhotoEntity.fromPhoto(createPhoto(7, ExchangeState.ReadyToExchange, 7, 7, 7L, "227", true, 11.1, 11.1, 777L, 0L, "123")))
       photosDao.save(PhotoEntity.fromPhoto(createPhoto(8, ExchangeState.ReadyToExchange, 8, 8, 6L, "228", true, 11.1, 11.1, 888L, 0L, "123")))
 
-      galleryPhotosDao.save(PhotoId(1L), 111L)
-      galleryPhotosDao.save(PhotoId(2L), 222L)
-      galleryPhotosDao.save(PhotoId(3L), 333L)
-      galleryPhotosDao.save(PhotoId(4L), 444L)
-      galleryPhotosDao.save(PhotoId(5L), 555L)
-      galleryPhotosDao.save(PhotoId(6L), 666L)
-      galleryPhotosDao.save(PhotoId(7L), 777L)
-      galleryPhotosDao.save(PhotoId(8L), 888L)
+      galleryPhotosDao.save(PhotoId(1L), DateTime(111L))
+      galleryPhotosDao.save(PhotoId(2L), DateTime(222L))
+      galleryPhotosDao.save(PhotoId(3L), DateTime(333L))
+      galleryPhotosDao.save(PhotoId(4L), DateTime(444L))
+      galleryPhotosDao.save(PhotoId(5L), DateTime(555L))
+      galleryPhotosDao.save(PhotoId(6L), DateTime(666L))
+      galleryPhotosDao.save(PhotoId(7L), DateTime(777L))
+      galleryPhotosDao.save(PhotoId(8L), DateTime(888L))
     }
 
     kotlin.run {

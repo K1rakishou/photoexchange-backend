@@ -11,6 +11,7 @@ import core.ErrorCode
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactor.mono
 import net.response.GalleryPhotosResponse
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -52,7 +53,7 @@ class GetGalleryPhotosHandler(
           )
         }
 
-        val galleryPhotoResponseData = photosRepository.findGalleryPhotos(lastUploadedOn, count)
+        val galleryPhotoResponseData = photosRepository.findGalleryPhotos(DateTime(lastUploadedOn), count)
         logger.debug("Found ${galleryPhotoResponseData.size} photos from gallery")
 
         val response = GalleryPhotosResponse.success(

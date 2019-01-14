@@ -18,7 +18,7 @@ open class BanListRepository(
 
   open suspend fun ban(userId: UserId, ipHash: IpHash): Boolean {
     return dbQuery(false) {
-      val banEntry = BanEntity.create(userId, ipHash, TimeUtils.getTimeFast())
+      val banEntry = BanEntity.create(userId, ipHash, TimeUtils.getCurrentDateTime())
       return@dbQuery bansDao.save(banEntry)
     }
   }
@@ -31,7 +31,7 @@ open class BanListRepository(
 
   open suspend fun banMany(userIdList: List<UserId>, ipHashList: List<IpHash>): Boolean {
     return dbQuery(false) {
-      val time = TimeUtils.getTimeFast()
+      val time = TimeUtils.getCurrentDateTime()
 
       if (userIdList.size != ipHashList.size) {
         throw IllegalArgumentException("userIdList.size (${userIdList.size}) != ipHashList.size (${ipHashList.size})")

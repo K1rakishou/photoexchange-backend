@@ -2,7 +2,9 @@ package com.kirakishou.photoexchange.database.entity
 
 import com.kirakishou.photoexchange.core.*
 import com.kirakishou.photoexchange.database.table.Photos
+import com.kirakishou.photoexchange.util.TimeUtils
 import org.jetbrains.exposed.sql.ResultRow
+import org.joda.time.DateTime
 
 data class PhotoEntity(
   val photoId: PhotoId,
@@ -14,8 +16,8 @@ data class PhotoEntity(
   val isPublic: Boolean,
   val lon: Double,
   val lat: Double,
-  val uploadedOn: Long,
-  val deletedOn: Long,
+  val uploadedOn: DateTime,
+  val deletedOn: DateTime,
   val ipHash: IpHash
 ) {
   fun isEmpty() = photoId.isEmpty()
@@ -49,7 +51,7 @@ data class PhotoEntity(
       isPublic: Boolean,
       lon: Double,
       lat: Double,
-      uploadedOn: Long,
+      uploadedOn: DateTime,
       ipHash: IpHash
     ): PhotoEntity {
       return PhotoEntity(
@@ -63,7 +65,7 @@ data class PhotoEntity(
         lon,
         lat,
         uploadedOn,
-        0L,
+        TimeUtils.dateTimeZero,
         ipHash
       )
     }
@@ -79,8 +81,8 @@ data class PhotoEntity(
         false,
         0.0,
         0.0,
-        0L,
-        0L,
+        TimeUtils.dateTimeZero,
+        TimeUtils.dateTimeZero,
         IpHash.empty()
       )
     }

@@ -3,13 +3,14 @@ package com.kirakishou.photoexchange.database.table
 import com.kirakishou.photoexchange.database.entity.LocationMapEntity
 import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.Table
+import org.joda.time.DateTime
 
 object LocationMaps : Table() {
   val id = long(Field.ID).primaryKey().autoIncrement()
   val photoId = long(Field.PHOTO_ID).references(Photos.id, ReferenceOption.CASCADE).index(Index.PHOTO_ID, true)
   val attemptsCount = integer(Field.ATTEMPTS_COUNT).default(0)
   val mapStatus = integer(Field.MAP_STATUS).default(LocationMapEntity.MapStatus.Empty.value)
-  val nextAttemptTime = long(Field.NEXT_ATTEMPT_TIME).default(0L)
+  val nextAttemptTime = datetime(Field.NEXT_ATTEMPT_TIME).default(DateTime.now())
 
   object Field {
     const val ID = "id"

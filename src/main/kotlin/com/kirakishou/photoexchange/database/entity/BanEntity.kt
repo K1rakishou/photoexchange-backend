@@ -4,19 +4,21 @@ import com.kirakishou.photoexchange.core.BanId
 import com.kirakishou.photoexchange.core.IpHash
 import com.kirakishou.photoexchange.core.UserId
 import com.kirakishou.photoexchange.database.table.Bans
+import com.kirakishou.photoexchange.util.TimeUtils
 import org.jetbrains.exposed.sql.ResultRow
+import org.joda.time.DateTime
 
 data class BanEntity(
   val banId: BanId,
   val userId: UserId,
   val ipHash: IpHash,
-  val bannedOn: Long
+  val bannedOn: DateTime
 ) {
 
   fun isEmpty() = banId.isEmpty()
 
   companion object {
-    fun create(userId: UserId, ipHash: IpHash, addedOn: Long): BanEntity {
+    fun create(userId: UserId, ipHash: IpHash, addedOn: DateTime): BanEntity {
       return BanEntity(
         BanId.empty(),
         userId,
@@ -30,7 +32,7 @@ data class BanEntity(
         BanId.empty(),
         UserId.empty(),
         IpHash.empty(),
-        -1L
+        TimeUtils.dateTimeZero
       )
     }
 

@@ -1,5 +1,8 @@
 package com.kirakishou.photoexchange.core
 
+import com.kirakishou.photoexchange.util.TimeUtils
+import org.joda.time.DateTime
+
 data class Photo(
   val photoId: PhotoId,
   val exchangeState: ExchangeState,
@@ -10,8 +13,8 @@ data class Photo(
   val isPublic: Boolean,
   val lon: Double,
   val lat: Double,
-  val uploadedOn: Long,
-  val deletedOn: Long,
+  val uploadedOn: DateTime,
+  val deletedOn: DateTime,
   val ipHash: IpHash
 ) {
 
@@ -33,8 +36,8 @@ data class Photo(
         false,
         0.0,
         0.0,
-        0L,
-        0L,
+        TimeUtils.dateTimeZero,
+        TimeUtils.dateTimeZero,
         IpHash.empty()
       )
     }

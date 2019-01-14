@@ -12,6 +12,7 @@ import core.SharedConstants
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactor.mono
 import net.response.GetFreshPhotosCountResponse
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -48,7 +49,7 @@ class GetFreshReceivedPhotosCountHandler(
           )
         }
 
-        val freshPhotosCount = photosRepository.countFreshReceivedPhotosSince(UserUuid(userUuid), time)
+        val freshPhotosCount = photosRepository.countFreshReceivedPhotosSince(UserUuid(userUuid), DateTime(time))
         logger.debug("Found ${freshPhotosCount} fresh received photos")
 
         return@mono formatResponse(

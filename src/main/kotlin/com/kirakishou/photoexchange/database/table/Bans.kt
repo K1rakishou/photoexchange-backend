@@ -7,7 +7,7 @@ object Bans : Table() {
   val id = long(Field.ID).primaryKey().autoIncrement()
   val userId = long(Field.USER_ID).references(Users.id).index(Index.USER_ID, true)
   val ipHash = varchar(Field.IP_HASH, ServerSettings.IP_HASH_LENGTH).index(Index.IP_HASH, true)
-  val bannedOn = long(Field.BANNED_ON)
+  val bannedOn = datetime(Field.BANNED_ON)
 
   object Field {
     const val ID = "id"

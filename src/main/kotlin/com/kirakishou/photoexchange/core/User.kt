@@ -1,13 +1,11 @@
 package com.kirakishou.photoexchange.core
 
-import com.kirakishou.photoexchange.util.TimeUtils
-import org.joda.time.DateTime
 
 data class User(
   val id: UserId,
   val userUuid: UserUuid,
   val firebaseToken: FirebaseToken,
-  val lastLoginTime: DateTime
+  val lastLoginTime: Long
 ) {
 
   fun isEmpty() = id.isEmpty()
@@ -18,7 +16,7 @@ data class User(
         UserId.empty(),
         UserUuid.empty(),
         FirebaseToken.default(),
-        TimeUtils.getCurrentDateTime()
+        -1L
       )
     }
   }

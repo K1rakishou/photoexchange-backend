@@ -43,7 +43,7 @@ class GalleryPhotoEntity(
       return GalleryPhotoEntity(
         GalleryPhotoId(resultRow[GalleryPhotos.id]),
         PhotoId(resultRow[GalleryPhotos.photoId]),
-        resultRow[GalleryPhotos.uploadedOn]
+        resultRow[GalleryPhotos.uploadedOn].millis
       )
     }
 

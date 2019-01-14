@@ -3,7 +3,9 @@ package com.kirakishou.photoexchange.database.dao
 import com.kirakishou.photoexchange.core.*
 import com.kirakishou.photoexchange.database.entity.PhotoEntity
 import com.kirakishou.photoexchange.database.table.Photos
+import com.kirakishou.photoexchange.util.TimeUtils
 import org.jetbrains.exposed.sql.*
+import org.joda.time.DateTime
 
 open class PhotosDao {
 
@@ -101,7 +103,7 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findPageOfUploadedPhotos(userId: UserId, lastUploadedOn: Long, count: Int): List<PhotoEntity> {
+  open fun findPageOfUploadedPhotos(userId: UserId, lastUploadedOn: DateTime, count: Int): List<PhotoEntity> {
     return Photos.select {
       withUserId(userId) and
         uploadedEarlierThan(lastUploadedOn) and
@@ -112,7 +114,7 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findPageOfReceivedPhotos(userId: UserId, lastUploadedOn: Long, count: Int): List<PhotoEntity> {
+  open fun findPageOfReceivedPhotos(userId: UserId, lastUploadedOn: DateTime, count: Int): List<PhotoEntity> {
     return Photos.select {
       withUserId(userId) and
         exchanged() and
@@ -152,7 +154,7 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findOldPhotos(earlierThanTime: Long, count: Int): List<PhotoEntity> {
+  open fun findOldPhotos(earlierThanTime: DateTime, count: Int): List<PhotoEntity> {
     return Photos.select {
       uploadedEarlierThan(earlierThanTime) and
         exchanged() and
@@ -163,7 +165,7 @@ open class PhotosDao {
       .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
-  open fun findDeletedPhotos(deletedEarlierThanTime: Long, count: Int): List<PhotoEntity> {
+  open fun findDeletedPhotos(deletedEarlierThanTime: DateTime, count: Int): List<PhotoEntity> {
     return Photos.select {
       deletedEarlierThan(deletedEarlierThanTime) and
         exchanged()
@@ -179,7 +181,7 @@ open class PhotosDao {
     } == 1
   }
 
-  open fun updateManyAsDeleted(currentTime: Long, photoIdList: List<PhotoId>): Boolean {
+  open fun updateManyAsDeleted(currentTime: DateTime, photoIdList: List<PhotoId>): Boolean {
     return Photos.update({ withPhotoIdIn(photoIdList) }) {
       it[Photos.deletedOn] = currentTime
     } == photoIdList.size
@@ -194,7 +196,7 @@ open class PhotosDao {
   }
 
   //TODO: tests for case when DB is empty should return 0 and not throw any exceptions
-  open fun countFreshUploadedPhotosSince(userId: UserId, time: Long): Int {
+  open fun countFreshUploadedPhotosSince(userId: UserId, time: DateTime): Int {
     return Photos.select {
       withUserId(userId) and
         uploadedLaterThan(time) and
@@ -204,7 +206,7 @@ open class PhotosDao {
       .count()
   }
 
-  open fun countFreshExchangedPhotos(userId: UserId, time: Long): Int {
+  open fun countFreshExchangedPhotos(userId: UserId, time: DateTime): Int {
     return Photos.select {
       withUserId(userId) and
         uploadedLaterThan(time) and
@@ -240,15 +242,15 @@ open class PhotosDao {
   /**
    * Photo must be uploaded later than "time"
    * */
-  private fun SqlExpressionBuilder.uploadedLaterThan(time: Long): Op<Boolean> {
+  private fun SqlExpressionBuilder.uploadedLaterThan(time: DateTime): Op<Boolean> {
     return Photos.uploadedOn.greater(time)
   }
 
   /**
    * Photo must be deleted (deleteOn > 0) and it must be deleted earlier than "time"
    * */
-  private fun SqlExpressionBuilder.deletedEarlierThan(time: Long): Op<Boolean> {
-    return Photos.deletedOn.greater(0L) and Photos.deletedOn.less(time)
+  private fun SqlExpressionBuilder.deletedEarlierThan(time: DateTime): Op<Boolean> {
+    return Photos.deletedOn.greater(TimeUtils.dateTimeZero) and Photos.deletedOn.less(time)
   }
 
   /**
@@ -300,7 +302,7 @@ open class PhotosDao {
   /**
    * Photo must be uploaded earlier than "lastUploadedOn"
    * */
-  private fun SqlExpressionBuilder.uploadedEarlierThan(lastUploadedOn: Long): Op<Boolean> {
+  private fun SqlExpressionBuilder.uploadedEarlierThan(lastUploadedOn: DateTime): Op<Boolean> {
     return Photos.uploadedOn.less(lastUploadedOn)
   }
 
@@ -330,6 +332,6 @@ open class PhotosDao {
    * Photo must not be deleted
    * */
   private fun SqlExpressionBuilder.notDeleted(): Op<Boolean> {
-    return Photos.deletedOn.eq(0L)
+    return Photos.deletedOn.eq(TimeUtils.dateTimeZero)
   }
 }
