@@ -11,12 +11,10 @@ import org.jetbrains.exposed.sql.select
 open class BansDao {
 
   open fun save(banEntity: BanEntity): Boolean {
-    val currentTime = TimeUtils.getTimeFast()
-
     val id = Bans.insert {
       it[Bans.userId] = banEntity.userId.id
       it[Bans.ipHash] = banEntity.ipHash.hash
-      it[Bans.bannedOn] = currentTime
+      it[Bans.bannedOn] = TimeUtils.getCurrentDateTime()
     } get Bans.id
 
     return id != null
@@ -24,11 +22,9 @@ open class BansDao {
 
   fun saveMany(banEntityList: List<BanEntity>): Boolean {
     val ids = Bans.batchInsert(banEntityList) { banEntity ->
-      val currentTime = TimeUtils.getTimeFast()
-
       this[Bans.userId] = banEntity.userId.id
       this[Bans.ipHash] = banEntity.ipHash.hash
-      this[Bans.bannedOn] = currentTime
+      this[Bans.bannedOn] = TimeUtils.getCurrentDateTime()
     }
 
     return ids.size == banEntityList.size

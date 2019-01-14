@@ -9,6 +9,7 @@ import core.ErrorCode
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactor.mono
 import net.response.GetFreshPhotosCountResponse
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -34,7 +35,7 @@ class GetFreshGalleryPhotosCountHandler(
             GetFreshPhotosCountResponse.fail(ErrorCode.BadRequest))
         }
 
-        val freshPhotosCount = photosRepository.countFreshGalleryPhotosSince(time)
+        val freshPhotosCount = photosRepository.countFreshGalleryPhotosSince(DateTime(time))
 
         logger.debug("Found ${freshPhotosCount} fresh gallery photos")
         return@mono formatResponse(HttpStatus.OK,

@@ -83,7 +83,7 @@ open class StaticMapDownloaderService(
   private suspend fun startDownloadingMapFiles() {
     val requestsBatch = locationMapRepository.getOldest(
       REQUESTS_PER_BATCH,
-      TimeUtils.getTimeFast()
+      TimeUtils.getCurrentDateTime()
     )
 
     if (requestsBatch.isEmpty()) {

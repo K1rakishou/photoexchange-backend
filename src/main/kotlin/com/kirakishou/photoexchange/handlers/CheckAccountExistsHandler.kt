@@ -31,7 +31,7 @@ class CheckAccountExistsHandler(
       try {
         val userUuid = request.getStringVariable(
           Router.USER_UUID_VARIABLE,
-          SharedConstants.MAX_USER_UUID_LEN
+          SharedConstants.FULL_USER_UUID_LEN
         )
 
         if (userUuid == null) {

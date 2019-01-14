@@ -5,7 +5,7 @@ import org.jetbrains.exposed.sql.Table
 
 object Users : Table() {
   val id = long(Field.ID).primaryKey().autoIncrement()
-  val userUuid = varchar(Field.USER_UUID, SharedConstants.MAX_USER_UUID_LEN).index(Index.USER_UUID, true)
+  val userUuid = varchar(Field.USER_UUID, SharedConstants.FULL_USER_UUID_LEN).index(Index.USER_UUID, true)
   val firebaseToken = varchar(Field.FIREBASE_TOKEN, SharedConstants.MAX_FIREBASE_TOKEN_LEN).nullable()
   val lastLoginTime = datetime(Field.LAST_LOGIN_TIME).index(Index.LAST_LOGIN_TIME)
 

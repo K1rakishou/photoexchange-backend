@@ -2,6 +2,7 @@ package com.kirakishou.photoexchange.service
 
 import com.kirakishou.photoexchange.core.PhotoName
 import com.kirakishou.photoexchange.core.UserUuid
+import core.SharedConstants
 import java.security.SecureRandom
 import java.util.*
 
@@ -29,6 +30,6 @@ open class GeneratorService(
 	}
 
 	fun generateUserUuid(): UserUuid {
-		return UserUuid(generateRandomString(20, numericAlphabetic) + "@photoexchange.io")
+		return UserUuid(generateRandomString(20, numericAlphabetic) + "@" + SharedConstants.DOMAIN)
 	}
 }

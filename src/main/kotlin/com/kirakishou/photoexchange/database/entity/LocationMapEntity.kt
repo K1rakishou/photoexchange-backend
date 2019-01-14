@@ -41,7 +41,7 @@ data class LocationMapEntity(
         PhotoId(resultRow[LocationMaps.photoId]),
         resultRow[LocationMaps.attemptsCount],
         MapStatus.fromInt(resultRow[LocationMaps.mapStatus]),
-        resultRow[LocationMaps.nextAttemptTime]
+        resultRow[LocationMaps.nextAttemptTime].millis
       )
     }
   }

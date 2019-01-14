@@ -8,13 +8,12 @@ import com.kirakishou.photoexchange.database.table.Users
 import com.kirakishou.photoexchange.util.TimeUtils
 import core.SharedConstants
 import org.jetbrains.exposed.sql.ResultRow
-import org.joda.time.DateTime
 
 data class UserEntity(
   val userId: UserId,
   val userUuid: UserUuid,
   val firebaseToken: FirebaseToken,
-  val lastLoginTime: DateTime
+  val lastLoginTime: Long
 ) {
 
   fun isEmpty() = userId.isEmpty()
@@ -29,7 +28,7 @@ data class UserEntity(
       userUuid: UserUuid,
       token: FirebaseToken = FirebaseToken(SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN)
     ): UserEntity {
-      return UserEntity(id, userUuid, token, TimeUtils.getCurrentDateTime())
+      return UserEntity(id, userUuid, token, TimeUtils.getCurrentDateTime().millis)
     }
 
     fun empty(): UserEntity {
@@ -37,7 +36,7 @@ data class UserEntity(
         UserId.empty(),
         UserUuid.empty(),
         FirebaseToken(SharedConstants.NO_GOOGLE_PLAY_SERVICES_DEFAULT_TOKEN),
-        TimeUtils.getCurrentDateTime()
+        -1L
       )
     }
 
@@ -46,7 +45,7 @@ data class UserEntity(
         UserId(resultRow[Users.id]),
         UserUuid(resultRow[Users.userUuid]),
         FirebaseToken(resultRow[Users.firebaseToken] ?: FirebaseToken.default().token),
-        resultRow[Users.lastLoginTime]
+        resultRow[Users.lastLoginTime].millis
       )
     }
   }

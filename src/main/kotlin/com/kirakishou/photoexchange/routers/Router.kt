@@ -50,7 +50,7 @@ class Router(
         }
 
 				accept(MediaType.APPLICATION_JSON).nest {
-					GET("/get_user_id", getUserUuidHandler::handle)
+					GET("/get_user_uuid", getUserUuidHandler::handle)
 					GET("/receive_photos/{$USER_UUID_VARIABLE}/{$PHOTO_NAME_LIST_VARIABLE}", receivePhotosHandler::handle)
 					GET("/get_photos_additional_info/{$USER_UUID_VARIABLE}/{$PHOTO_NAME_LIST_VARIABLE}", getPhotosAdditionalInfoHandler::handle)
 

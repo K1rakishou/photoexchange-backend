@@ -14,6 +14,7 @@ import core.SharedConstants
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactor.mono
 import net.response.GetUploadedPhotosResponse
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -63,7 +64,7 @@ class GetUploadedPhotosHandler(
 
         val userUuid = request.getStringVariable(
           Router.USER_UUID_VARIABLE,
-          SharedConstants.MAX_USER_UUID_LEN
+          SharedConstants.FULL_USER_UUID_LEN
         )
 
         if (userUuid == null) {
@@ -76,7 +77,7 @@ class GetUploadedPhotosHandler(
 
         val uploadedPhotos = photosRepository.findPageOfUploadedPhotos(
           UserUuid(userUuid),
-          lastUploadedOn,
+          DateTime(lastUploadedOn),
           count
         )
 

@@ -6,7 +6,7 @@ import org.jetbrains.exposed.sql.Table
 object GalleryPhotos : Table() {
   val id = long(Field.ID).primaryKey().autoIncrement()
   val photoId = long(Field.PHOTO_ID).references(Photos.id, ReferenceOption.CASCADE).index(Index.PHOTO_ID_INDEX, true)
-  val uploadedOn = long(Field.UPLOADED_ON).index(Index.UPLOADED_ON)
+  val uploadedOn = datetime(Field.UPLOADED_ON).index(Index.UPLOADED_ON)
 
   object Field {
     const val ID = "id"

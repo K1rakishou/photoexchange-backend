@@ -4,11 +4,8 @@ import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
 
 object TimeUtils {
-
-	@Synchronized
-	fun getTimeFast(): Long {
-		return System.currentTimeMillis()
-	}
+	//default value for datetime database fields
+	val dateTimeZero = DateTime(0L)
 
 	@Synchronized
 	fun getCurrentDateTime(): DateTime {

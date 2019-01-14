@@ -8,6 +8,7 @@ import com.kirakishou.photoexchange.service.GeneratorService
 import kotlinx.coroutines.CoroutineDispatcher
 import net.response.data.*
 import org.jetbrains.exposed.sql.Database
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import java.io.IOException
 
@@ -41,7 +42,7 @@ open class PhotosRepository(
     return photoName
   }
 
-  suspend fun save(userId: UserId, lon: Double, lat: Double, isPublic: Boolean, uploadedOn: Long, ipHash: IpHash): Photo {
+  suspend fun save(userId: UserId, lon: Double, lat: Double, isPublic: Boolean, uploadedOn: DateTime, ipHash: IpHash): Photo {
     return dbQuery(Photo.empty()) {
       val photoName = generatePhotoInfoName()
 
@@ -103,7 +104,7 @@ open class PhotosRepository(
 
   suspend fun findPageOfUploadedPhotos(
     userUuid: UserUuid,
-    lastUploadedOn: Long,
+    lastUploadedOn: DateTime,
     count: Int
   ): List<UploadedPhotoResponseData> {
     return dbQuery(emptyList()) {
@@ -129,7 +130,7 @@ open class PhotosRepository(
           myPhoto.lon,
           myPhoto.lat,
           receiverInfo,
-          myPhoto.uploadedOn
+          myPhoto.uploadedOn.millis
         )
       }
 
@@ -139,7 +140,7 @@ open class PhotosRepository(
 
   suspend fun findPageOfReceivedPhotos(
     userUuid: UserUuid,
-    lastUploadedOn: Long,
+    lastUploadedOn: DateTime,
     count: Int
   ): List<ReceivedPhotoResponseData> {
     return dbQuery(emptyList()) {
@@ -170,7 +171,7 @@ open class PhotosRepository(
           theirPhoto.photoName.name,
           theirPhoto.lon,
           theirPhoto.lat,
-          theirPhoto.uploadedOn
+          theirPhoto.uploadedOn.millis
         )
       }
 
@@ -190,8 +191,8 @@ open class PhotosRepository(
    * @return -1 if something went wrong or amount of updated photos
    * */
   suspend fun markAsDeletedPhotosUploadedEarlierThan(
-    uploadedEarlierThanTime: Long,
-    currentTime: Long,
+    uploadedEarlierThanTime: DateTime,
+    currentTime: DateTime,
     count: Int
   ): Int {
     return dbQuery(-1) {
@@ -240,6 +241,10 @@ open class PhotosRepository(
           }
         }
 
+        if (toBeUpdated.isEmpty()) {
+          return@dbQuery 0
+        }
+
         //update photos as deleted
         val photoIdList = toBeUpdated.map { PhotoId(it) }.toList()
         if (!photosDao.updateManyAsDeleted(currentTime, photoIdList)) {
@@ -262,7 +267,7 @@ open class PhotosRepository(
    * @param count - the maximum amount of photos to be found
    * */
   suspend fun cleanDatabaseAndPhotos(
-    deletedEarlierThanTime: Long,
+    deletedEarlierThanTime: DateTime,
     count: Int
   ) {
     dbQuery(Unit) {
@@ -404,7 +409,7 @@ open class PhotosRepository(
     }
   }
 
-  suspend fun findGalleryPhotos(lastUploadedOn: Long, count: Int): List<GalleryPhotoResponseData> {
+  suspend fun findGalleryPhotos(lastUploadedOn: DateTime, count: Int): List<GalleryPhotoResponseData> {
     return dbQuery(emptyList()) {
       val pageOfGalleryPhotos = galleryPhotosDao.findPage(lastUploadedOn, count)
 
@@ -426,7 +431,7 @@ open class PhotosRepository(
           photoInfo.photoName.name,
           photoInfo.lon,
           photoInfo.lat,
-          photoInfo.uploadedOn
+          photoInfo.uploadedOn.millis
         )
       }
     }
@@ -503,7 +508,7 @@ open class PhotosRepository(
           theirPhoto.photoName.name,
           theirPhoto.lon,
           theirPhoto.lat,
-          theirPhoto.uploadedOn
+          theirPhoto.uploadedOn.millis
         )
       }
 
@@ -511,13 +516,13 @@ open class PhotosRepository(
     }
   }
 
-  suspend fun countFreshGalleryPhotosSince(time: Long): Int {
+  suspend fun countFreshGalleryPhotosSince(time: DateTime): Int {
     return dbQuery(0) {
       return@dbQuery galleryPhotosDao.countGalleryPhotosUploadedLaterThan(time)
     }
   }
 
-  suspend fun countFreshReceivedPhotosSince(userUuid: UserUuid, time: Long): Int {
+  suspend fun countFreshReceivedPhotosSince(userUuid: UserUuid, time: DateTime): Int {
     return dbQuery(0) {
       val user = usersDao.getUser(userUuid)
       if (user.isEmpty()) {
@@ -528,7 +533,7 @@ open class PhotosRepository(
     }
   }
 
-  suspend fun countFreshUploadedPhotosSince(userUuid: UserUuid, time: Long): Int {
+  suspend fun countFreshUploadedPhotosSince(userUuid: UserUuid, time: DateTime): Int {
     return dbQuery(0) {
       val user = usersDao.getUser(userUuid)
       if (user.isEmpty()) {

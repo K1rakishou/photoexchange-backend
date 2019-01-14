@@ -4,6 +4,7 @@ import com.kirakishou.photoexchange.core.PhotoId
 import com.kirakishou.photoexchange.database.entity.LocationMapEntity
 import com.kirakishou.photoexchange.database.table.LocationMaps
 import org.jetbrains.exposed.sql.*
+import org.joda.time.DateTime
 
 open class LocationMapsDao {
 
@@ -15,7 +16,7 @@ open class LocationMapsDao {
     return id != null
   }
 
-  open fun findOldest(count: Int, currentTime: Long): List<LocationMapEntity> {
+  open fun findOldest(count: Int, currentTime: DateTime): List<LocationMapEntity> {
     return LocationMaps.select {
       withNextAttemptTimeEarlierThan(currentTime) and
         withMapStatus(LocationMapEntity.MapStatus.Empty)
@@ -39,7 +40,7 @@ open class LocationMapsDao {
     } == 1
   }
 
-  open fun updateNextAttemptTime(photoId: PhotoId, nextAttemptTime: Long): Boolean {
+  open fun updateNextAttemptTime(photoId: PhotoId, nextAttemptTime: DateTime): Boolean {
     return LocationMaps.update({ withPhotoId(photoId) }) {
       it[LocationMaps.nextAttemptTime] = nextAttemptTime
     } == 1
@@ -63,7 +64,7 @@ open class LocationMapsDao {
   /**
    * LocationMap's next attempt must be less than "currentTime"
    * */
-  private fun SqlExpressionBuilder.withNextAttemptTimeEarlierThan(currentTime: Long): Op<Boolean> {
+  private fun SqlExpressionBuilder.withNextAttemptTimeEarlierThan(currentTime: DateTime): Op<Boolean> {
     return LocationMaps.nextAttemptTime.less(currentTime)
   }
 

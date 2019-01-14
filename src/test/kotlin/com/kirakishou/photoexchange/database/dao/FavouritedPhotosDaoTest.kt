@@ -3,6 +3,7 @@ package com.kirakishou.photoexchange.database.dao
 import com.kirakishou.photoexchange.AbstractTest
 import com.kirakishou.photoexchange.core.*
 import com.kirakishou.photoexchange.database.entity.PhotoEntity
+import org.joda.time.DateTime
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -41,8 +42,8 @@ class FavouritedPhotosDaoTest : AbstractTest() {
           true,
           11.1,
           22.2,
-          444L,
-          0L,
+          DateTime(444L),
+          DateTime(0L),
           IpHash("123")
         )
       )
@@ -57,8 +58,8 @@ class FavouritedPhotosDaoTest : AbstractTest() {
           true,
           11.1,
           22.2,
-          444L,
-          0L,
+          DateTime(444L),
+          DateTime(0L),
           IpHash("123")
         )
       )

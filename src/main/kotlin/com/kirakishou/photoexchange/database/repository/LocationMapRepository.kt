@@ -10,6 +10,7 @@ import com.kirakishou.photoexchange.database.entity.LocationMapEntity
 import com.kirakishou.photoexchange.util.TimeUtils
 import kotlinx.coroutines.CoroutineDispatcher
 import org.jetbrains.exposed.sql.Database
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 
 open class LocationMapRepository(
@@ -26,7 +27,7 @@ open class LocationMapRepository(
     }
   }
 
-  open suspend fun getOldest(count: Int, currentTime: Long): List<LocationMap> {
+  open suspend fun getOldest(count: Int, currentTime: DateTime): List<LocationMap> {
     return dbQuery(emptyList()) {
       return@dbQuery locationMapsDao.findOldest(count, currentTime)
         .map { it.toLocationMap() }
@@ -77,7 +78,7 @@ open class LocationMapRepository(
 
   open suspend fun increaseAttemptsCountAndNextAttemptTime(photoId: PhotoId, repeatTimeDelta: Long) {
     dbQuery {
-      val nextAttemptTime = TimeUtils.getTimeFast() + repeatTimeDelta
+      val nextAttemptTime = TimeUtils.getCurrentDateTime().plus(repeatTimeDelta)
 
       if (!locationMapsDao.incrementAttemptsCount(photoId)) {
         throw DatabaseTransactionException(

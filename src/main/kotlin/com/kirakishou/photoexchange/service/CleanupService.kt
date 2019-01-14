@@ -13,12 +13,12 @@ open class CleanupService(
   private val deletedEarlierThanTimeDelta: Long
 ) {
   private val logger = LoggerFactory.getLogger(CleanupService::class.java)
-  private val lastTimeCheck = AtomicLong(TimeUtils.getTimeFast())
+  private val lastTimeCheck = AtomicLong(System.currentTimeMillis())
   private val inProgress = AtomicBoolean(false)
   private val photosPerQuery = 100
 
   open suspend fun tryToStartCleaningRoutine() {
-    val now = TimeUtils.getTimeFast()
+    val now = System.currentTimeMillis()
     val oldTime = lastTimeCheck.get()
 
     logger.debug("time delta = ${now - lastTimeCheck.get()}, cleanupInterval = $cleanupInterval")
@@ -36,11 +36,11 @@ open class CleanupService(
     }
 
     try {
-      val now = TimeUtils.getTimeFast()
+      val now = TimeUtils.getCurrentDateTime()
       logger.debug("Start cleanDatabaseAndPhotos routine")
 
       val markedAsDeletedCount = photosRepository.markAsDeletedPhotosUploadedEarlierThan(
-        now - uploadedEarlierThanTimeDelta,
+        now.minus(uploadedEarlierThanTimeDelta),
         now,
         photosPerQuery
       )
@@ -53,7 +53,7 @@ open class CleanupService(
       logger.debug("Marked as deleted $markedAsDeletedCount photos")
 
       photosRepository.cleanDatabaseAndPhotos(
-        now - deletedEarlierThanTimeDelta,
+        now.minus(deletedEarlierThanTimeDelta),
         photosPerQuery
       )
     } catch (error: Throwable) {

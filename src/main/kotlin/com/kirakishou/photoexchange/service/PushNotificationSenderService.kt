@@ -130,7 +130,7 @@ open class PushNotificationSenderService(
       theirPhoto.photoName.name,
       theirPhoto.lon.toString(),
       theirPhoto.lat.toString(),
-      theirPhoto.uploadedOn.toString()
+      theirPhoto.uploadedOn.millis.toString()
     )
 
     val packet = Packet(Message(firebaseToken.token, data))

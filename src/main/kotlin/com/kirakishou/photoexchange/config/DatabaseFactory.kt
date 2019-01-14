@@ -8,12 +8,10 @@ import org.jetbrains.exposed.sql.SchemaUtils.create
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class DatabaseFactory {
-  lateinit var db: Database
+  val db: Database by lazy { Database.connect(hikari()) }
 
   init {
-    db = Database.connect(hikari())
-
-    transaction {
+    transaction(db) {
       create(
         Users,
         Photos,
@@ -28,10 +26,10 @@ class DatabaseFactory {
 
   private fun hikari(): HikariDataSource {
     val config = HikariConfig()
-    config.driverClassName = "jdbc:postgresql://192.168.99.100:5432/photoexchange"
+    config.driverClassName = "org.postgresql.Driver"
     config.username = ServerSettings.DATABASE_LOGIN
     config.password = ServerSettings.DATABASE_PASSWORD
-    config.jdbcUrl = "org.postgresql.Driver"
+    config.jdbcUrl = "jdbc:postgresql://192.168.99.100:5432/"
     config.maximumPoolSize = 20
     config.isAutoCommit = false
     config.transactionIsolation = "TRANSACTION_REPEATABLE_READ"

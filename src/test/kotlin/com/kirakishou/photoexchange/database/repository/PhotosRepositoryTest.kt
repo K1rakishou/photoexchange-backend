@@ -8,6 +8,7 @@ import com.kirakishou.photoexchange.config.ServerSettings.FILE_DIR_PATH
 import com.kirakishou.photoexchange.core.*
 import com.kirakishou.photoexchange.database.entity.PhotoEntity
 import kotlinx.coroutines.runBlocking
+import org.joda.time.DateTime
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -38,7 +39,7 @@ class PhotosRepositoryTest : AbstractTest() {
     }
 
     runBlocking {
-      val saved = photosRepository.save(UserId(1L), 11.1, 22.2, true, 5345L, IpHash("12121313"))
+      val saved = photosRepository.save(UserId(1L), 11.1, 22.2, true, DateTime(5345L), IpHash("12121313"))
 
       assertEquals(saved.photoName, dbQuery { photosDao.testFindAll() }.first().photoName)
       assertEquals(saved.photoId, dbQuery { galleryPhotosDao.testFindAll() }.first().photoId)
@@ -52,7 +53,7 @@ class PhotosRepositoryTest : AbstractTest() {
     }
 
     runBlocking {
-      val saved = photosRepository.save(UserId(1L), 11.1, 22.2, false, 5345L, IpHash("12121313"))
+      val saved = photosRepository.save(UserId(1L), 11.1, 22.2, false, DateTime(5345L), IpHash("12121313"))
 
       assertEquals(saved.photoName, dbQuery { photosDao.testFindAll() }.first().photoName)
       assertTrue(dbQuery { galleryPhotosDao.testFindAll() }.isEmpty())
@@ -151,15 +152,15 @@ class PhotosRepositoryTest : AbstractTest() {
 
     runBlocking {
       val count = photosRepository.markAsDeletedPhotosUploadedEarlierThan(
-        104L,
-        999L,
+        DateTime(104L),
+        DateTime(999L),
         100
       )
 
       assertEquals(4, count)
 
       val found = dbQuery { photosDao.testFindAll() }
-      assertEquals(4, found.count { it.deletedOn == 999L })
+      assertEquals(4, found.count { it.deletedOn == DateTime(999L) })
     }
   }
 
@@ -170,7 +171,7 @@ class PhotosRepositoryTest : AbstractTest() {
       usersDao.save(UserUuid("222"))
 
       val generatedPhotos = TestUtils.createExchangedPhotoPairs(10, listOf(1L, 2L))
-        .map { it.copy(deletedOn = 111L) }
+        .map { it.copy(deletedOn = DateTime(111L)) }
 
       for (generatedPhoto in generatedPhotos) {
         photosDao.save(PhotoEntity.fromPhoto(generatedPhoto))
@@ -187,7 +188,7 @@ class PhotosRepositoryTest : AbstractTest() {
     }
 
     dbQuery {
-      photosRepository.cleanDatabaseAndPhotos(200L, 100)
+      photosRepository.cleanDatabaseAndPhotos(DateTime(200L), 100)
 
       assertTrue(File(FILE_DIR_PATH).list().isEmpty())
 
