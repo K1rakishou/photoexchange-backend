@@ -91,7 +91,7 @@ class ReportPhotoHandler(
       return false
     }
 
-    if (packet.userUuid.length > SharedConstants.MAX_USER_UUID_LEN) {
+    if (packet.userUuid.length > SharedConstants.FULL_USER_UUID_LEN) {
       logger.debug("Bad param userId (${packet.userUuid})")
       return false
     }

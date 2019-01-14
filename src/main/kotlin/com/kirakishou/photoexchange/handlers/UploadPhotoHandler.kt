@@ -206,7 +206,7 @@ class UploadPhotoHandler(
       return false
     }
 
-    if (packet.userUuid == null || packet.userUuid.isEmpty() || packet.userUuid.length > SharedConstants.MAX_USER_UUID_LEN) {
+    if (packet.userUuid == null || packet.userUuid.isEmpty() || packet.userUuid.length > SharedConstants.FULL_USER_UUID_LEN) {
       logger.debug("Bad param userUuid (${packet.userUuid})")
       return false
     }
