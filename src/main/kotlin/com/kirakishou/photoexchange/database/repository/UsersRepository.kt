@@ -20,10 +20,10 @@ open class UsersRepository(
     var userUuid = UserUuid.empty()
 
     while (true) {
-      val generatedUserId = generator.generateUserUuid()
+      val generatedUserUuid = generator.generateUserUuid()
 
-      if (!usersDao.userExists(generatedUserId)) {
-        userUuid = generatedUserId
+      if (!usersDao.userExists(generatedUserUuid)) {
+        userUuid = generatedUserUuid
         break
       }
     }
