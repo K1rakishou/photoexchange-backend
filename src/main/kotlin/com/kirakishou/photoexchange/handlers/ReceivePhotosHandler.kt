@@ -37,7 +37,7 @@ class ReceivePhotosHandler(
         )
 
         if (userUuid == null) {
-          logger.debug("Bad param userUuid ($userUuid)")
+          logger.error("Bad param userUuid ($userUuid)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             ReceivedPhotosResponse.fail(ErrorCode.BadRequest)
@@ -50,7 +50,7 @@ class ReceivePhotosHandler(
         )
 
         if (photoNames == null) {
-          logger.debug("Bad param photoNames ($photoNames)")
+          logger.error("Bad param photoNames ($photoNames)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             ReceivedPhotosResponse.fail(ErrorCode.BadRequest)
@@ -64,7 +64,7 @@ class ReceivePhotosHandler(
         )
 
         if (photoNameList.isEmpty()) {
-          logger.debug("photoNameList is empty")
+          logger.error("photoNameList is empty")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             ReceivedPhotosResponse.fail(ErrorCode.NoPhotosInRequest)
@@ -77,7 +77,7 @@ class ReceivePhotosHandler(
         )
 
         if (receivedPhotosResponseData.isEmpty()) {
-          logger.debug("photoAnswerList is empty")
+          logger.error("photoAnswerList is empty")
           return@mono formatResponse(
             HttpStatus.OK,
             ReceivedPhotosResponse.fail(ErrorCode.NoPhotosToSendBack)
