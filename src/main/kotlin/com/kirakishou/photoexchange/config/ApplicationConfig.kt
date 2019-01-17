@@ -26,7 +26,7 @@ import org.springframework.web.reactive.function.server.HandlerStrategies
 import org.springframework.web.reactive.function.server.RouterFunctions
 
 object ApplicationConfig {
-  const val COROUTINE_SCHEDULER_DEFAULT_NAME = "default"
+  const val COROUTINE_SCHEDULER_GENERAL_NAME = "general"
   const val COROUTINE_SCHEDULER_IO_NAME = "io"
   const val COROUTINE_SCHEDULER_MAP_DOWNLOADER_NAME = "map-downloader"
   const val COROUTINE_SCHEDULER_PUSH_SENDER_NAME = "push-sender"
@@ -52,17 +52,20 @@ object ApplicationConfig {
     bean<BansDao>()
 
     //dispatchers
-    bean(COROUTINE_SCHEDULER_DEFAULT_NAME) {
-      newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), COROUTINE_SCHEDULER_DEFAULT_NAME)
+    bean(COROUTINE_SCHEDULER_GENERAL_NAME) {
+      val threadsCount = Runtime.getRuntime().availableProcessors().coerceAtLeast(4)
+      newFixedThreadPoolContext(threadsCount, COROUTINE_SCHEDULER_GENERAL_NAME)
     }
     bean(COROUTINE_SCHEDULER_IO_NAME) {
       Dispatchers.IO
     }
     bean(COROUTINE_SCHEDULER_MAP_DOWNLOADER_NAME) {
-      newFixedThreadPoolContext(4, COROUTINE_SCHEDULER_MAP_DOWNLOADER_NAME)
+      val threadsCount = Runtime.getRuntime().availableProcessors().coerceAtLeast(4)
+      newFixedThreadPoolContext(threadsCount, COROUTINE_SCHEDULER_MAP_DOWNLOADER_NAME)
     }
     bean(COROUTINE_SCHEDULER_PUSH_SENDER_NAME) {
-      newFixedThreadPoolContext(4, COROUTINE_SCHEDULER_PUSH_SENDER_NAME)
+      val threadsCount = Runtime.getRuntime().availableProcessors().coerceAtLeast(4)
+      newFixedThreadPoolContext(threadsCount, COROUTINE_SCHEDULER_PUSH_SENDER_NAME)
     }
     bean(COROUTINE_SCHEDULER_GOOGLE_TOKEN_REFRESHER_NAME) {
       newFixedThreadPoolContext(1, COROUTINE_SCHEDULER_GOOGLE_TOKEN_REFRESHER_NAME)
@@ -135,66 +138,66 @@ object ApplicationConfig {
         ref(),
         ref(),
         ref(),
-        ref(COROUTINE_SCHEDULER_DEFAULT_NAME),
+        ref(COROUTINE_SCHEDULER_GENERAL_NAME),
         ref()
       )
     }
     bean {
-      ReceivePhotosHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      ReceivePhotosHandler(ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      GetPhotoHandler(ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      GetPhotoHandler(ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      GetGalleryPhotosHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      GetGalleryPhotosHandler(ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      FavouritePhotoHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      FavouritePhotoHandler(ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      ReportPhotoHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      ReportPhotoHandler(ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      GetUserUuidHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      GetUserUuidHandler(ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      GetUploadedPhotosHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      GetUploadedPhotosHandler(ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      GetReceivedPhotosHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      GetReceivedPhotosHandler(ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      GetStaticMapHandler(ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      GetStaticMapHandler(ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      CheckAccountExistsHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      CheckAccountExistsHandler(ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      UpdateFirebaseTokenHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      UpdateFirebaseTokenHandler(ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      GetFreshGalleryPhotosCountHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      GetFreshGalleryPhotosCountHandler(ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      GetFreshUploadedPhotosCountHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      GetFreshUploadedPhotosCountHandler(ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      GetFreshReceivedPhotosCountHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      GetFreshReceivedPhotosCountHandler(ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      BanPhotoHandler(ref(), ref(), ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      BanPhotoHandler(ref(), ref(), ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      BanUserHandler(ref(), ref(), ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      BanUserHandler(ref(), ref(), ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      StartCleanupHandler(ref(), ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      StartCleanupHandler(ref(), ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      GetPhotosAdditionalInfoHandler(ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      GetPhotosAdditionalInfoHandler(ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
     bean {
-      BanUserAndAllTheirPhotosHandler(ref(), ref(), ref(), ref(), ref(COROUTINE_SCHEDULER_DEFAULT_NAME), ref())
+      BanUserAndAllTheirPhotosHandler(ref(), ref(), ref(), ref(), ref(COROUTINE_SCHEDULER_GENERAL_NAME), ref())
     }
 
     //etc
