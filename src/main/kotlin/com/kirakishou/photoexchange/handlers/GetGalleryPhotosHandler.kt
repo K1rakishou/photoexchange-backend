@@ -53,7 +53,17 @@ class GetGalleryPhotosHandler(
           )
         }
 
-        val galleryPhotoResponseData = photosRepository.findGalleryPhotos(DateTime(lastUploadedOn), count)
+        val time = if (lastUploadedOn <= 0L) {
+          DateTime.now()
+        } else {
+          DateTime(lastUploadedOn)
+        }
+
+        val galleryPhotoResponseData = photosRepository.findGalleryPhotos(
+          time,
+          count
+        )
+
         logger.debug("Found ${galleryPhotoResponseData.size} photos from gallery")
 
         val response = GalleryPhotosResponse.success(

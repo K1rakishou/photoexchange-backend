@@ -74,9 +74,15 @@ class GetReceivedPhotosHandler(
           )
         }
 
+        val time = if (lastUploadedOn <= 0L) {
+          DateTime.now()
+        } else {
+          DateTime(lastUploadedOn)
+        }
+
         val receivedPhotosResponseData = photosRepository.findPageOfReceivedPhotos(
           UserUuid(userUuid),
-          DateTime(lastUploadedOn),
+          time,
           count
         )
 
