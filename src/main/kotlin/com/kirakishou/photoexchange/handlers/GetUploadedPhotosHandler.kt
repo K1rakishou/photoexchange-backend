@@ -75,9 +75,15 @@ class GetUploadedPhotosHandler(
           )
         }
 
+        val time = if (lastUploadedOn <= 0L) {
+          DateTime.now()
+        } else {
+          DateTime(lastUploadedOn)
+        }
+
         val uploadedPhotos = photosRepository.findPageOfUploadedPhotos(
           UserUuid(userUuid),
-          DateTime(lastUploadedOn),
+          time,
           count
         )
 
