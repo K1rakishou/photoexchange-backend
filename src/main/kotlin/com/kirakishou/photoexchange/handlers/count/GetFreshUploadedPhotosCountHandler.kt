@@ -2,7 +2,7 @@ package com.kirakishou.photoexchange.handlers.count
 
 import com.kirakishou.photoexchange.core.UserUuid
 import com.kirakishou.photoexchange.database.repository.PhotosRepository
-import com.kirakishou.photoexchange.extensions.getLongVariable
+import com.kirakishou.photoexchange.extensions.getDateTimeVariable
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.routers.Router
@@ -12,7 +12,6 @@ import core.SharedConstants
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactor.mono
 import net.response.GetFreshPhotosCountResponse
-import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -40,7 +39,7 @@ class GetFreshUploadedPhotosCountHandler(
           )
         }
 
-        val time = request.getLongVariable(Router.TIME_VARIABLE, 0L, Long.MAX_VALUE)
+        val time = request.getDateTimeVariable(Router.TIME_VARIABLE)
         if (time == null) {
           logger.debug("Bad param time ($time)")
           return@mono formatResponse(
@@ -49,20 +48,13 @@ class GetFreshUploadedPhotosCountHandler(
           )
         }
 
-        val freshPhotosCount = photosRepository.countFreshUploadedPhotosSince(UserUuid(userUuid), DateTime(time))
+        val freshPhotosCount = photosRepository.countFreshUploadedPhotosSince(UserUuid(userUuid), time)
         logger.debug("Found ${freshPhotosCount} fresh uploaded photos")
 
-        return@mono formatResponse(
-          HttpStatus.OK,
-          GetFreshPhotosCountResponse.success(freshPhotosCount)
-        )
-
+        return@mono formatResponse(HttpStatus.OK, GetFreshPhotosCountResponse.success(freshPhotosCount))
       } catch (error: Throwable) {
         logger.error("Unknown error", error)
-        return@mono formatResponse(
-          HttpStatus.INTERNAL_SERVER_ERROR,
-          GetFreshPhotosCountResponse.fail(ErrorCode.UnknownError)
-        )
+        return@mono formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, GetFreshPhotosCountResponse.fail(ErrorCode.UnknownError))
       }
     }.flatMap { it }
   }

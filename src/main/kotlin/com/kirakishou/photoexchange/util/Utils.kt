@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory
 object Utils {
   private val logger = LoggerFactory.getLogger(Utils::class.java)
 
-  fun parsePhotoNames(photoNames: String, maxCount: Int, delimiter: Char): List<PhotoName> {
+  fun parsePhotoNames(photoNames: String, maxCount: Int, delimiter: Char): List<PhotoName>? {
     return try {
       photoNames
         .split(delimiter)
@@ -15,9 +15,10 @@ object Utils {
         .filter { it != "" }
         .map { PhotoName(it) }
         .toList()
+
     } catch (error: Throwable) {
       logger.error("Unknown error", error)
-      return emptyList()
+      return null
     }
   }
 }

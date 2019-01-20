@@ -3,8 +3,8 @@ package com.kirakishou.photoexchange.handlers
 import com.kirakishou.photoexchange.config.ServerSettings
 import com.kirakishou.photoexchange.core.UserUuid
 import com.kirakishou.photoexchange.database.repository.PhotosRepository
+import com.kirakishou.photoexchange.extensions.getDateTimeVariable
 import com.kirakishou.photoexchange.extensions.getIntVariable
-import com.kirakishou.photoexchange.extensions.getLongVariable
 import com.kirakishou.photoexchange.extensions.getStringVariable
 import com.kirakishou.photoexchange.handlers.base.AbstractWebHandler
 import com.kirakishou.photoexchange.routers.Router
@@ -14,7 +14,6 @@ import core.SharedConstants
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.reactor.mono
 import net.response.ReceivedPhotosResponse
-import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
@@ -33,10 +32,8 @@ class GetReceivedPhotosHandler(
       logger.debug("New GetReceivedPhotos request")
 
       try {
-        val lastUploadedOn = request.getLongVariable(
-          Router.LAST_UPLOADED_ON_VARIABLE,
-          0L,
-          Long.MAX_VALUE
+        val lastUploadedOn = request.getDateTimeVariable(
+          Router.LAST_UPLOADED_ON_VARIABLE
         )
 
         if (lastUploadedOn == null) {
@@ -74,15 +71,9 @@ class GetReceivedPhotosHandler(
           )
         }
 
-        val time = if (lastUploadedOn <= 0L) {
-          DateTime.now()
-        } else {
-          DateTime(lastUploadedOn)
-        }
-
         val receivedPhotosResponseData = photosRepository.findPageOfReceivedPhotos(
           UserUuid(userUuid),
-          time,
+          lastUploadedOn,
           count
         )
 

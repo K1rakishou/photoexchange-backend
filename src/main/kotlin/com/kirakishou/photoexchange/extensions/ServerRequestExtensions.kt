@@ -1,15 +1,7 @@
 package com.kirakishou.photoexchange.extensions
 
+import org.joda.time.DateTime
 import org.springframework.web.reactive.function.server.ServerRequest
-import java.lang.NumberFormatException
-
-fun ServerRequest.containsAllParams(vararg names: String): Boolean {
-	return names.all { this.queryParams().containsKey(it) }
-}
-
-fun ServerRequest.containsAllPathVars(vararg names: String): Boolean {
-	return names.all { this.pathVariables().containsKey(it) }
-}
 
 fun ServerRequest.getStringVariable(name: String, maxLen: Int): String? {
 	if (!pathVariables().containsKey(name)) {
@@ -64,5 +56,18 @@ fun ServerRequest.getDoubleValue(name: String, min: Double, max: Double): Double
 		variableStr.toDouble().coerceIn(min, max)
 	} catch (error: NumberFormatException) {
 		return null
+	}
+}
+
+fun ServerRequest.getDateTimeVariable(name: String): DateTime? {
+	val timeLong = getLongVariable(name, 0, Long.MAX_VALUE)
+	if (timeLong == null) {
+		return null
+	}
+
+	return if (timeLong <= 0L) {
+		DateTime.now()
+	} else {
+		DateTime(timeLong)
 	}
 }

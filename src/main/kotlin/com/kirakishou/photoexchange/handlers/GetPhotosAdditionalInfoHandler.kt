@@ -71,10 +71,10 @@ class GetPhotosAdditionalInfoHandler(
           ServerSettings.PHOTOS_DELIMITER
         )
 
-        if (photoNameList.isEmpty()) {
+        if (photoNameList == null) {
           return@mono formatResponse(
-            HttpStatus.OK,
-            GetPhotosAdditionalInfoResponse.success(emptyList())
+            HttpStatus.BAD_REQUEST,
+            GetPhotosAdditionalInfoResponse.fail(ErrorCode.BadRequest)
           )
         }
 

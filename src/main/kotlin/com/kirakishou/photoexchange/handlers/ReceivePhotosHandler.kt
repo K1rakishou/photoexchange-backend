@@ -63,7 +63,7 @@ class ReceivePhotosHandler(
           ServerSettings.PHOTOS_DELIMITER
         )
 
-        if (photoNameList.isEmpty()) {
+        if (photoNameList == null) {
           logger.error("photoNameList is empty")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
