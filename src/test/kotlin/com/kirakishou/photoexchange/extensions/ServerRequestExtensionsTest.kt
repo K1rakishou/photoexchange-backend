@@ -1,7 +1,6 @@
 package com.kirakishou.photoexchange.extensions
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.*
 import org.junit.Test
 import org.springframework.mock.web.reactive.function.server.MockServerRequest
 
@@ -83,5 +82,23 @@ class ServerRequestExtensionsTest {
   fun `test getStringVariable must return null if string is too long`() {
     val request = MockServerRequest.builder().pathVariable("test", "this_is_a_test_string").build()
     assertNull(request.getStringVariable("test", 5))
+  }
+
+  @Test
+  fun `test getDateTimeVariable with negative time should return current time`() {
+    val request = MockServerRequest.builder().pathVariable("test", (-1L).toString()).build()
+    assertNotEquals(-1L, request.getDateTimeVariable("test")!!.millis)
+  }
+
+  @Test
+  fun `test getDateTimeVariable with 0 as time parameter should return current time`() {
+    val request = MockServerRequest.builder().pathVariable("test", 0.toString()).build()
+    assertNotEquals(0, request.getDateTimeVariable("test")!!.millis)
+  }
+
+  @Test
+  fun `test getDateTimeVariable with normal time should return that time`() {
+    val request = MockServerRequest.builder().pathVariable("test", 1234.toString()).build()
+    assertEquals(1234, request.getDateTimeVariable("test")!!.millis)
   }
 }
