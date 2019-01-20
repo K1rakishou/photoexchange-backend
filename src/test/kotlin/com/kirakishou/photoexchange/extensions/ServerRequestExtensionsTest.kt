@@ -81,7 +81,7 @@ class ServerRequestExtensionsTest {
 
   @Test
   fun `test getStringVariable must return null if string is too long`() {
-    val request = MockServerRequest.builder().pathVariable("test", "this_is_a_test_string|and_this_part_should_be_removed").build()
-    assertNull(request.getStringVariable("test", 21))
+    val request = MockServerRequest.builder().pathVariable("test", "this_is_a_test_string").build()
+    assertNull(request.getStringVariable("test", 5))
   }
 }
