@@ -1,15 +1,6 @@
 package com.kirakishou.photoexchange.extensions
 
 import org.springframework.web.reactive.function.server.ServerRequest
-import java.lang.NumberFormatException
-
-fun ServerRequest.containsAllParams(vararg names: String): Boolean {
-	return names.all { this.queryParams().containsKey(it) }
-}
-
-fun ServerRequest.containsAllPathVars(vararg names: String): Boolean {
-	return names.all { this.pathVariables().containsKey(it) }
-}
 
 fun ServerRequest.getStringVariable(name: String, maxLen: Int): String? {
 	if (!pathVariables().containsKey(name)) {
