@@ -455,6 +455,11 @@ open class PhotosRepository(
       val resultMap = linkedMapOf<String, GalleryPhotoInfoDto>()
       val countMap = favouritedPhotosDao.countFavouritesByPhotoIdList(photoIdList)
 
+      val photos = photosDao.findManyByPhotoIdList(countMap.keys.map { PhotoId(it) }.toList(), false)
+      for (photo in photos) {
+        resultMap.putIfAbsent(photo.photoName.name, GalleryPhotoInfoDto(photo.photoId.id, photo.photoName.name))
+      }
+
       val userFavouritedPhotos = favouritedPhotosDao.findManyFavouritedPhotos(user.userId, photoIdList)
       val userReportedPhotos = reportedPhotosDao.findManyReportedPhotos(user.userId, photoIdList)
 
