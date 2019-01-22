@@ -121,6 +121,8 @@ open class StaticMapDownloaderService(
       }
 
       if (photo.isAnonymous()) {
+        logger.debug("Photo ${photo.photoName.name} was made anonymously")
+
         //photo does not have location attached to it, so just update it's state as Anonymous
         locationMapRepository.setMapAnonymous(locationMap.photoId, locationMap.id)
         return true
