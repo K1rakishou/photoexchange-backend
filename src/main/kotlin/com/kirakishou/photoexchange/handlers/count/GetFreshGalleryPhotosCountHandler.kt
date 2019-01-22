@@ -29,7 +29,7 @@ class GetFreshGalleryPhotosCountHandler(
       try {
         val time = request.getDateTimeVariable(Router.TIME_VARIABLE)
         if (time == null) {
-          logger.debug("Bad param time ($time)")
+          logger.error("Bad param time ($time)")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
             GetFreshPhotosCountResponse.fail(ErrorCode.BadRequest))
         }

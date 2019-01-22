@@ -32,7 +32,7 @@ class GetFreshReceivedPhotosCountHandler(
       try {
         val userUuid = request.getStringVariable(Router.USER_UUID_VARIABLE, SharedConstants.FULL_USER_UUID_LEN)
         if (userUuid == null) {
-          logger.debug("Bad param userUuid ($userUuid)")
+          logger.error("Bad param userUuid ($userUuid)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             GetFreshPhotosCountResponse.fail(ErrorCode.BadRequest)
@@ -41,7 +41,7 @@ class GetFreshReceivedPhotosCountHandler(
 
         val time = request.getDateTimeVariable(Router.TIME_VARIABLE)
         if (time == null) {
-          logger.debug("Bad param time ($time)")
+          logger.error("Bad param time ($time)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             GetFreshPhotosCountResponse.fail(ErrorCode.BadRequest)

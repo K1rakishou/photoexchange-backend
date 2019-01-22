@@ -39,7 +39,7 @@ class GetPhotoHandler(
         )
 
         if (photoName == null) {
-          logger.debug("Bad param photoName ($photoName)")
+          logger.error("Bad param photoName ($photoName)")
           return@mono ServerResponse.badRequest().build()
         }
 
@@ -49,18 +49,18 @@ class GetPhotoHandler(
         )
 
         if (photoSize == null) {
-          logger.debug("Bad param photoSize ($photoSize)")
+          logger.error("Bad param photoSize ($photoSize)")
           return@mono ServerResponse.badRequest().build()
         }
 
         if (!PHOTO_SIZES.contains(photoSize)) {
-          logger.debug("Photo size $photoSize param is neither of $PHOTO_SIZES")
+          logger.error("Photo size $photoSize param is neither of $PHOTO_SIZES")
           return@mono ServerResponse.badRequest().build()
         }
 
         val file = File("$FILE_DIR_PATH\\${photoName}_$photoSize")
         if (!file.exists()) {
-          logger.debug("Photo $photoName not found on the disk")
+          logger.error("Photo $photoName not found on the disk")
           return@mono ServerResponse.notFound().build()
         }
 

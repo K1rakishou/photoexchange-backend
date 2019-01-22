@@ -35,7 +35,7 @@ class CheckAccountExistsHandler(
         )
 
         if (userUuid == null) {
-          logger.debug("Bad param userUuid ($userUuid)")
+          logger.error("Bad param userUuid ($userUuid)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             CheckAccountExistsResponse.fail(ErrorCode.BadRequest)
@@ -43,7 +43,7 @@ class CheckAccountExistsHandler(
         }
 
         if (!usersRepository.accountExists(UserUuid(userUuid))) {
-          logger.debug("Account with userUuid ${userUuid} does not exist")
+          logger.error("Account with userUuid ${userUuid} does not exist")
           return@mono formatResponse(
             HttpStatus.OK,
             CheckAccountExistsResponse.success(false)

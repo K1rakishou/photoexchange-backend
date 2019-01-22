@@ -54,7 +54,7 @@ open class PushNotificationSenderService(
     launch {
       val userUuid = usersRepository.getUserUuidByUserId(photo.userId)
       if (userUuid.isEmpty()) {
-        logger.debug("Could not find user with userId (${photo.userId.id})")
+        logger.error("Could not find user with userId (${photo.userId.id})")
         return@launch
       }
 
@@ -79,7 +79,7 @@ open class PushNotificationSenderService(
 
     val accessToken = googleCredentialsService.getAccessToken()
     if (accessToken.isEmpty()) {
-      logger.debug("Access token is empty")
+      logger.error("Access token is empty")
       return
     }
 
@@ -105,19 +105,19 @@ open class PushNotificationSenderService(
 
     val theirPhoto = photosRepository.findOneById(myPhoto.exchangedPhotoId.toPhotoId())
     if (theirPhoto.isEmpty()) {
-      logger.debug("No photo with id ${myPhoto.exchangedPhotoId}, photoName = ${myPhoto.photoName}")
+      logger.error("No photo with id ${myPhoto.exchangedPhotoId}, photoName = ${myPhoto.photoName}")
       return
     }
 
     val userUuid = usersRepository.getUserUuidByUserId(myPhoto.userId)
     if (userUuid.isEmpty()) {
-      logger.debug("Could not find user with userId (${myPhoto.userId.id})")
+      logger.error("Could not find user with userId (${myPhoto.userId.id})")
       return
     }
 
     val firebaseToken = usersRepository.getFirebaseToken(userUuid)
     if (firebaseToken.isEmpty()) {
-      logger.debug("Firebase token is empty")
+      logger.error("Firebase token is empty")
       return
     }
 

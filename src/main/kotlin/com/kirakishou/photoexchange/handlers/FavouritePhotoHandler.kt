@@ -37,6 +37,7 @@ class FavouritePhotoHandler(
 
         val packet = jsonConverter.fromJson<FavouritePhotoPacket>(packetBuffers)
         if (!isPacketOk(packet)) {
+          logger.error("Bad packet")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             FavouritePhotoResponse.fail(ErrorCode.BadRequest)
@@ -50,7 +51,7 @@ class FavouritePhotoHandler(
 
         return@mono when (result) {
           is PhotosRepository.FavouritePhotoResult.Error -> {
-            logger.debug("Could not favoutite photo (${packet.photoName})")
+            logger.error("Could not favoutite photo (${packet.photoName})")
             formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, FavouritePhotoResponse.fail(ErrorCode.UnknownError))
           }
           is PhotosRepository.FavouritePhotoResult.Unfavourited -> {
@@ -62,11 +63,11 @@ class FavouritePhotoHandler(
             formatResponse(HttpStatus.OK, FavouritePhotoResponse.success(true, result.count))
           }
           is PhotosRepository.FavouritePhotoResult.PhotoDoesNotExist -> {
-            logger.debug("A photo (${packet.photoName}) does not exist")
+            logger.error("A photo (${packet.photoName}) does not exist")
             formatResponse(HttpStatus.NOT_FOUND, FavouritePhotoResponse.fail(ErrorCode.PhotoDoesNotExist))
           }
           PhotosRepository.FavouritePhotoResult.UserDoesNotExist -> {
-            logger.debug("User with userUuid (${packet.userUuid}) does not exist")
+            logger.error("User with userUuid (${packet.userUuid}) does not exist")
             formatResponse(HttpStatus.NOT_FOUND, FavouritePhotoResponse.fail(ErrorCode.AccountNotFound))
           }
         }

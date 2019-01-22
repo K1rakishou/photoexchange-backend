@@ -46,7 +46,7 @@ open class CleanupService(
       )
 
       if (markedAsDeletedCount == -1) {
-        logger.debug("Could not mark photos as deleted")
+        logger.error("Could not mark photos as deleted")
         return
       }
 

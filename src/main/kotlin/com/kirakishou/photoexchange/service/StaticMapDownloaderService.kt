@@ -142,8 +142,6 @@ open class StaticMapDownloaderService(
 
       try {
         locationMapRepository.setMapReady(locationMap.photoId, locationMap.id)
-
-        logger.debug("[$photoMapName], Map has been successfully downloaded")
       } catch (error: Throwable) {
         if (!outFile.deleteIfExists()) {
           logger.warn("Could not delete file ${outFile.getFile()!!.absolutePath}")
@@ -151,6 +149,8 @@ open class StaticMapDownloaderService(
 
         throw error
       }
+
+      logger.debug("[$photoMapName], Map has been successfully downloaded")
     } catch (error: Throwable) {
       logger.error("Unknown error", error)
 

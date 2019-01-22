@@ -38,13 +38,13 @@ class GetStaticMapHandler(
         )
 
         if (photoName == null) {
-          logger.debug("Bad param photoName ($photoName)")
+          logger.error("Bad param photoName ($photoName)")
           return@mono ServerResponse.badRequest().build()
         }
 
         val file = File("${ServerSettings.FILE_DIR_PATH}\\${photoName}_map")
         if (!file.exists()) {
-          logger.debug("Static map $photoName not found on the disk")
+          logger.error("Static map $photoName not found on the disk")
           return@mono ServerResponse.notFound().build()
         }
 

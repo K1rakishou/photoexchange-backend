@@ -37,6 +37,7 @@ class ReportPhotoHandler(
 
         val packet = jsonConverter.fromJson<ReportPhotoPacket>(packetBuffers)
         if (!isPacketOk(packet)) {
+          logger.error("Bad packet")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             ReportPhotoResponse.fail(ErrorCode.BadRequest)
@@ -50,7 +51,7 @@ class ReportPhotoHandler(
 
         return@mono when (result) {
           is PhotosRepository.ReportPhotoResult.Error -> {
-            logger.debug("Could not report photo (${packet.photoName})")
+            logger.error("Could not report photo (${packet.photoName})")
             formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, ReportPhotoResponse.fail(ErrorCode.UnknownError))
           }
           is PhotosRepository.ReportPhotoResult.Unreported -> {
@@ -62,11 +63,11 @@ class ReportPhotoHandler(
             formatResponse(HttpStatus.OK, ReportPhotoResponse.success(true))
           }
           is PhotosRepository.ReportPhotoResult.PhotoDoesNotExist -> {
-            logger.debug("A photo (${packet.photoName}) does not exist")
+            logger.error("A photo (${packet.photoName}) does not exist")
             formatResponse(HttpStatus.NOT_FOUND, ReportPhotoResponse.fail(ErrorCode.PhotoDoesNotExist))
           }
           PhotosRepository.ReportPhotoResult.UserDoesNotExist -> {
-            logger.debug("User with userUuid (${packet.userUuid}) does not exist")
+            logger.error("User with userUuid (${packet.userUuid}) does not exist")
             formatResponse(HttpStatus.NOT_FOUND, ReportPhotoResponse.fail(ErrorCode.AccountNotFound))
           }
         }
@@ -82,22 +83,22 @@ class ReportPhotoHandler(
 
   private fun isPacketOk(packet: ReportPhotoPacket): Boolean {
     if (packet.userUuid.isNullOrEmpty()) {
-      logger.debug("Bad param userUuid (${packet.userUuid})")
+      logger.error("Bad param userUuid (${packet.userUuid})")
       return false
     }
 
     if (packet.photoName.isNullOrEmpty()) {
-      logger.debug("Bad param photoName (${packet.photoName})")
+      logger.error("Bad param photoName (${packet.photoName})")
       return false
     }
 
     if (packet.userUuid.length > SharedConstants.FULL_USER_UUID_LEN) {
-      logger.debug("Bad param userId (${packet.userUuid})")
+      logger.error("Bad param userId (${packet.userUuid})")
       return false
     }
 
     if (packet.photoName.length > SharedConstants.MAX_PHOTO_NAME_LEN) {
-      logger.debug("Bad param photoName (${packet.photoName})")
+      logger.error("Bad param photoName (${packet.photoName})")
       return false
     }
 

@@ -36,7 +36,7 @@ class BanPhotoHandler(
       try {
         val authToken = request.headers().header(ServerSettings.authTokenHeaderName).getOrNull(0)
         if (authToken == null) {
-          logger.debug("No auth token")
+          logger.error("No auth token")
 
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
@@ -45,7 +45,7 @@ class BanPhotoHandler(
         }
 
         if (adminInfoRepository.adminToken != authToken) {
-          logger.debug("Bad auth token: ${authToken}")
+          logger.error("Bad auth token: ${authToken}")
 
           return@mono formatResponse(
             HttpStatus.FORBIDDEN,
@@ -59,7 +59,7 @@ class BanPhotoHandler(
         )
 
         if (photoName == null) {
-          logger.debug("Bad param photoName ($photoName)")
+          logger.error("Bad param photoName ($photoName)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             BanPhotoResponse.fail(ErrorCode.BadRequest)
@@ -68,7 +68,7 @@ class BanPhotoHandler(
 
         val photoInfo = photosRepository.findOneByPhotoName(PhotoName(photoName))
         if (photoInfo.isEmpty()) {
-          logger.debug("Photo does not exist")
+          logger.error("Photo does not exist")
           return@mono formatResponse(
             HttpStatus.NOT_FOUND,
             BanPhotoResponse.fail(ErrorCode.PhotoDoesNotExist)

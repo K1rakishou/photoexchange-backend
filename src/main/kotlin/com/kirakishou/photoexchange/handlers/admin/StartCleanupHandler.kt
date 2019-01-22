@@ -30,14 +30,14 @@ class StartCleanupHandler(
       try {
         val authToken = request.headers().header(ServerSettings.authTokenHeaderName).getOrNull(0)
         if (authToken == null) {
-          logger.debug("No auth token")
+          logger.error("No auth token")
 
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
             StartCleanupResponse.fail(ErrorCode.BadRequest))
         }
 
         if (adminInfoRepository.adminToken != authToken) {
-          logger.debug("Bad auth token: ${authToken}")
+          logger.error("Bad auth token: ${authToken}")
 
           return@mono formatResponse(HttpStatus.FORBIDDEN,
             StartCleanupResponse.fail(ErrorCode.BadRequest))
@@ -45,6 +45,7 @@ class StartCleanupHandler(
 
         cleanupService.startCleaningRoutine()
 
+        logger.debug("Cleanup done")
         return@mono formatResponse(HttpStatus.OK, StartCleanupResponse.success())
       } catch (error: Throwable) {
         logger.error("Unknown error", error)

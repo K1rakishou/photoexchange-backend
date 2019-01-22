@@ -31,7 +31,7 @@ class GetGalleryPhotosHandler(
       try {
         val lastUploadedOn = request.getDateTimeVariable(Router.LAST_UPLOADED_ON_VARIABLE)
         if (lastUploadedOn == null) {
-          logger.debug("Bad param lastUploadedOn ($lastUploadedOn)")
+          logger.error("Bad param lastUploadedOn ($lastUploadedOn)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             GalleryPhotosResponse.fail(ErrorCode.BadRequest)
@@ -45,7 +45,7 @@ class GetGalleryPhotosHandler(
         )
 
         if (count == null) {
-          logger.debug("Bad param count ($count)")
+          logger.error("Bad param count ($count)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             GalleryPhotosResponse.fail(ErrorCode.BadRequest)

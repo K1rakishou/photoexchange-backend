@@ -79,7 +79,7 @@ open class WebClientService(
       .map { it.statusCode() }
       .map { statusCode ->
         if (!statusCode.is2xxSuccessful) {
-          logger.debug("Status code is not 2xxSuccessful ($statusCode)")
+          logger.error("Status code is not 2xxSuccessful ($statusCode)")
           return@map false
         }
 
