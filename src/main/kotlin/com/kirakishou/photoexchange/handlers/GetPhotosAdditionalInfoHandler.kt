@@ -37,7 +37,7 @@ class GetPhotosAdditionalInfoHandler(
         )
 
         if (photoNameListString == null) {
-          logger.debug("Bad param photoNameListString ($photoNameListString)")
+          logger.error("Bad param photoNameListString ($photoNameListString)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             GetPhotosAdditionalInfoResponse.fail(ErrorCode.BadRequest)
@@ -45,7 +45,7 @@ class GetPhotosAdditionalInfoHandler(
         }
 
         if (photoNameListString.isEmpty()) {
-          logger.debug("photoNamesString is empty")
+          logger.error("photoNamesString is empty")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             GetPhotosAdditionalInfoResponse.fail(ErrorCode.NoPhotosInRequest)
@@ -58,7 +58,7 @@ class GetPhotosAdditionalInfoHandler(
         )
 
         if (userUuid == null) {
-          logger.debug("Bad param userUuid ($userUuid)")
+          logger.error("Bad param userUuid ($userUuid)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             GetPhotosAdditionalInfoResponse.fail(ErrorCode.BadRequest)
@@ -72,6 +72,7 @@ class GetPhotosAdditionalInfoHandler(
         )
 
         if (photoNameList == null) {
+          logger.error("Could not parse photo names")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             GetPhotosAdditionalInfoResponse.fail(ErrorCode.BadRequest)

@@ -171,8 +171,6 @@ class UploadPhotoHandler(
           return formatResponse(HttpStatus.INTERNAL_SERVER_ERROR, UploadPhotoResponse.fail(ErrorCode.DatabaseError))
         }
 
-        logger.debug("Photo has been successfully uploaded")
-
         if (!exchangedPhoto.isEmpty()) {
           pushNotificationSenderService.enqueue(exchangedPhoto)
         }
@@ -183,10 +181,10 @@ class UploadPhotoHandler(
           newUploadingPhoto.uploadedOn.millis
         )
 
+        logger.debug("Photo has been successfully uploaded")
         return formatResponse(HttpStatus.OK, response)
       } catch (error: Throwable) {
         deletePhotoWithFile(newUploadingPhoto)
-
         throw error
       }
     } catch (error: Throwable) {
@@ -197,22 +195,22 @@ class UploadPhotoHandler(
 
   private fun isPacketOk(packet: UploadPhotoPacket): Boolean {
     if (packet.lon == null || packet.lon < -180.0 || packet.lon > 180.0) {
-      logger.debug("Bad param lon (${packet.lon})")
+      logger.error("Bad param lon (${packet.lon})")
       return false
     }
 
     if (packet.lat == null || packet.lat < -90.0 || packet.lat > 90.0) {
-      logger.debug("Bad param lat (${packet.lat})")
+      logger.error("Bad param lat (${packet.lat})")
       return false
     }
 
     if (packet.userUuid == null || packet.userUuid.isEmpty() || packet.userUuid.length > SharedConstants.FULL_USER_UUID_LEN) {
-      logger.debug("Bad param userUuid (${packet.userUuid})")
+      logger.error("Bad param userUuid (${packet.userUuid})")
       return false
     }
 
     if (packet.isPublic == null) {
-      logger.debug("Bad param isPublic (${packet.isPublic})")
+      logger.error("Bad param isPublic (${packet.isPublic})")
       return false
     }
 
@@ -275,7 +273,7 @@ class UploadPhotoHandler(
     try {
       photosRepository.delete(photo.photoId)
     } catch (error: Throwable) {
-      logger.debug("Could not delete photo with id (${photo.photoId.id})")
+      logger.error("Could not delete photo with id (${photo.photoId.id})")
       return
     }
 

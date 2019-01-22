@@ -37,7 +37,7 @@ class BanUserHandler(
       try {
         val authToken = request.headers().header(ServerSettings.authTokenHeaderName).getOrNull(0)
         if (authToken == null) {
-          logger.debug("No auth token")
+          logger.error("No auth token")
 
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
@@ -46,7 +46,7 @@ class BanUserHandler(
         }
 
         if (adminInfoRepository.adminToken != authToken) {
-          logger.debug("Bad auth token: ${authToken}")
+          logger.error("Bad auth token: ${authToken}")
 
           return@mono formatResponse(
             HttpStatus.FORBIDDEN,
@@ -60,7 +60,7 @@ class BanUserHandler(
         )
 
         if (userUuid == null) {
-          logger.debug("Bad param userUuid ($userUuid)")
+          logger.error("Bad param userUuid ($userUuid)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             BanUserResponse.fail(ErrorCode.BadRequest)
@@ -69,7 +69,7 @@ class BanUserHandler(
 
         val allUserPhotos = photosRepository.findAllPhotosByUserUuid(UserUuid(userUuid))
         if (!banAllUserIpHashes(allUserPhotos)) {
-          logger.debug("Could not ban one of the ip hashes for userUuid ${userUuid}")
+          logger.error("Could not ban one of the ip hashes for userUuid ${userUuid}")
           return@mono formatResponse(
             HttpStatus.INTERNAL_SERVER_ERROR,
             BanUserResponse.fail(ErrorCode.DatabaseError)

@@ -37,7 +37,7 @@ class GetReceivedPhotosHandler(
         )
 
         if (lastUploadedOn == null) {
-          logger.debug("Bad param lastUploadedOn ($lastUploadedOn)")
+          logger.error("Bad param lastUploadedOn ($lastUploadedOn)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             ReceivedPhotosResponse.fail(ErrorCode.BadRequest)
@@ -51,7 +51,7 @@ class GetReceivedPhotosHandler(
         )
 
         if (count == null) {
-          logger.debug("Bad param count ($count)")
+          logger.error("Bad param count ($count)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             ReceivedPhotosResponse.fail(ErrorCode.BadRequest)
@@ -64,7 +64,7 @@ class GetReceivedPhotosHandler(
         )
 
         if (userUuid.isNullOrEmpty()) {
-          logger.debug("Bad param userUuid ($userUuid)")
+          logger.error("Bad param userUuid ($userUuid)")
           return@mono formatResponse(
             HttpStatus.BAD_REQUEST,
             ReceivedPhotosResponse.fail(ErrorCode.BadRequest)

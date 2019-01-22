@@ -121,6 +121,8 @@ open class StaticMapDownloaderService(
       }
 
       if (photo.isAnonymous()) {
+        logger.debug("Photo ${photo.photoName.name} was made anonymously")
+
         //photo does not have location attached to it, so just update it's state as Anonymous
         locationMapRepository.setMapAnonymous(locationMap.photoId, locationMap.id)
         return true
@@ -140,8 +142,6 @@ open class StaticMapDownloaderService(
 
       try {
         locationMapRepository.setMapReady(locationMap.photoId, locationMap.id)
-
-        logger.debug("[$photoMapName], Map has been successfully downloaded")
       } catch (error: Throwable) {
         if (!outFile.deleteIfExists()) {
           logger.warn("Could not delete file ${outFile.getFile()!!.absolutePath}")
@@ -149,6 +149,8 @@ open class StaticMapDownloaderService(
 
         throw error
       }
+
+      logger.debug("[$photoMapName], Map has been successfully downloaded")
     } catch (error: Throwable) {
       logger.error("Unknown error", error)
 

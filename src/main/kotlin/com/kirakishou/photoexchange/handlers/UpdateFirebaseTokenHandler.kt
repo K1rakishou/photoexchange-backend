@@ -38,8 +38,7 @@ class UpdateFirebaseTokenHandler(
 
         val packet = jsonConverter.fromJson<UpdateFirebaseTokenPacket>(packetParts)
         if (!isPacketOk(packet)) {
-          logger.error("One or more of the packet's fields is incorrect")
-
+          logger.error("Bad packet")
           return@mono formatResponse(HttpStatus.BAD_REQUEST,
             UpdateFirebaseTokenResponse.fail(ErrorCode.BadRequest))
         }
@@ -67,22 +66,22 @@ class UpdateFirebaseTokenHandler(
 
   private fun isPacketOk(packet: UpdateFirebaseTokenPacket): Boolean {
     if (packet.userUuid.isNullOrEmpty()) {
-      logger.debug("Bad param userUuid (${packet.userUuid})")
+      logger.error("Bad param userUuid (${packet.userUuid})")
       return false
     }
 
     if (packet.token.isNullOrEmpty()) {
-      logger.debug("Bad param token (${packet.token})")
+      logger.error("Bad param token (${packet.token})")
       return false
     }
 
     if (packet.userUuid.length > SharedConstants.FULL_USER_UUID_LEN) {
-      logger.debug("Bad param userId (${packet.userUuid})")
+      logger.error("Bad param userId (${packet.userUuid})")
       return false
     }
 
     if (packet.token.length > SharedConstants.MAX_FIREBASE_TOKEN_LEN) {
-      logger.debug("Bad param token (${packet.token})")
+      logger.error("Bad param token (${packet.token})")
       return false
     }
 

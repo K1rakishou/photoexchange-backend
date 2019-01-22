@@ -27,6 +27,7 @@ class GetUserUuidHandler(
 
         val userInfo = usersRepository.createNew()
         if (userInfo.isEmpty()) {
+          logger.error("Could not create new user")
           return@mono formatResponse(
             HttpStatus.INTERNAL_SERVER_ERROR,
             GetUserUuidResponse.fail(ErrorCode.DatabaseError)

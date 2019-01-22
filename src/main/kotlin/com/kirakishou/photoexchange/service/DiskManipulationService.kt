@@ -145,13 +145,13 @@ open class DiskManipulationService {
 
     val resource = ClassPathResource(path)
     if (!resource.exists()) {
-      logger.debug("Resource with path ($path) does not exist")
+      logger.error("Resource with path ($path) does not exist")
       return
     }
 
     val placeholderFile = resource.file
     if (!placeholderFile.exists()) {
-      logger.debug("Placeholder file (${placeholderFile.absolutePath}) does not exist")
+      logger.error("Placeholder file (${placeholderFile.absolutePath}) does not exist")
       return
     }
 
@@ -196,7 +196,7 @@ open class DiskManipulationService {
   @Throws(IOException::class)
   private fun deleteFile(fileToDelete: File) {
     if (!fileToDelete.exists()) {
-      logger.debug("File (${fileToDelete.absolutePath}) does not exist")
+      logger.error("File (${fileToDelete.absolutePath}) does not exist")
       return
     }
 
