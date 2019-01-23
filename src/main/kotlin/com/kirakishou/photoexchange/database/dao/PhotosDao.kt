@@ -43,7 +43,9 @@ open class PhotosDao {
       Photos.deletedOn,
       Photos.ipHash
     ).select {
-      uploadedEarlierThan(lastUploadedOn)
+      uploadedEarlierThan(lastUploadedOn) and
+        hasLocationMap() and
+        notDeleted()
     }
       .orderBy(GalleryPhotos.id, false)
       .limit(count)
