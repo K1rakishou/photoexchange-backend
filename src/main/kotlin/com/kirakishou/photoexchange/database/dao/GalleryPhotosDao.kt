@@ -17,15 +17,6 @@ open class GalleryPhotosDao {
     return id != null
   }
 
-  open fun findPage(lastUploadedOn: DateTime, count: Int): List<GalleryPhotoEntity> {
-    return GalleryPhotos.select {
-      uploadedEarlierThan(lastUploadedOn)
-    }
-      .orderBy(GalleryPhotos.id, false)
-      .limit(count)
-      .map { resultRow -> GalleryPhotoEntity.fromResultRow(resultRow) }
-  }
-
   open fun countGalleryPhotosUploadedLaterThan(currentTime: DateTime): Int {
     return GalleryPhotos.select {
       uploadedLaterThan(currentTime)

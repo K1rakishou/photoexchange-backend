@@ -411,22 +411,9 @@ open class PhotosRepository(
 
   suspend fun findGalleryPhotos(lastUploadedOn: DateTime, count: Int): List<GalleryPhotoResponseData> {
     return dbQuery(emptyList()) {
-      val pageOfGalleryPhotos = galleryPhotosDao.findPage(lastUploadedOn, count)
+      val photoInfos = photosDao.findPageByGalleryPhotos(lastUploadedOn, count)
 
-      val resultMap = linkedMapOf<Long, GalleryPhotoDto>()
-      val photoIdList = pageOfGalleryPhotos.map { it.photoId }
-
-      val photoInfos = photosDao.findManyByPhotoIdList(photoIdList, false)
-      for (photo in photoInfos) {
-        val galleryPhoto = pageOfGalleryPhotos.first { it.photoId.id == photo.photoId.id }
-
-        resultMap[photo.photoId.id] = GalleryPhotoDto(
-          photo.toPhoto(),
-          galleryPhoto.toGalleryPhoto()
-        )
-      }
-
-      return@dbQuery resultMap.values.map { (photoInfo, _) ->
+      return@dbQuery photoInfos.map { photoInfo ->
         GalleryPhotoResponseData(
           photoInfo.photoName.name,
           photoInfo.lon,
