@@ -2,6 +2,7 @@ package com.kirakishou.photoexchange.database.dao
 
 import com.kirakishou.photoexchange.core.*
 import com.kirakishou.photoexchange.database.entity.PhotoEntity
+import com.kirakishou.photoexchange.database.table.GalleryPhotos
 import com.kirakishou.photoexchange.database.table.Photos
 import com.kirakishou.photoexchange.util.TimeUtils
 import org.jetbrains.exposed.sql.*
@@ -25,6 +26,30 @@ open class PhotosDao {
     } get Photos.id
 
     return photoEntity.copy(photoId = PhotoId(id!!))
+  }
+
+  open fun findPageByGalleryPhotos(lastUploadedOn: DateTime, count: Int): List<PhotoEntity> {
+    return (GalleryPhotos innerJoin Photos).slice(
+      Photos.id,
+      Photos.exchangeState,
+      Photos.userId,
+      Photos.exchangedPhotoId,
+      Photos.locationMapId,
+      Photos.photoName,
+      Photos.isPublic,
+      Photos.lon,
+      Photos.lat,
+      Photos.uploadedOn,
+      Photos.deletedOn,
+      Photos.ipHash
+    ).select {
+      uploadedEarlierThan(lastUploadedOn) and
+        hasLocationMap() and
+        notDeleted()
+    }
+      .orderBy(GalleryPhotos.id, false)
+      .limit(count)
+      .map { resultRow -> PhotoEntity.fromResultRow(resultRow) }
   }
 
   open fun findOldestEmptyPhoto(userId: UserId): PhotoEntity {
